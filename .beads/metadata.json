@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "geo_analyzer_extension",
+  "project_id": "91360240-8556-45ae-8e9c-0561bbfb145c"
+}
