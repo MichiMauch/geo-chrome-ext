@@ -1,5 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.zip
+
+# Local IDE / agent state
+.claude/settings.local.json
+.claude/skills/
+.agents/
+.windsurf/
+.pi/
+.DS_Store
 
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db
 .beads-credential-key
+
+# Skills lock (per-machine)
+skills-lock.json
