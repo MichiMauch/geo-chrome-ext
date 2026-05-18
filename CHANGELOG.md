@@ -15,18 +15,28 @@
 
 - **Schema.org-Vollständigkeits-Validierung:** Zusätzlich zum bestehenden `@type`-Presence-Check prüft die Maschinenlesbarkeits-Analyse jetzt auch die Pflichtfelder pro Schema-Typ. Ein leeres `Article`-Schema ohne `author` und `datePublished` wird nicht mehr als „Pass" gewertet. Validiert werden Article / NewsArticle / BlogPosting (headline, author, datePublished), FAQPage (mainEntity), HowTo (name, step), Product (name, offers), Organization (name, url), Person (name), BreadcrumbList (itemListElement), WebPage (name). Shallow-Schemas aus Microdata/RDFa-Extraktion (nur `@type` ohne Properties) werden fair übersprungen. Zeigt im Sub-Kriterium konkret welche Felder fehlen („Article: author, datePublished"). Neue Empfehlung `rec_schema_incomplete` in 6 Sprachen.
 
+- **6. Analyse-Kategorie: On-Page SEO:** Neue Kategorie erweitert das Tool von GEO-only zu kombiniertem GEO+SEO-Audit. Gesamtscore geht neu von 0–30 (statt 0–25); Rating-Schwellen entsprechend skaliert (Exzellent ≥25, Gut ≥19, Verbesserungsbedarf ≥12). Sechs Sub-Checks:
+  - **Seitentitel-Qualität** (Pflicht, Länge 30–60 Zeichen, Weight 2.0)
+  - **Meta-Description** (Pflicht, Länge 120–160 Zeichen, Weight 1.5)
+  - **Bild-Alt-Texte** (Anteil Bilder mit `alt`-Attribut; `alt=""` für decorative Images zählt korrekt; Seiten ohne Bilder = volle Punkte, Weight 1.5)
+  - **Indexierbarkeit** (`<meta name="robots">` mit `noindex` triggert eine kritische Empfehlung mit Priority 12 — höher als alles andere im System; Weight 2.5)
+  - **Mobile-Viewport** (drei Stati: kein Tag = rot/0, Tag ohne `width=device-width` = orange/0.4, korrekt = grün/1; Weight 1.5)
+  - **Open Graph & Twitter Cards** (og:title + og:description + og:image + twitter:card mit OG-Fallback, Weight 1.0)
+
 ### Changed
 
 - **Kategorie-Layout im Popup:** Sub-Kriterien werden jetzt jedes auf einer eigenen Zeile dargestellt (vorher horizontal mit `•`-Separator und Flex-Wrap). Bessere Lesbarkeit insbesondere bei langen Kriterien-Namen und vielen Sub-Checks pro Kategorie.
 - **Empfehlungs-Bullet-Position:** Der orange Bullet sitzt jetzt korrekt auf Höhe der ersten Textzeile — auch wenn die Snippet-Buttons („Snippet anzeigen", „Kopieren") darüber stehen. Vorher war der Bullet bei Items mit Snippet-Buttons leicht verrutscht.
+- **Score-Range 0–30 statt 0–25:** Durch die neue 6. Kategorie. Total-Score-Anzeige im Popup, History-Liste und HTML-Report zeigt jetzt `X/30`.
 - **`schemaOrg`-Weight in Maschinenlesbarkeit:** Von 2.5 auf 2.0 reduziert, um Platz für das neue `schemaCompleteness` (Weight 1.5) zu machen ohne den Kategorie-Gesamtscore zu verfälschen.
 - **Header-Titel:** „Paul AI GEO Analyzer 2.0" → „Paul AI GEO Analyzer 3.0".
 
 ### Technical
 
-- Komplette Test-Suite: 55 Tests (3 Test-Dateien neu / erweitert: `readability.test.ts` mit 13 Tests, `machine-readability.test.ts` mit 6 Tests).
+- Komplette Test-Suite: 71 Tests (von 8 vor dem Release-Zyklus). Neue Test-Dateien: `readability.test.ts` (13), `machine-readability.test.ts` (6), `on-page-seo.test.ts` (16), `fix-snippets.test.ts`.
 - Manifest v3-konformes Side-Panel-Setup ohne `default_popup` (damit `sidePanel.setPanelBehavior` greift).
-- Cache-Prefix in `src/utils/cache.ts` auf v2 gebumpt (durch Fix-Snippets-Integration).
+- Cache-Prefix in `src/utils/cache.ts` zweimal gebumpt: `v1` → `v2` (Fix-Snippets-Integration änderte `topRecommendations` von Text auf Keys) → `v3` (neue On-Page-SEO-Kategorie änderte die Result-Shape). Alte Caches werden automatisch ignoriert.
+- `PageData`-Type um `ImageData[]`, `OpenGraphData`, `TwitterCardData`, `RobotsMetaData`, `ViewportData` erweitert; neue Extract-Funktionen `extractImages`, `extractOpenGraph`, `extractTwitterCard`, `extractRobotsMeta`, `extractViewport` in `dom-helpers.ts`.
 
 ## [2.0.0] - 2026-04-05
 
