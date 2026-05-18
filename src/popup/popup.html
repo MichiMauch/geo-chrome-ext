@@ -61,13 +61,12 @@
   <!-- Results -->
   <main id="results" class="hidden flex-1" role="main">
 
-    <!-- Tab-change banner (side panel only) -->
-    <div id="tab-change-banner" class="hidden flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200" role="status" aria-live="polite">
-      <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+    <!-- Tab-change banner (side panel only): purely informational hint -->
+    <div id="tab-change-banner" class="hidden flex items-start gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200" role="status" aria-live="polite">
+      <svg class="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
       </svg>
-      <span id="tab-change-text" class="flex-1 truncate" data-i18n="ui_otherPageDetected">Different page detected</span>
-      <button id="tab-change-analyze" class="px-2 py-1 bg-[#33CCCC] hover:bg-[#2BA3A3] text-white rounded text-[11px] font-medium transition-colors flex-shrink-0" data-i18n="ui_analyzeNow">Analyze</button>
+      <span class="flex-1" data-i18n="ui_otherPageDetected">Click the extension icon to analyze this page</span>
     </div>
 
     <!-- Gesamtscore -->

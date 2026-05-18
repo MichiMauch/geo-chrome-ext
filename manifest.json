@@ -4,7 +4,6 @@
   "version": "3.0.0",
   "description": "Analyzes web pages for Generative Engine Optimization (GEO) with score tracking, trend analysis and history - by NETNODE",
   "permissions": ["activeTab", "scripting", "storage", "alarms", "sidePanel", "tabs"],
-  "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background/service-worker.js"
   },

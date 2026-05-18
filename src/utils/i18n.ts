@@ -12,8 +12,7 @@ const translations: Record<Lang, Record<string, string>> = {
     ui_analysisHistory: 'Analysis History',
     ui_noHistory: 'No previous analyses for this page.',
     ui_exportReport: 'Export Report',
-    ui_otherPageDetected: 'Different page detected',
-    ui_analyzeNow: 'Analyze',
+    ui_otherPageDetected: 'Click the extension icon to analyze this page',
 
     // Report
     report_title: 'GEO Analysis Report',
@@ -274,8 +273,7 @@ const translations: Record<Lang, Record<string, string>> = {
     ui_analysisHistory: 'Analyse-Verlauf',
     ui_noHistory: 'Keine bisherigen Analysen für diese Seite.',
     ui_exportReport: 'Bericht exportieren',
-    ui_otherPageDetected: 'Andere Seite erkannt',
-    ui_analyzeNow: 'Analysieren',
+    ui_otherPageDetected: 'Klick aufs Extension-Icon, um diese Seite zu analysieren',
 
     report_title: 'GEO-Analyse-Bericht',
     report_recommendations: 'Empfehlungen',
@@ -522,8 +520,7 @@ const translations: Record<Lang, Record<string, string>> = {
     ui_analysisHistory: 'Historique des analyses',
     ui_noHistory: 'Aucune analyse précédente pour cette page.',
     ui_exportReport: 'Exporter le rapport',
-    ui_otherPageDetected: 'Autre page détectée',
-    ui_analyzeNow: 'Analyser',
+    ui_otherPageDetected: 'Cliquez sur l\'icône de l\'extension pour analyser cette page',
 
     report_title: 'Rapport d\'analyse GEO',
     report_recommendations: 'Recommandations',
@@ -767,8 +764,7 @@ const translations: Record<Lang, Record<string, string>> = {
     ui_analysisHistory: 'Historial de análisis',
     ui_noHistory: 'No hay análisis previos para esta página.',
     ui_exportReport: 'Exportar informe',
-    ui_otherPageDetected: 'Otra página detectada',
-    ui_analyzeNow: 'Analizar',
+    ui_otherPageDetected: 'Haga clic en el icono de la extensión para analizar esta página',
 
     report_title: 'Informe de análisis GEO',
     report_recommendations: 'Recomendaciones',
@@ -1012,8 +1008,7 @@ const translations: Record<Lang, Record<string, string>> = {
     ui_analysisHistory: 'Histórico de análises',
     ui_noHistory: 'Nenhuma análise anterior para esta página.',
     ui_exportReport: 'Exportar relatório',
-    ui_otherPageDetected: 'Outra página detectada',
-    ui_analyzeNow: 'Analisar',
+    ui_otherPageDetected: 'Clique no ícone da extensão para analisar esta página',
 
     report_title: 'Relatório de análise GEO',
     report_recommendations: 'Recomendações',
@@ -1257,8 +1252,7 @@ const translations: Record<Lang, Record<string, string>> = {
     ui_analysisHistory: 'Cronologia delle analisi',
     ui_noHistory: 'Nessuna analisi precedente per questa pagina.',
     ui_exportReport: 'Esporta rapporto',
-    ui_otherPageDetected: 'Altra pagina rilevata',
-    ui_analyzeNow: 'Analizza',
+    ui_otherPageDetected: 'Clicca sull\'icona dell\'estensione per analizzare questa pagina',
 
     report_title: 'Rapporto di analisi GEO',
     report_recommendations: 'Raccomandazioni',

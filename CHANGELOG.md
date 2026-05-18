@@ -4,10 +4,10 @@
 
 ### Added
 
-- **Side-Panel-Modus:** Klick auf das Extension-Icon öffnet jetzt das Chrome Side-Panel statt eines Popups. Das Panel bleibt beim Tab-Wechsel offen, sodass der Workflow „Seite editieren → re-analysieren → vergleichen" ohne Schließen und Wiederöffnen funktioniert. Beim Wechsel auf einen anderen Tab erscheint ein amber-farbener Hinweis-Banner („Andere Seite erkannt — Analysieren") mit Direkt-Action. Layout ist responsive: Side-Panel füllt die volle Breite und Höhe, Footer sitzt am unteren Rand.
-  - Manifest: neue Permissions `sidePanel` und `tabs`, `host_permissions: ["<all_urls>"]` (persistent statt nur `optional_host_permissions`, damit `executeScript` nach Tab-Wechseln im Side-Panel funktioniert)
-  - Service-Worker: `chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })`, Fallback via `chrome.action.onClicked` für ältere Browser
-  - Banner-Strings in 6 Sprachen (`ui_otherPageDetected`, `ui_analyzeNow`)
+- **Side-Panel-Modus:** Klick auf das Extension-Icon öffnet jetzt das Chrome Side-Panel statt eines Popups. Das Panel bleibt beim Tab-Wechsel offen, sodass der Workflow „Seite editieren → re-analysieren → vergleichen" ohne Schließen und Wiederöffnen funktioniert. Beim Wechsel auf einen anderen Tab zeigt das Panel einen informativen Hinweis-Banner („Klick aufs Extension-Icon, um diese Seite zu analysieren"). Layout ist responsive: Side-Panel füllt die volle Breite und Höhe, Footer sitzt am unteren Rand.
+  - Manifest: neue Permissions `sidePanel` und `tabs` — **keine** `host_permissions` nötig, die Extension läuft weiterhin mit `activeTab`, das beim Icon-Klick automatisch erteilt wird (kein Permission-Dialog beim Install, kein Re-Aktivieren beim Update)
+  - Service-Worker: `chrome.action.onClicked`-Handler öffnet das Side-Panel via `chrome.sidePanel.open()` und schickt dem Panel eine `analyze-tab`-Message, damit es für den Tab, auf dem das Icon geklickt wurde, neu analysiert (der Klick erteilt frisch `activeTab` für genau diesen Tab)
+  - Banner-String in 6 Sprachen (`ui_otherPageDetected`)
 
 - **One-Click Fix-Snippets:** Pro Empfehlung gibt es jetzt einen „Snippet anzeigen"- und einen „Kopieren"-Button. Generiert konkrete Code-Snippets (JSON-LD-Schema für Article/FAQPage/Person/Organization, semantisches HTML, llms.txt-Template, robots.txt-Anweisungen etc.), die mit einem Klick in die Zwischenablage gehen. Wandelt die Extension vom Diagnose- in ein Umsetzungs-Tool. 16 Snippets + 2 No-Snippet-Hinweise für alle 18 Recommendation-Keys. Funktioniert im Popup und im HTML-Report. UI-Strings in 6 Sprachen.
 

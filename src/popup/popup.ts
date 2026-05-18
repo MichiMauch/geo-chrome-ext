@@ -69,7 +69,6 @@ const exportBtnEl = document.getElementById('export-btn')!;
 
 // Tab-change banner (visible only when active tab changes while side panel is open)
 const tabChangeBannerEl = document.getElementById('tab-change-banner')!;
-const tabChangeAnalyzeBtn = document.getElementById('tab-change-analyze')!;
 
 let historyOpen = false;
 let lastResult: GEOAnalysisResult | null = null;
@@ -650,6 +649,9 @@ async function checkActiveTab() {
   }
 }
 
+// Tab tracking only updates the informational banner — analysis is NOT
+// auto-triggered. The user needs to click the toolbar icon to grant
+// activeTab for the new tab; the service worker then messages us to re-run.
 chrome.tabs.onActivated.addListener(() => {
   checkActiveTab();
 });
@@ -660,9 +662,13 @@ chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
   }
 });
 
-tabChangeAnalyzeBtn.addEventListener('click', () => {
-  hideTabChangeBanner();
-  startAnalysis();
+// Message channel from the service worker: fires when the user clicks the
+// toolbar icon (which freshly grants activeTab for the clicked tab).
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg?.type === 'analyze-tab') {
+    hideTabChangeBanner();
+    startAnalysis();
+  }
 });
 
 // Event listeners
