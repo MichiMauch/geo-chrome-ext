@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.0.1] - 2026-05-26
+
+### Fixed
+
+- **Side-Panel öffnet nicht / „Content script not reachable":** In 3.0.0 wurde `chrome.sidePanel.open()` nach einem `await chrome.sidePanel.setOptions(...)` aufgerufen. Das verbraucht die User-Geste, und `open()` warf in Chrome silently „may only be called in response to a user gesture", landete im Fallback-Popup-Window — wo `chrome.tabs.query({ currentWindow: true })` das Popup-Fenster selbst zurückgab und „Nicht unterstützt" anzeigte. Fix: `sidePanel.open()` wird jetzt synchron im `chrome.action.onClicked`-Handler aufgerufen; `setOptions`/Messaging laufen in `.then()`-Chains.
+- **Upgrader von 2.x bekamen die neue Flow nie zu sehen:** v2.x hatte `chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })` gesetzt, und Chrome persistiert das Setting über Updates hinweg. Das unterdrückte `chrome.action.onClicked` weiter, sodass die neue Logik bei Upgradern nie lief. Fix: Service-Worker setzt das Setting beim `onInstalled`/`onStartup` explizit auf `false` zurück.
+- **Popup-Window-Fallback findet jetzt den richtigen Tab:** Wenn die sidePanel-API nicht verfügbar ist oder `open()` doch fehlschlägt, übergibt der Service-Worker die Tab-ID via `?tabId=…` an die Popup-URL. Der Popup liest sie via `chrome.tabs.get()` aus, statt fälschlich seinen eigenen Window-Tab zu queryen.
+- **Aussagekräftige Fehlermeldung statt „Content script not reachable":** `chrome.scripting.executeScript`-Fehler werden nicht mehr stillschweigend verschluckt — wenn die Injection scheitert (typischerweise fehlende activeTab-Gewährung), zeigt das Panel die Original-Chrome-Fehlermeldung plus einen Hinweis, das Icon erneut zu klicken.
+
 ## [3.0.0] - 2026-05-18
 
 ### Added

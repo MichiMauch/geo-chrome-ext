@@ -74,6 +74,35 @@ let historyOpen = false;
 let lastResult: GEOAnalysisResult | null = null;
 let analyzedUrl: string | null = null;
 
+// When opened as a fallback popup window (sidePanel API unavailable or open
+// failed), the service worker passes the user's real tab via ?tabId=…. The
+// popup window itself is its own window/tab, so chrome.tabs.query would
+// otherwise return the wrong tab and we'd report "Nicht unterstützt".
+function getForcedTabId(): number | null {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get('tabId');
+    if (!raw) return null;
+    const parsed = parseInt(raw, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+async function getTargetTab(): Promise<chrome.tabs.Tab | undefined> {
+  const forcedId = getForcedTabId();
+  if (forcedId !== null) {
+    try {
+      return await chrome.tabs.get(forcedId);
+    } catch {
+      // Tab gone — fall through to active-tab query
+    }
+  }
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tab;
+}
+
 // Apply i18n to static HTML elements
 function applyI18nToDOM() {
   document.querySelectorAll('[data-i18n]').forEach((el) => {
@@ -395,10 +424,10 @@ async function startAnalysis() {
   showState('loading');
 
   try {
-    // Get active tab
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    // Get target tab (forced via ?tabId for popup-window fallback, otherwise active)
+    const tab = await getTargetTab();
 
-    if (!tab.id || !tab.url) {
+    if (!tab?.id || !tab.url) {
       showState('not-supported');
       return;
     }
@@ -415,14 +444,21 @@ async function startAnalysis() {
       return;
     }
 
-    // Inject content script
+    // Inject content script. Capture any error — silently swallowing here
+    // masks the real root cause when sendMessage later fails.
+    let injectError: unknown = null;
     try {
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         files: ['content/content-script.js'],
       });
-    } catch {
-      // Script might already be injected, continue
+    } catch (err) {
+      injectError = err;
+      // A "Cannot access contents of url" error means activeTab wasn't granted
+      // for this tab. The script may also already be injected on a re-run; we
+      // can't distinguish here, so try sendMessage and use injectError only
+      // if it ultimately fails.
+      console.warn('executeScript failed:', err);
     }
 
     // Wait for content script to initialize
@@ -466,8 +502,10 @@ async function startAnalysis() {
     }
 
     // Falls Content Script nicht erreichbar (orphaned context nach Extension-Reload),
-    // Seite neu laden und erneut versuchen
-    if (!response) {
+    // Seite neu laden und erneut versuchen.
+    // Skip the reload path if executeScript itself failed — reloading won't
+    // help if the underlying problem is a missing activeTab grant.
+    if (!response && !injectError) {
       // Tab neu laden
       await chrome.tabs.reload(tab.id);
 
@@ -480,8 +518,8 @@ async function startAnalysis() {
           target: { tabId: tab.id },
           files: ['content/content-script.js'],
         });
-      } catch {
-        // Ignorieren - Script könnte bereits injiziert sein
+      } catch (err) {
+        injectError = err;
       }
 
       await new Promise((resolve) => setTimeout(resolve, 300));
@@ -490,11 +528,16 @@ async function startAnalysis() {
       try {
         response = await chrome.tabs.sendMessage(tab.id, { action: 'analyze' });
       } catch {
-        throw new Error('Content script not reachable');
+        // Fall through to the unified error handling below
       }
     }
 
     if (!response) {
+      if (injectError) {
+        const msg = injectError instanceof Error ? injectError.message : String(injectError);
+        // Most common: activeTab not granted. Tell the user how to recover.
+        throw new Error(`${msg} — Click the extension icon again on this page.`);
+      }
       throw new Error('Content script not reachable');
     }
 
@@ -632,6 +675,10 @@ function isSupportedUrl(url: string | undefined): boolean {
 }
 
 async function checkActiveTab() {
+  // The popup-window fallback runs in its own window — tab-change tracking
+  // doesn't apply there (the user can't switch tabs inside a side panel they
+  // don't have).
+  if (getForcedTabId() !== null) return;
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.url) return;
@@ -687,8 +734,8 @@ refreshBtnEl.addEventListener('click', async () => {
     return;
   }
   lastRefresh = now;
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab.url) await clearCache(tab.url);
+  const tab = await getTargetTab();
+  if (tab?.url) await clearCache(tab.url);
   startAnalysis();
 });
 
