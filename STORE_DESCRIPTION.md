@@ -1,10 +1,31 @@
-Paul AI GEO Analyzer 3.0 — Optimize Your Content for AI Search and Classic SEO
+Paul AI GEO Analyzer 3.1 — Optimize Your Content for AI Search and Classic SEO
 
 Is your website ready for the age of AI-powered search? As tools like ChatGPT, Perplexity, Google AI Overviews, and other generative engines become the primary way people discover information, your content needs to be structured so AI systems can understand, cite, and surface it effectively — while still nailing the classic on-page SEO fundamentals.
 
-Paul AI GEO Analyzer is a privacy-first Chrome extension that instantly analyzes any web page across six dimensions (five GEO + on-page SEO). Get a detailed score, copy-paste fix snippets for every issue, a polished side-panel UI that stays open while you edit, and track your progress over time.
+Paul AI GEO Analyzer is a privacy-first Chrome extension that instantly analyzes any web page across six dimensions (five GEO + on-page SEO). Get a detailed score, copy-paste fix snippets for every issue, in-page highlighting that marks problems right where they are, a polished side-panel UI that stays open while you edit, and track your progress over time.
 
 Built by NETNODE (netnode.ch), a Swiss digital agency specializing in AI-driven marketing strategies.
+
+---
+
+NEW IN VERSION 3.1 — SEE YOUR ISSUES RIGHT ON THE PAGE
+
+- In-Page Issue Highlighting: Recommendations that point to visible elements now come with a "Show on page (n)" button. One click outlines the affected elements directly on the page you are analyzing, scrolls to the first one, and attaches a plain-language badge to every marker that explains exactly what is wrong — and what to do:
+  - "This H4 follows an H2 and should be an H3" on heading-hierarchy breaks, plus duplicate H1s (red)
+  - "H1 too short (3 chars, min. 5)" on weak main headings (red)
+  - "Missing alt text" on images — decorative `alt=""` is correctly left alone (amber)
+  - "Paragraph too long (873 chars)" on walls of text that hurt scannability (amber)
+  - "Hard to read (68 LIX)" on overly complex paragraphs, using the same Flesch/LIX formula as the score (amber)
+  - "Factual claim without a source link" on statistics and claims that AI systems can't verify (amber)
+  - A dashed blue marker showing WHERE your key statement belongs when the first paragraphs bury the point — the only marker that flags a place, not a broken element
+
+  Click again to hide the markers, or jump straight to the next finding. Re-analyzing cleans the page automatically. Badges are localized in all six languages.
+
+- Clearer recommendations: Every recommendation is now a self-contained card — text, plain-language tip, and its action buttons grouped unmistakably together. Developer jargon like "No code snippet" has been replaced by actionable tips.
+
+- Still permission-free: In-page highlighting runs entirely through the existing click-to-analyze model. No new permissions, no warnings at install or after the update.
+
+- Smarter caching: Adding alt texts to images now correctly invalidates the cached result, so your score and markers always reflect the current page.
 
 ---
 
@@ -37,7 +58,7 @@ HOW IT WORKS
 1. Navigate to any web page you want to analyze
 2. Click the Paul AI GEO Analyzer icon in your toolbar — the side panel opens and analyzes the active tab automatically
 3. Get an instant GEO + SEO score (0–30) with a detailed breakdown across six key categories
-4. Follow the prioritized recommendations — copy fix snippets directly from each issue
+4. Follow the prioritized recommendations — copy fix snippets directly from each issue, or click "Show on page" to see the affected elements highlighted right on the page
 5. Edit your page, click the icon again to re-analyze, and track your progress with built-in trend comparison
 
 ---
@@ -114,6 +135,8 @@ TOP RECOMMENDATIONS WITH ONE-CLICK FIXES
 After every analysis, Paul AI GEO Analyzer surfaces the highest-priority improvements based on what is missing from your page. Recommendations are ranked by impact — the most critical issues (an accidental `noindex`, missing Schema.org, missing H1) appear first.
 
 For every fixable issue, a "Show snippet" button reveals a ready-to-paste code example (JSON-LD, HTML, llms.txt, robots.txt, meta-tag block) and a "Copy" button drops it into your clipboard. No more guessing what to write — just paste into your CMS or template.
+
+And where the issue lives in your content rather than your code, the "Show on page" button takes you straight to it: outlined on the page, explained by a badge, one click away from being fixed.
 
 ---
 
