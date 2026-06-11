@@ -37,6 +37,7 @@ describe('ContentClarityAnalyzer', () => {
       twitterCard: { card: null, title: null, description: null, image: null },
       robotsMeta: { hasNoIndex: false, hasNoFollow: false, hasNoArchive: false, hasNoSnippet: false, rawContent: null },
       viewport: { hasViewport: false, hasDeviceWidth: false, userScalableNo: false, rawContent: null },
+      canonical: { href: null },
     };
 
     const result = analyzer.analyze(mockPage);
@@ -65,6 +66,7 @@ describe('ContentClarityAnalyzer', () => {
       twitterCard: { card: null, title: null, description: null, image: null },
       robotsMeta: { hasNoIndex: false, hasNoFollow: false, hasNoArchive: false, hasNoSnippet: false, rawContent: null },
       viewport: { hasViewport: false, hasDeviceWidth: false, userScalableNo: false, rawContent: null },
+      canonical: { href: null },
     };
 
     const result = analyzer.analyze(mockPage);
@@ -93,6 +95,7 @@ describe('ContentClarityAnalyzer', () => {
       twitterCard: { card: null, title: null, description: null, image: null },
       robotsMeta: { hasNoIndex: false, hasNoFollow: false, hasNoArchive: false, hasNoSnippet: false, rawContent: null },
       viewport: { hasViewport: false, hasDeviceWidth: false, userScalableNo: false, rawContent: null },
+      canonical: { href: null },
     };
 
     const result = analyzer.analyze(mockPage);

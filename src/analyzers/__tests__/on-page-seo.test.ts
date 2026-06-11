@@ -21,6 +21,7 @@ function makePage(overrides: Partial<PageData> = {}): PageData {
     twitterCard: { card: null, title: null, description: null, image: null },
     robotsMeta: { hasNoIndex: false, hasNoFollow: false, hasNoArchive: false, hasNoSnippet: false, rawContent: null },
     viewport: { hasViewport: true, hasDeviceWidth: true, userScalableNo: false, rawContent: 'width=device-width, initial-scale=1' },
+    canonical: { href: 'https://example.com' },
     ...overrides,
   };
 }
@@ -180,6 +181,64 @@ describe('OnPageSeoAnalyzer', () => {
       const d = r.details.find((x) => x.criterionKey === 'criterion_social_cards')!;
       expect(d.found).toBe(true);
       expect(r.recommendations).not.toContain('social_cards_missing');
+    });
+  });
+
+  describe('canonical tag', () => {
+    it('flags a missing canonical', () => {
+      const r = analyzer.analyze(makePage({ canonical: { href: null } }));
+      const d = r.details.find((x) => x.criterionKey === 'criterion_canonical')!;
+      expect(d.found).toBe(false);
+      expect(d.value).toBe('value_notPresent');
+      expect(r.recommendations).toContain('canonical_missing');
+      expect(r.recommendations).not.toContain('canonical_mismatch');
+    });
+
+    it('flags a canonical pointing to a different URL', () => {
+      const r = analyzer.analyze(
+        makePage({ canonical: { href: 'https://other-domain.com/some-page' } })
+      );
+      const d = r.details.find((x) => x.criterionKey === 'criterion_canonical')!;
+      expect(d.found).toBe(false);
+      expect(d.value).toBe('value_canonical_mismatch');
+      expect(r.recommendations).toContain('canonical_mismatch');
+      expect(r.recommendations).not.toContain('canonical_missing');
+    });
+
+    it('flags a canonical pointing to a different path on the same host', () => {
+      const r = analyzer.analyze(
+        makePage({
+          url: 'https://example.com/page-b',
+          canonical: { href: 'https://example.com/page-a' },
+        })
+      );
+      expect(r.recommendations).toContain('canonical_mismatch');
+    });
+
+    it('accepts a self-referencing canonical', () => {
+      const r = analyzer.analyze(
+        makePage({
+          url: 'https://example.com/artikel/geo-guide',
+          canonical: { href: 'https://example.com/artikel/geo-guide' },
+        })
+      );
+      const d = r.details.find((x) => x.criterionKey === 'criterion_canonical')!;
+      expect(d.found).toBe(true);
+      expect(d.value).toBe('value_present');
+      expect(r.recommendations).not.toContain('canonical_missing');
+      expect(r.recommendations).not.toContain('canonical_mismatch');
+    });
+
+    it('ignores trailing slash, host case, query string and hash when comparing', () => {
+      const r = analyzer.analyze(
+        makePage({
+          url: 'https://Example.com/artikel/?utm_source=newsletter#abschnitt',
+          canonical: { href: 'https://example.com/artikel' },
+        })
+      );
+      const d = r.details.find((x) => x.criterionKey === 'criterion_canonical')!;
+      expect(d.found).toBe(true);
+      expect(r.recommendations).not.toContain('canonical_mismatch');
     });
   });
 });

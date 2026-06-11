@@ -331,6 +331,11 @@ function sourcesSnippet(): string {
 </section>`;
 }
 
+function canonicalSnippet(): string {
+  return `<!-- ${t('snippet_comment_canonical')} -->
+<link rel="canonical" href="https://www.example.com/your-page/">`;
+}
+
 export function getFixSnippet(key: string): FixSnippetResult | null {
   switch (key) {
     case 'no_schema':
@@ -365,6 +370,10 @@ export function getFixSnippet(key: string): FixSnippetResult | null {
       return { type: 'snippet', language: 'html', code: sectionsSnippet(), note: t('snippet_note_sections') };
     case 'few_sources':
       return { type: 'snippet', language: 'html', code: sourcesSnippet(), note: t('snippet_note_sources') };
+    case 'canonical_missing':
+      return { type: 'snippet', language: 'html', code: canonicalSnippet(), note: t('snippet_note_canonical') };
+    case 'canonical_mismatch':
+      return { type: 'no-snippet', note: t('snippet_none_canonical_mismatch') };
     case 'bad_hierarchy':
       return { type: 'no-snippet', note: t('snippet_none_bad_hierarchy') };
     case 'low_scanability':

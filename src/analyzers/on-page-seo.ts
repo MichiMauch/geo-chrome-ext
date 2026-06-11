@@ -133,6 +133,41 @@ export class OnPageSeoAnalyzer extends BaseAnalyzer {
     weightedScore += socialResult.score * config.weights.socialCards;
     totalWeight += config.weights.socialCards;
 
+    // Check 7: Canonical tag (three states, like the viewport check)
+    const canonicalHref = pageData.canonical.href;
+    const isSelfCanonical =
+      canonicalHref !== null &&
+      this.normalizeForCanonical(canonicalHref) !== null &&
+      this.normalizeForCanonical(canonicalHref) === this.normalizeForCanonical(pageData.url);
+    let canonicalScore = 0;
+    let canonicalValueKey: string;
+    if (canonicalHref === null) {
+      canonicalScore = 0;
+      canonicalValueKey = 'value_notPresent';
+    } else if (!isSelfCanonical) {
+      // Pointing at a different URL: often intentional (syndication,
+      // pagination consolidation) but frequently a CMS bug — partial credit
+      // plus a hint, never a hard fail.
+      canonicalScore = 0.4;
+      canonicalValueKey = 'value_canonical_mismatch';
+    } else {
+      canonicalScore = 1;
+      canonicalValueKey = 'value_present';
+    }
+    details.push({
+      criterionKey: 'criterion_canonical',
+      found: canonicalScore >= 0.99,
+      value: canonicalValueKey,
+      weight: config.weights.canonical,
+      progress: {
+        current: isSelfCanonical ? 1 : 0,
+        target: 1,
+        unitKey: 'unit_status',
+      },
+    });
+    weightedScore += canonicalScore * config.weights.canonical;
+    totalWeight += config.weights.canonical;
+
     const recommendations: string[] = [];
     if (titleLen === 0) recommendations.push('title_missing');
     else if (titleLen < config.thresholds.titleMinLength) recommendations.push('title_too_short');
@@ -151,8 +186,23 @@ export class OnPageSeoAnalyzer extends BaseAnalyzer {
     if (!vp.hasViewport) recommendations.push('viewport_missing');
     else if (!vp.hasDeviceWidth) recommendations.push('viewport_misconfigured');
     if (!socialGood) recommendations.push('social_cards_missing');
+    if (canonicalHref === null) recommendations.push('canonical_missing');
+    else if (!isSelfCanonical) recommendations.push('canonical_mismatch');
 
     return this.createCategory(0, weightedScore, totalWeight, details, recommendations);
+  }
+
+  // Self-referencing comparison ignores query string and hash on both sides:
+  // a canonical that strips tracking parameters (?utm_…) is correct usage,
+  // not a mismatch. Trailing slashes and host case are normalized too.
+  private normalizeForCanonical(url: string): string | null {
+    try {
+      const u = new URL(url);
+      const path = u.pathname.replace(/\/+$/, '') || '/';
+      return `${u.protocol}//${u.host.toLowerCase()}${path}`;
+    } catch {
+      return null;
+    }
   }
 
   private scoreTitle(len: number): number {

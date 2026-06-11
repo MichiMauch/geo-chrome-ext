@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.2.0] - 2026-06-11
+
+### Added
+
+- **Canonical-Tag-Check (7. Sub-Check in On-Page SEO, Weight 1.0):** Drei Stati analog zum Viewport-Check: fehlendes/kaputtes `<link rel="canonical">` = rot (Empfehlung `canonical_missing` mit Copy-Paste-Snippet), Canonical auf eine **andere** URL = orange mit Teilpunkten (Empfehlung `canonical_mismatch` mit Tipp-Box — fremdzeigende Canonicals können beabsichtigt sein, z.B. Syndication), self-referencing = grün. URL-Vergleich ignoriert Query-String und Hash auf beiden Seiten (ein Canonical, das Tracking-Parameter strippt, ist korrekte Nutzung) und normalisiert Trailing-Slash sowie Host-Schreibweise. Relative hrefs werden aufgelöst. Report-Erklärungen und alle Strings in 6 Sprachen.
+
+### Technical
+
+- `PageData.canonical` (`extractCanonical()` in dom-helpers), neue Recommendation-Keys `canonical_missing` (Prio 6) / `canonical_mismatch` (Prio 7), Cache-Prefix `v6`, 103 Tests (5 neue).
+
 ## [3.1.0] - 2026-06-11
 
 ### Added

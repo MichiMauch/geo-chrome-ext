@@ -130,6 +130,7 @@ export const GEO_CONFIG = {
       indexability: 2.5, // Highest weight — accidental noindex is catastrophic
       socialCards: 1.0,
       viewport: 1.5,
+      canonical: 1.0,
     },
     thresholds: {
       titleMinLength: 30,

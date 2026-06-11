@@ -74,6 +74,13 @@ export interface PageData {
   twitterCard: TwitterCardData;
   robotsMeta: RobotsMetaData;
   viewport: ViewportData;
+  canonical: CanonicalData;
+}
+
+export interface CanonicalData {
+  // Absolute resolved href of <link rel="canonical">; null when the tag is
+  // missing, empty, or unparseable (a broken canonical counts as none).
+  href: string | null;
 }
 
 export interface ViewportData {

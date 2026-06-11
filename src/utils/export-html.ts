@@ -170,6 +170,14 @@ function getExplanation(d: CategoryDetail): string {
     if (!d.found) return t('explain_viewport_misconfigured');
     return t('explain_viewport_ok');
   }
+  // On-Page SEO: Canonical tag
+  if (criterion === t('criterion_canonical')) {
+    if (current === 0 && (value === t('value_notPresent') || !value)) {
+      return t('explain_canonical_missing');
+    }
+    if (!d.found) return t('explain_canonical_mismatch');
+    return t('explain_canonical_ok');
+  }
 
   return '';
 }

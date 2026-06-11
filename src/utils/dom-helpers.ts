@@ -15,6 +15,7 @@ import type {
   TwitterCardData,
   RobotsMetaData,
   ViewportData,
+  CanonicalData,
 } from '../types/analysis';
 import { GEO_CONFIG } from '../config/geo-config';
 
@@ -43,7 +44,21 @@ export async function extractPageData(): Promise<PageData> {
     twitterCard: extractTwitterCard(),
     robotsMeta: extractRobotsMeta(),
     viewport: extractViewport(),
+    canonical: extractCanonical(),
   };
+}
+
+export function extractCanonical(): CanonicalData {
+  const link = document.querySelector('link[rel="canonical"]');
+  const raw = link?.getAttribute('href')?.trim() || '';
+  if (!raw) return { href: null };
+  try {
+    // Resolve relative hrefs against the page; an unparseable href is as
+    // good as no canonical at all.
+    return { href: new URL(raw, window.location.href).href };
+  } catch {
+    return { href: null };
+  }
 }
 
 export function extractViewport(): ViewportData {
