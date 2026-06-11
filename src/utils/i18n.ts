@@ -13,6 +13,18 @@ const translations: Record<Lang, Record<string, string>> = {
     ui_noHistory: 'No previous analyses for this page.',
     ui_exportReport: 'Export Report',
     ui_otherPageDetected: 'Click the extension icon to analyze this page',
+    ui_showOnPage: 'Show on page',
+    ui_hideOnPage: 'Hide markers',
+    ui_highlightFailed: 'Page not reachable — click the icon again',
+    hl_missing_alt: 'Missing alt text',
+    hl_heading_jump: 'This H{to} follows an H{from} and should be an H{mid}',
+    hl_extra_h1: 'Extra H1 — only one per page',
+    hl_long_paragraph: 'Paragraph too long ({n} chars)',
+    hl_h1_too_short: 'H1 too short ({n} chars, min. {min})',
+    hl_h1_too_long: 'H1 too long ({n} chars, max. {max})',
+    hl_hard_paragraph: 'Hard to read ({val})',
+    hl_unsourced_claim: 'Factual claim without a source link',
+    hl_key_info: 'Key statement belongs here — put the definition first',
 
     // Report
     report_title: 'GEO Analysis Report',
@@ -216,8 +228,8 @@ const translations: Record<Lang, Record<string, string>> = {
     snippet_note_sections: 'Each section ~150-300 words around one clearly named aspect.',
     snippet_note_sources: '2-4 high-quality external sources is the sweet spot.',
 
-    snippet_none_bad_hierarchy: 'No code snippet — restructure your headings so they go H1 → H2 → H3 without skipping levels.',
-    snippet_none_low_scanability: 'No code snippet — break long paragraphs into 2-3 sentences and add subheadings.',
+    snippet_none_bad_hierarchy: 'Tip: either change marked headings to the suggested level — or, if the depth is intentional, add an intermediate heading before them.',
+    snippet_none_low_scanability: 'Tip: break long paragraphs into 2-3 sentences and add subheadings.',
 
     // On-Page SEO
     cat_onPageSeo: 'On-Page SEO',
@@ -274,6 +286,18 @@ const translations: Record<Lang, Record<string, string>> = {
     ui_noHistory: 'Keine bisherigen Analysen für diese Seite.',
     ui_exportReport: 'Bericht exportieren',
     ui_otherPageDetected: 'Klick aufs Extension-Icon, um diese Seite zu analysieren',
+    ui_showOnPage: 'Auf Seite zeigen',
+    ui_hideOnPage: 'Markierungen ausblenden',
+    ui_highlightFailed: 'Seite nicht erreichbar — Icon erneut klicken',
+    hl_missing_alt: 'Alt-Text fehlt',
+    hl_heading_jump: 'Diese H{to} folgt auf H{from} und müsste eine H{mid} sein',
+    hl_extra_h1: 'Zweite H1 — nur eine pro Seite',
+    hl_long_paragraph: 'Absatz zu lang ({n} Zeichen)',
+    hl_h1_too_short: 'H1 zu kurz ({n} Zeichen, min. {min})',
+    hl_h1_too_long: 'H1 zu lang ({n} Zeichen, max. {max})',
+    hl_hard_paragraph: 'Schwer lesbar ({val})',
+    hl_unsourced_claim: 'Faktenaussage ohne Quellenlink',
+    hl_key_info: 'Hier sollte die Kernaussage stehen — Definition an den Anfang',
 
     report_title: 'GEO-Analyse-Bericht',
     report_recommendations: 'Empfehlungen',
@@ -463,8 +487,8 @@ const translations: Record<Lang, Record<string, string>> = {
     snippet_note_sections: 'Jede Sektion ~150-300 Wörter rund um einen klar benannten Aspekt.',
     snippet_note_sources: '2-4 hochwertige externe Quellen sind das Optimum.',
 
-    snippet_none_bad_hierarchy: 'Kein Code-Snippet — strukturiere deine Überschriften so, dass sie H1 → H2 → H3 ohne Sprünge folgen.',
-    snippet_none_low_scanability: 'Kein Code-Snippet — teile lange Absätze in 2-3 Sätze und ergänze Zwischenüberschriften.',
+    snippet_none_bad_hierarchy: 'Tipp: Markierte Überschriften entweder auf die angezeigte Ebene ändern — oder, falls die Tiefe inhaltlich stimmt, eine Zwischenüberschrift davor ergänzen.',
+    snippet_none_low_scanability: 'Tipp: Teilen Sie lange Absätze in 2-3 Sätze und ergänzen Sie Zwischenüberschriften.',
 
     // On-Page SEO
     cat_onPageSeo: 'On-Page SEO',
@@ -521,6 +545,18 @@ const translations: Record<Lang, Record<string, string>> = {
     ui_noHistory: 'Aucune analyse précédente pour cette page.',
     ui_exportReport: 'Exporter le rapport',
     ui_otherPageDetected: 'Cliquez sur l\'icône de l\'extension pour analyser cette page',
+    ui_showOnPage: 'Afficher sur la page',
+    ui_hideOnPage: 'Masquer les marqueurs',
+    ui_highlightFailed: 'Page inaccessible — cliquez à nouveau sur l\'icône',
+    hl_missing_alt: 'Texte alternatif manquant',
+    hl_heading_jump: 'Ce H{to} suit un H{from} et devrait être un H{mid}',
+    hl_extra_h1: 'H1 supplémentaire — une seule par page',
+    hl_long_paragraph: 'Paragraphe trop long ({n} caractères)',
+    hl_h1_too_short: 'H1 trop court ({n} caractères, min. {min})',
+    hl_h1_too_long: 'H1 trop long ({n} caractères, max. {max})',
+    hl_hard_paragraph: 'Difficile à lire ({val})',
+    hl_unsourced_claim: 'Affirmation factuelle sans lien source',
+    hl_key_info: 'L\'essentiel devrait figurer ici — placez la définition au début',
 
     report_title: 'Rapport d\'analyse GEO',
     report_recommendations: 'Recommandations',
@@ -707,8 +743,8 @@ const translations: Record<Lang, Record<string, string>> = {
     snippet_note_sections: 'Chaque section ~150-300 mots autour d\'un aspect clairement nommé.',
     snippet_note_sources: '2 à 4 sources externes de qualité, c\'est le bon dosage.',
 
-    snippet_none_bad_hierarchy: 'Aucun snippet de code — restructurez vos titres pour aller H1 → H2 → H3 sans sauter de niveau.',
-    snippet_none_low_scanability: 'Aucun snippet de code — divisez les longs paragraphes en 2-3 phrases et ajoutez des sous-titres.',
+    snippet_none_bad_hierarchy: 'Conseil : changez les titres marqués au niveau suggéré — ou, si la profondeur est voulue, ajoutez un titre intermédiaire avant.',
+    snippet_none_low_scanability: 'Conseil : divisez les longs paragraphes en 2-3 phrases et ajoutez des sous-titres.',
 
     // On-Page SEO
     cat_onPageSeo: 'SEO On-Page',
@@ -765,6 +801,18 @@ const translations: Record<Lang, Record<string, string>> = {
     ui_noHistory: 'No hay análisis previos para esta página.',
     ui_exportReport: 'Exportar informe',
     ui_otherPageDetected: 'Haga clic en el icono de la extensión para analizar esta página',
+    ui_showOnPage: 'Mostrar en la página',
+    ui_hideOnPage: 'Ocultar marcadores',
+    ui_highlightFailed: 'Página no accesible — haga clic de nuevo en el icono',
+    hl_missing_alt: 'Falta texto alternativo',
+    hl_heading_jump: 'Este H{to} sigue a un H{from} y debería ser un H{mid}',
+    hl_extra_h1: 'H1 adicional — solo una por página',
+    hl_long_paragraph: 'Párrafo demasiado largo ({n} caracteres)',
+    hl_h1_too_short: 'H1 demasiado corto ({n} caracteres, mín. {min})',
+    hl_h1_too_long: 'H1 demasiado largo ({n} caracteres, máx. {max})',
+    hl_hard_paragraph: 'Difícil de leer ({val})',
+    hl_unsourced_claim: 'Afirmación factual sin enlace a la fuente',
+    hl_key_info: 'La idea clave debería estar aquí — coloque la definición al principio',
 
     report_title: 'Informe de análisis GEO',
     report_recommendations: 'Recomendaciones',
@@ -951,8 +999,8 @@ const translations: Record<Lang, Record<string, string>> = {
     snippet_note_sections: 'Cada sección ~150-300 palabras sobre un aspecto claramente nombrado.',
     snippet_note_sources: '2-4 fuentes externas de calidad es la cantidad óptima.',
 
-    snippet_none_bad_hierarchy: 'Sin snippet de código — reestructure los encabezados para que sigan H1 → H2 → H3 sin saltar niveles.',
-    snippet_none_low_scanability: 'Sin snippet de código — divida párrafos largos en 2-3 frases y añada subtítulos.',
+    snippet_none_bad_hierarchy: 'Consejo: cambie los encabezados marcados al nivel sugerido — o, si la profundidad es intencional, añada un encabezado intermedio antes.',
+    snippet_none_low_scanability: 'Consejo: divida párrafos largos en 2-3 frases y añada subtítulos.',
 
     // On-Page SEO
     cat_onPageSeo: 'SEO On-Page',
@@ -1009,6 +1057,18 @@ const translations: Record<Lang, Record<string, string>> = {
     ui_noHistory: 'Nenhuma análise anterior para esta página.',
     ui_exportReport: 'Exportar relatório',
     ui_otherPageDetected: 'Clique no ícone da extensão para analisar esta página',
+    ui_showOnPage: 'Mostrar na página',
+    ui_hideOnPage: 'Ocultar marcadores',
+    ui_highlightFailed: 'Página não acessível — clique novamente no ícone',
+    hl_missing_alt: 'Texto alternativo em falta',
+    hl_heading_jump: 'Este H{to} segue um H{from} e deveria ser um H{mid}',
+    hl_extra_h1: 'H1 adicional — apenas um por página',
+    hl_long_paragraph: 'Parágrafo demasiado longo ({n} caracteres)',
+    hl_h1_too_short: 'H1 demasiado curto ({n} caracteres, mín. {min})',
+    hl_h1_too_long: 'H1 demasiado longo ({n} caracteres, máx. {max})',
+    hl_hard_paragraph: 'Difícil de ler ({val})',
+    hl_unsourced_claim: 'Afirmação factual sem link de fonte',
+    hl_key_info: 'A ideia principal deveria estar aqui — coloque a definição no início',
 
     report_title: 'Relatório de análise GEO',
     report_recommendations: 'Recomendações',
@@ -1195,8 +1255,8 @@ const translations: Record<Lang, Record<string, string>> = {
     snippet_note_sections: 'Cada secção ~150-300 palavras sobre um aspeto claramente nomeado.',
     snippet_note_sources: '2 a 4 fontes externas de qualidade é o ideal.',
 
-    snippet_none_bad_hierarchy: 'Sem snippet de código — reestruture os títulos para seguirem H1 → H2 → H3 sem saltar níveis.',
-    snippet_none_low_scanability: 'Sem snippet de código — divida parágrafos longos em 2-3 frases e adicione subtítulos.',
+    snippet_none_bad_hierarchy: 'Dica: altere os títulos marcados para o nível sugerido — ou, se a profundidade for intencional, adicione um título intermédio antes.',
+    snippet_none_low_scanability: 'Dica: divida parágrafos longos em 2-3 frases e adicione subtítulos.',
 
     // On-Page SEO
     cat_onPageSeo: 'SEO On-Page',
@@ -1253,6 +1313,18 @@ const translations: Record<Lang, Record<string, string>> = {
     ui_noHistory: 'Nessuna analisi precedente per questa pagina.',
     ui_exportReport: 'Esporta rapporto',
     ui_otherPageDetected: 'Clicca sull\'icona dell\'estensione per analizzare questa pagina',
+    ui_showOnPage: 'Mostra sulla pagina',
+    ui_hideOnPage: 'Nascondi marcatori',
+    ui_highlightFailed: 'Pagina non raggiungibile — clicca di nuovo sull\'icona',
+    hl_missing_alt: 'Testo alternativo mancante',
+    hl_heading_jump: 'Questo H{to} segue un H{from} e dovrebbe essere un H{mid}',
+    hl_extra_h1: 'H1 aggiuntivo — solo uno per pagina',
+    hl_long_paragraph: 'Paragrafo troppo lungo ({n} caratteri)',
+    hl_h1_too_short: 'H1 troppo corto ({n} caratteri, min. {min})',
+    hl_h1_too_long: 'H1 troppo lungo ({n} caratteri, max. {max})',
+    hl_hard_paragraph: 'Difficile da leggere ({val})',
+    hl_unsourced_claim: 'Affermazione fattuale senza link alla fonte',
+    hl_key_info: 'Il punto chiave dovrebbe stare qui — metti la definizione all\'inizio',
 
     report_title: 'Rapporto di analisi GEO',
     report_recommendations: 'Raccomandazioni',
@@ -1439,8 +1511,8 @@ const translations: Record<Lang, Record<string, string>> = {
     snippet_note_sections: 'Ogni sezione ~150-300 parole su un aspetto chiaramente nominato.',
     snippet_note_sources: '2-4 fonti esterne di qualità è l\'ottimale.',
 
-    snippet_none_bad_hierarchy: 'Nessuno snippet di codice — ristruttura i titoli in modo che seguano H1 → H2 → H3 senza saltare livelli.',
-    snippet_none_low_scanability: 'Nessuno snippet di codice — dividi i paragrafi lunghi in 2-3 frasi e aggiungi sottotitoli.',
+    snippet_none_bad_hierarchy: 'Suggerimento: cambia i titoli marcati al livello suggerito — oppure, se la profondità è voluta, aggiungi un titolo intermedio prima.',
+    snippet_none_low_scanability: 'Suggerimento: dividi i paragrafi lunghi in 2-3 frasi e aggiungi sottotitoli.',
 
     // On-Page SEO
     cat_onPageSeo: 'SEO On-Page',

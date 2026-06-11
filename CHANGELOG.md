@@ -1,5 +1,35 @@
 # Changelog
 
+## [3.1.0] - 2026-06-11
+
+### Added
+
+- **In-Page Issue-Highlighting (Overlay-Modus):** Pro Empfehlung mit sichtbaren DOM-Zielen gibt es im Panel einen „Auf Seite zeigen (n)"-Button. Klick markiert die betroffenen Elemente direkt auf der analysierten Seite (Outline + erklärendes Badge) und scrollt sanft zum ersten Treffer. Toggle-Verhalten: ein aktiver Befund zur Zeit; Re-Analyse räumt Marker auf. Sieben markierbare Befunde:
+  - **Überschriften-Hierarchie** (`bad_hierarchy`, rot): Ebenensprünge mit Handlungsanweisung im Badge („Diese H4 folgt auf H2 und müsste eine H3 sein") plus doppelte H1s
+  - **H1-Qualität** (`no_h1`, rot): zu kurze/zu lange H1s mit Zeichenzahl und Grenzwert im Badge
+  - **Bild-Alt-Texte** (`images_missing_alts`, orange): Bilder ohne `alt`-Attribut; dekorative (`alt=""`) korrekt ausgenommen
+  - **Überlange Absätze** (`low_scanability`, orange): Absätze über dem Scanability-Schwellwert, Zeichenzahl im Badge
+  - **Schwer lesbare Absätze** (`low_readability`, orange): pro Absatz mit Flesch-/LIX-Wert im Badge, gleiche Formelwahl wie der Score
+  - **Unbelegte Faktenaussagen** (`no_sourced_claims`, orange): Absätze mit Zahlen-/„laut"-Mustern ohne Zitationsmuster und ohne externen Link
+  - **Kerninfo am Anfang** (`no_key_info_upfront`, **blau gestrichelt**): markiert den Ort (erster Absatz), an dem die Definition stehen sollte — bewusst anderer Stil, weil hier nichts kaputt ist, sondern etwas fehlt
+  - Badges sind eigenständige, absolut positionierte Elemente (Bilder können keine CSS-Pseudo-Elemente tragen), lokalisiert in 6 Sprachen, erzeugt zur Analysezeit im Page-Context
+  - **Keine neuen Permissions:** alles läuft über das bestehende activeTab + Messaging; der `permissions`-Block im Manifest ist unverändert
+  - Fehlerfall (Tab navigiert, activeTab-Grant weg): Button zeigt kurz „Seite nicht erreichbar — Icon erneut klicken"
+
+### Changed
+
+- **Empfehlungs-Layout:** Jede Empfehlung ist jetzt eine eigene Karte mit fester Reihenfolge Text → Hinweis → Buttons → Snippet-Vorschau. Vorher hob CSS (`order: -1`) die Button-Zeile über den Text, wodurch Buttons optisch an der falschen Empfehlung klebten.
+- **„Kein Code-Snippet"-Hinweis ersetzt:** Die grauen Hinweis-Boxen sagen jetzt direkt, was zu tun ist („💡 Tipp: …"), ohne Entwickler-Jargon. Beim Hierarchie-Tipp wird die Alternative erklärt (Ebene ändern oder Zwischenüberschrift ergänzen), da das Badge nur den häufigsten Fix nennt.
+- **Cache-Fingerprint erweitert:** Der Content-Hash enthält jetzt die Anzahl Bilder ohne `alt` — Alt-Texte nachzutragen invalidiert den Cache, vorher blieben Score und Marker stale.
+- **Scanability-Längen-Schwellwerte** (300/500/800 Zeichen) aus `content-clarity.ts` nach `geo-config.ts` zentralisiert; Highlight-Collector und Score nutzen dieselbe Konstante.
+
+### Technical
+
+- Drei neue Module: `src/utils/selector.ts` (eindeutige CSS-Pfade), `src/utils/highlight-targets.ts` (Collector-Map, läuft nur für gefeuerte Empfehlungen), `src/utils/highlight.ts` (Overlay-Rendering im Page-Context).
+- `GEOAnalysisResult.highlightTargets?: Record<string, HighlightTarget[]>` (`{selector, label}`); Message-Protokoll `highlight`/`clear-highlights`; Cache-Prefix `v3` → `v5`.
+- Test-Suite: 98 Tests (von 71); neue jsdom-Tests für Selector-Generierung und alle sieben Collectors; `jsdom` als devDependency.
+- Lokale Testseiten unter `testpage/` (nicht im Build): Seite 1 für das Element-Fehler-Trio, Seite 2 für H1/Lesbarkeit/Quellen/Kerninfo.
+
 ## [3.0.2] - 2026-05-27
 
 ### Fixed

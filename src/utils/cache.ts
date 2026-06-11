@@ -1,9 +1,10 @@
 import type { GEOAnalysisResult } from '../types/analysis';
 import { normalizeUrl } from './history';
 
-// v3 prefix: new On-Page SEO category + viewport sub-check changed the result shape.
-// Old v2 caches are ignored automatically.
-const CACHE_PREFIX = 'geo_cache_v3:';
+// v5 prefix: highlightTargets field added to the result shape (in-page
+// highlighting, selector + per-element label). Old caches are ignored
+// automatically.
+const CACHE_PREFIX = 'geo_cache_v5:';
 
 interface CachedAnalysis {
   hash: string;

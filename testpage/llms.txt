@@ -1,0 +1,12 @@
+# GEO Analyzer Testumgebung
+
+> Lokale Testseite für das In-Page-Highlighting des Paul AI GEO Analyzers.
+
+## Inhalte
+
+- [Startseite](http://localhost:8765/): Demo-Artikel mit absichtlichen Strukturfehlern für den Overlay-Modus.
+
+## Hinweise
+
+Diese Seite dient ausschliesslich Testzwecken und enthält bewusst platzierte Fehler
+bei Alt-Texten, Überschriften-Hierarchie und Absatzlängen.

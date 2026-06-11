@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GEO Testseite: Highlighting-Demo für Paul AI Analyzer</title>
+  <meta name="description" content="Lokale Testseite für das In-Page-Highlighting des Paul AI GEO Analyzers mit absichtlichen Fehlern bei Alt-Texten, Heading-Hierarchie und Absatzlängen.">
+  <meta name="author" content="Michael Mauch">
+  <meta property="og:title" content="GEO Testseite: Highlighting-Demo">
+  <meta property="og:description" content="Testseite mit absichtlichen GEO-Fehlern für das In-Page-Highlighting.">
+  <meta property="og:image" content="http://localhost:8765/og.png">
+  <meta property="og:url" content="http://localhost:8765/">
+  <meta property="og:type" content="article">
+  <meta name="twitter:card" content="summary">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "GEO Testseite: Highlighting-Demo für Paul AI Analyzer",
+    "author": { "@type": "Person", "name": "Michael Mauch" },
+    "datePublished": "2026-06-01",
+    "dateModified": "2026-06-11"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Was prüft diese Testseite?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Sie prüft das In-Page-Highlighting für fehlende Alt-Texte, Heading-Sprünge und überlange Absätze." }
+      },
+      {
+        "@type": "Question",
+        "name": "Warum sind die Absätze so lang?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Damit der Scannbarkeits-Check anschlägt und die Empfehlung low_scanability ausgelöst wird." }
+      }
+    ]
+  }
+  </script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; color: #1f2937; }
+    img { display: inline-block; width: 180px; height: 110px; border-radius: 8px; margin: 0.5rem 0.5rem 0.5rem 0; background: #e5e7eb; object-fit: cover; }
+    header, footer { color: #6b7280; font-size: 0.875rem; }
+    h1, h2, h3, h4 { line-height: 1.25; }
+    time { color: #6b7280; }
+  </style>
+</head>
+<body>
+  <header>
+    <nav>GEO Analyzer Testumgebung · <a href="extra.html">Testseite 2 (H1, Lesbarkeit, Quellen, Kerninfo)</a></nav>
+  </header>
+  <main>
+    <article>
+      <h1>Generative Engine Optimization verständlich erklärt</h1>
+      <p><span>M. Mauch</span> · <time datetime="2026-06-01">1.6.2026</time></p>
+
+      <!-- FEHLER 1: Heading-Sprung h1 → h3 -->
+      <h3>Definition direkt am Anfang</h3>
+      <p>Generative Engine Optimization ist die systematische Aufbereitung von Webinhalten für KI-gestützte Suchsysteme, und sie bezeichnet damit eine Disziplin, die klassisches SEO um maschinenlesbare Strukturen erweitert, denn laut einer Untersuchung von 2025 beziehen bereits 42 Prozent der Internetnutzer ihre Antworten direkt aus generativen Suchsystemen, ohne jemals eine klassische Ergebnisliste zu öffnen, was für Betreiber von Webseiten bedeutet, dass ihre Inhalte nicht mehr nur für Crawler, sondern auch für Sprachmodelle verständlich aufbereitet sein müssen, weil diese Systeme Inhalte zitieren, zusammenfassen und neu kombinieren, und genau deshalb entscheidet die Struktur einer Seite zunehmend darüber, ob sie in den Antworten der Assistenten überhaupt vorkommt oder vollständig unsichtbar bleibt, wie eine Auswertung von <a href="https://www.example.org/geo-studie">example.org</a> eindrücklich gezeigt hat.</p>
+
+      <h2>Warum Maschinenlesbarkeit den Unterschied macht</h2>
+      <p>Maschinenlesbarkeit bedeutet in diesem Zusammenhang, dass strukturierte Daten, semantisches HTML und konsistente Metadaten zusammenwirken, damit ein Sprachmodell den Inhalt einer Seite korrekt einordnen kann, und laut der Erhebung des Branchenverbands aus dem Jahr 2025 steigt die Zitierwahrscheinlichkeit einer Seite um das Zweieinhalbfache, sobald vollständige Schema-Auszeichnungen vorhanden sind, denn das Modell muss Autor, Datum und Kernaussage nicht mühsam aus dem Fliesstext rekonstruieren, sondern findet sie an definierten Stellen, was die Verlässlichkeit der Zuordnung deutlich erhöht, und genau diese Verlässlichkeit ist die Währung, in der generative Systeme rechnen, wie auch die Analyse von <a href="https://www.example.com/ki-suche-report">example.com</a> mit über 1,5 Millionen ausgewerteten Antworten belegt, die zeigt, dass unstrukturierte Seiten systematisch seltener als Quelle genannt werden.</p>
+
+      <!-- FEHLER 1 (zweiter Sprung): h2 → h4 -->
+      <h4>Ein tief verschachtelter Unterpunkt</h4>
+      <p>Dieser Abschnitt sind bewusst falsch eingeordnet, denn nach einer h2-Überschrift folgt hier direkt eine h4-Ebene, was die Hierarchie-Prüfung des Analyzers als Sprung erkennen muss, und gleichzeitig dient der Absatz dazu, die durchschnittliche Absatzlänge der Seite weiter nach oben zu treiben, weil der Scannbarkeits-Check des Werkzeugs die mittlere Zeichenzahl aller Absätze bewertet und erst oberhalb von achthundert Zeichen keinerlei Punkte mehr vergibt, weshalb dieser Text so ausführlich formuliert ist, wie es in echten, schlecht redigierten Fachartikeln tatsächlich häufig vorkommt, in denen Autorinnen und Autoren ohne Zwischenüberschriften, ohne Aufzählungen und ohne Absatzwechsel ganze Gedankenketten in einem einzigen Block unterbringen, sodass weder Leser noch Maschinen die Kernaussagen schnell erfassen können, was die Verweildauer messbar senkt.</p>
+
+      <h2>Vertrauen entsteht durch Quellen und Daten</h2>
+      <p>Vertrauenswürdigkeit ist für generative Systeme ein zentrales Ranking-Signal, und sie definiert sich aus der Kombination von erkennbarer Autorschaft, aktuellen Datumsangaben und belegten Aussagen, denn laut der Studie von <a href="https://www.example.net/trust-signale">example.net</a> aus dem Jahr 2026 werden Seiten mit klar ausgewiesenen Quellenangaben in 67 Prozent der Fälle bevorzugt zitiert, während anonyme Inhalte ohne Beleg fast vollständig ignoriert werden, was zeigt, dass die alte journalistische Tugend der Quellenarbeit im Zeitalter der KI-Suche eine technische Renaissance erlebt, weil jede überprüfbare Zahl und jeder externe Verweis dem Modell ein zusätzliches Signal liefert, dass dieser Inhalt verlässlich genug ist, um ihn Millionen von Nutzerinnen und Nutzern als Antwort zu präsentieren, und genau daraus ergibt sich die Empfehlung, Statistiken stets mit Jahreszahl und Herkunft zu nennen.</p>
+
+      <h2>Häufige Fragen zur Testseite</h2>
+      <p>Die folgenden Antworten sind bewusst kompakt gehalten, aber dieser einleitende Absatz ist es nicht, denn er muss ebenfalls die Achthundert-Zeichen-Marke überschreiten, damit die Durchschnittsrechnung des Scannbarkeits-Checks stabil im roten Bereich bleibt, und deshalb sei hier noch einmal ausführlich erklärt, dass übersprungene Überschriften-Ebenen auf einer einzelnen Seite ein klassischer Strukturfehler sind, den Content-Management-Systeme erstaunlich oft produzieren, etwa wenn Template-Bausteine jeweils eigene Zwischenüberschriften mitbringen und niemand die gerenderte Seite prüft, was dazu führt, dass weder Suchmaschinen noch Sprachmodelle eindeutig erkennen können, wie die Abschnitte des Dokuments zueinander gehören, und genau diese Fehler markiert das neue Highlighting-Feature des Analyzers nun direkt im Dokument, sodass sie in Sekunden gefunden und behoben werden können.</p>
+
+      <h3>Was ist das Ziel dieser Seite?</h3>
+      <p>Das Ziel ist die manuelle Prüfung des Overlay-Modus, also der Funktion, mit der der Paul AI GEO Analyzer gefundene Probleme direkt auf der analysierten Seite markiert, und dieser Absatz beschreibt das so wortreich, weil auch er zur durchschnittlichen Absatzlänge beiträgt, die der Scannbarkeits-Check der Kategorie inhaltliche Klarheit auswertet, denn die Seite soll exakt drei Empfehlungen mit sichtbaren Zielen auslösen, nämlich fehlende Alternativtexte bei Bildern, eine fehlerhafte Überschriften-Hierarchie mit gleich drei übersprungenen Ebenen sowie überlange Absätze wie diesen hier, während alle übrigen Prüfungen der sechs Kategorien bewusst bestanden werden, damit die drei Zielempfehlungen sicher unter den fünf wichtigsten Hinweisen des Panels erscheinen und der Testdurchlauf reproduzierbar bleibt.</p>
+
+      <h2>Bildmaterial ohne Beschreibung</h2>
+      <p>Die folgenden fünf Bilder sind das dritte Testszenario, denn drei von ihnen besitzen überhaupt kein alt-Attribut und müssen vom Analyzer rot beziehungsweise orange umrandet werden, während ein Bild einen korrekten Alternativtext trägt und eines mit einem leeren alt-Attribut als dekorativ gekennzeichnet ist, was nach den Regeln der Barrierefreiheit ausdrücklich erlaubt ist und daher nicht markiert werden darf, und damit dieser erklärende Absatz ebenfalls in die Längenwertung einfliesst, sei noch erwähnt, dass fehlende Alternativtexte laut einer Auswertung von 2025 zu den drei häufigsten On-Page-Fehlern überhaupt gehören, weil sie im Redaktionsalltag schlicht vergessen werden, obwohl sie für Screenreader-Nutzer wie für Bildverständnis-Modelle gleichermassen die einzige verlässliche Beschreibung des Bildinhalts darstellen.</p>
+
+      <img src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='110'%3E%3Crect width='180' height='110' fill='%23fca5a5'/%3E%3Ctext x='14' y='60' font-family='sans-serif' font-size='14'%3EOhne Alt 1%3C/text%3E%3C/svg%3E">
+      <img src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='110'%3E%3Crect width='180' height='110' fill='%23fdba74'/%3E%3Ctext x='14' y='60' font-family='sans-serif' font-size='14'%3EOhne Alt 2%3C/text%3E%3C/svg%3E">
+      <img src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='110'%3E%3Crect width='180' height='110' fill='%23fde047'/%3E%3Ctext x='14' y='60' font-family='sans-serif' font-size='14'%3EOhne Alt 3%3C/text%3E%3C/svg%3E">
+      <img alt="Beispielgrafik mit korrektem Alternativtext" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='110'%3E%3Crect width='180' height='110' fill='%2386efac'/%3E%3Ctext x='14' y='60' font-family='sans-serif' font-size='14'%3EMit Alt%3C/text%3E%3C/svg%3E">
+      <img alt="" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='110'%3E%3Crect width='180' height='110' fill='%23d1d5db'/%3E%3Ctext x='14' y='60' font-family='sans-serif' font-size='14'%3EDekorativ%3C/text%3E%3C/svg%3E">
+
+      <!-- FEHLER 1 (dritter Sprung): h2 → h4 -->
+      <h4>Wie wird gemessen?</h4>
+      <p>Gemessen wird, indem der Analyzer nach der Analyse für jede Empfehlung mit sichtbaren Zielen einen Button im Seitenpanel anzeigt, der die Trefferanzahl nennt und beim Anklicken die betroffenen Elemente farbig umrandet sowie nummerierte Markierungen daneben setzt, und auch dieser abschliessende Absatz ist absichtlich deutlich zu lang geraten, denn er simuliert die in der Praxis weit verbreitete Unsitte, Schlussbemerkungen, Zusammenfassungen, Danksagungen und Ausblicke in einem einzigen ununterbrochenen Textblock zu vereinen, statt sie durch Zwischenüberschriften, Listen oder wenigstens Absatzwechsel zu gliedern, wodurch die Seite zwar inhaltlich vollständig sein mag, ihre Kernaussagen aber weder von eiligen Leserinnen noch von extrahierenden Sprachmodellen in angemessener Zeit erfasst werden können, was am Ende beiden Zielgruppen die Antwort auf ihre eigentliche Frage vorenthält.</p>
+    </article>
+  </main>
+  <footer>
+    <p>© 2026 GEO Analyzer Testumgebung</p>
+  </footer>
+</body>
+</html>

@@ -153,10 +153,11 @@ export class ContentClarityAnalyzer extends BaseAnalyzer {
     else if (paragraphs.length >= 1) score += factors.bulletPoints / 2;
 
     if (paragraphs.length > 0) {
+      const tiers = GEO_CONFIG.contentClarity.scoring.paragraphLengthChars;
       const avgLength = paragraphs.reduce((sum, p) => sum + p.length, 0) / paragraphs.length;
-      if (avgLength < 300) score += factors.boldText;
-      else if (avgLength < 500) score += factors.numberedLists;
-      else if (avgLength < 800) score += factors.shortSentences;
+      if (avgLength < tiers.good) score += factors.boldText;
+      else if (avgLength < tiers.ok) score += factors.numberedLists;
+      else if (avgLength < tiers.max) score += factors.shortSentences;
     }
 
     if (pageData.lists.length >= 2) score += factors.whiteSpace;

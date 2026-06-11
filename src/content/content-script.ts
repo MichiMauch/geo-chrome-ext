@@ -1,8 +1,10 @@
-import type { AnalyzeResponse } from '../types/analysis';
+import type { AnalyzeResponse, HighlightTarget } from '../types/analysis';
 import { extractPageData } from '../utils/dom-helpers';
 import { runFullAnalysis } from '../analyzers';
 import { initI18n, setLang } from '../utils/i18n';
 import type { Lang } from '../utils/i18n';
+import { computeHighlightTargets } from '../utils/highlight-targets';
+import { applyHighlights, clearHighlights, scrollToFirst } from '../utils/highlight';
 
 // Initialize i18n for analyzer strings
 initI18n();
@@ -28,6 +30,9 @@ function computeContentHash(): string {
   parts.push('P:' + document.querySelectorAll('p').length);
   parts.push('L:' + document.querySelectorAll('ul,ol').length);
   parts.push('A:' + document.querySelectorAll('a').length);
+  // Alt-attribute fingerprint: fixing alt texts doesn't change the body text,
+  // but must bust the cache (alt coverage score + highlight targets).
+  parts.push('IMG:' + document.querySelectorAll('img').length + ':' + document.querySelectorAll('img:not([alt])').length);
 
   // Simple string hash (djb2)
   const str = parts.join('|');
@@ -41,16 +46,40 @@ function computeContentHash(): string {
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener(
   (
-    message: { action: string },
+    message: { action: string; targets?: HighlightTarget[]; severity?: string },
     _sender: chrome.runtime.MessageSender,
-    sendResponse: (response: AnalyzeResponse | { hash: string }) => void
+    sendResponse: (
+      response: AnalyzeResponse | { hash: string } | { count: number } | { cleared: boolean }
+    ) => void
   ) => {
     if (message.action === 'getHash') {
       sendResponse({ hash: computeContentHash() });
       return false;
     }
 
+    // Mark the affected elements on the page and scroll to the first one.
+    if (message.action === 'highlight') {
+      const targets = message.targets || [];
+      const severity =
+        message.severity === 'high' || message.severity === 'info'
+          ? message.severity
+          : 'medium';
+      const count = applyHighlights(targets, severity);
+      if (count > 0) scrollToFirst(targets);
+      sendResponse({ count });
+      return false;
+    }
+
+    if (message.action === 'clear-highlights') {
+      clearHighlights();
+      sendResponse({ cleared: true });
+      return false;
+    }
+
     if (message.action === 'analyze') {
+      // Stale markers from a previous round must not survive a re-analysis.
+      clearHighlights();
+
       // Handle async analysis
       (async () => {
         try {
@@ -65,6 +94,14 @@ chrome.runtime.onMessage.addListener(
 
           // Run full analysis
           const result = runFullAnalysis(pageData);
+
+          // Selectors of the elements behind each recommendation, for the
+          // "show on page" buttons in the panel. Collectors only run for
+          // recommendations the analysis actually fired.
+          const fired = new Set(
+            Object.values(result.categories).flatMap((c) => c.recommendations)
+          );
+          result.highlightTargets = computeHighlightTargets(document, fired);
 
           sendResponse({
             success: true,

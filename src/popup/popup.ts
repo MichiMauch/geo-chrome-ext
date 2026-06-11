@@ -9,6 +9,7 @@ import { generateHtmlReport } from '../utils/export-html';
 import { renderSparkline } from '../utils/sparkline';
 import { loadCache, saveCache, clearCache } from '../utils/cache';
 import { getFixSnippet, getSnippetLanguageLabel } from '../utils/fix-snippets';
+import { getRecommendationPriority } from '../utils/recommendations';
 
 // Initialize i18n before anything else
 initI18n();
@@ -73,6 +74,9 @@ const tabChangeBannerEl = document.getElementById('tab-change-banner')!;
 let historyOpen = false;
 let lastResult: GEOAnalysisResult | null = null;
 let analyzedUrl: string | null = null;
+// Recommendation key whose elements are currently marked on the page.
+// Single-active by design: activating another key replaces the markers.
+let activeHighlightKey: string | null = null;
 
 // When opened as a fallback popup window (sidePanel API unavailable or open
 // failed), the service worker passes the user's real tab via ?tabId=…. The
@@ -238,12 +242,14 @@ function renderResults(result: GEOAnalysisResult) {
   });
 
   // Recommendations
+  activeHighlightKey = null;
   if (result.topRecommendations.length > 0) {
     recommendationsSectionEl.classList.remove('hidden');
     recommendationsEl.innerHTML = result.topRecommendations
       .map((recKey, i) => renderRecommendationItem(recKey, i))
       .join('');
     attachSnippetHandlers(recommendationsEl);
+    attachHighlightHandlers(recommendationsEl);
   } else {
     recommendationsSectionEl.classList.add('hidden');
   }
@@ -260,44 +266,57 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
+// "Show on page" button — only for recommendations whose affected elements
+// were located on the page (result.highlightTargets, computed at analysis).
+function renderHighlightButton(recKey: string): string {
+  const targets = lastResult?.highlightTargets?.[recKey];
+  if (!targets || targets.length === 0) return '';
+  return `<button type="button" class="highlight-toggle" data-rec-key="${escapeHtml(recKey)}" aria-pressed="false">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+    <span class="highlight-toggle-label">${escapeHtml(t('ui_showOnPage'))} (${targets.length})</span>
+  </button>`;
+}
+
+// Every recommendation renders as one card with a fixed order: text first,
+// optional hint, then the card's action buttons, then the snippet preview.
 function renderRecommendationItem(recKey: string, index: number): string {
   const text = t(`rec_${recKey}`);
   const snippet = getFixSnippet(recKey);
   const snippetId = `snippet-${index}`;
+  const highlightBtn = renderHighlightButton(recKey);
 
-  if (!snippet) {
-    // No matching snippet entry — render plain text
-    return `<li class="recommendation-item">${escapeHtml(text)}</li>`;
-  }
+  let note = '';
+  let snippetButtons = '';
+  let snippetPreview = '';
 
-  if (snippet.type === 'no-snippet') {
-    return `<li class="recommendation-item">
-      <div>${escapeHtml(text)}</div>
-      <div class="snippet-none">${escapeHtml(snippet.note)}</div>
-    </li>`;
-  }
-
-  const langLabel = getSnippetLanguageLabel(snippet.language);
-  return `<li class="recommendation-item">
-    <div class="snippet-row-header">
-      <div class="snippet-row-text">${escapeHtml(text)}</div>
-      <div class="snippet-row-actions">
-        <button type="button" class="snippet-toggle" data-snippet-target="${snippetId}" aria-expanded="false">
-          ${escapeHtml(t('snippet_label_show'))}
-        </button>
-        <button type="button" class="snippet-copy" data-snippet-code="${snippetId}-code">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          <span class="snippet-copy-label">${escapeHtml(t('snippet_label_copy'))}</span>
-        </button>
-      </div>
-    </div>
-    <div class="snippet-preview hidden" id="${snippetId}">
+  if (snippet?.type === 'no-snippet') {
+    note = `<div class="snippet-none">${escapeHtml(snippet.note)}</div>`;
+  } else if (snippet) {
+    const langLabel = getSnippetLanguageLabel(snippet.language);
+    snippetButtons = `<button type="button" class="snippet-toggle" data-snippet-target="${snippetId}" aria-expanded="false">
+        ${escapeHtml(t('snippet_label_show'))}
+      </button>
+      <button type="button" class="snippet-copy" data-snippet-code="${snippetId}-code">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <span class="snippet-copy-label">${escapeHtml(t('snippet_label_copy'))}</span>
+      </button>`;
+    snippetPreview = `<div class="snippet-preview hidden" id="${snippetId}">
       <div class="snippet-preview-header">
         <span class="snippet-lang-tag">${escapeHtml(langLabel)}</span>
         <span class="snippet-note">${escapeHtml(snippet.note)}</span>
       </div>
       <pre class="snippet-code" id="${snippetId}-code"><code>${escapeHtml(snippet.code)}</code></pre>
-    </div>
+    </div>`;
+  }
+
+  const buttons = [highlightBtn, snippetButtons].filter(Boolean).join('\n');
+  const actions = buttons ? `<div class="snippet-row-actions">${buttons}</div>` : '';
+
+  return `<li class="recommendation-item">
+    <div class="snippet-row-text">${escapeHtml(text)}</div>
+    ${note}
+    ${actions}
+    ${snippetPreview}
   </li>`;
 }
 
@@ -343,6 +362,70 @@ function attachSnippetHandlers(container: HTMLElement) {
           label.textContent = original;
           btn.classList.remove('copied');
         }, 1500);
+      }
+    });
+  });
+}
+
+function updateHighlightButtons(container: HTMLElement) {
+  container.querySelectorAll<HTMLButtonElement>('.highlight-toggle').forEach((btn) => {
+    const key = btn.getAttribute('data-rec-key');
+    const active = key !== null && key === activeHighlightKey;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', String(active));
+    const label = btn.querySelector('.highlight-toggle-label');
+    if (label && key) {
+      const count = lastResult?.highlightTargets?.[key]?.length ?? 0;
+      label.textContent = active ? t('ui_hideOnPage') : `${t('ui_showOnPage')} (${count})`;
+    }
+  });
+}
+
+function attachHighlightHandlers(container: HTMLElement) {
+  container.querySelectorAll<HTMLButtonElement>('.highlight-toggle').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const recKey = btn.getAttribute('data-rec-key');
+      const targets = recKey ? lastResult?.highlightTargets?.[recKey] : undefined;
+      if (!recKey || !targets || targets.length === 0) return;
+
+      const tab = await getTargetTab();
+      if (!tab?.id) return;
+
+      try {
+        if (activeHighlightKey === recKey) {
+          await chrome.tabs.sendMessage(tab.id, { action: 'clear-highlights' });
+          activeHighlightKey = null;
+        } else {
+          // Single-active: the content script clears previous markers itself.
+          // 'info' = marks a place where something is missing (dashed blue),
+          // otherwise severity follows the recommendation priority.
+          const severity =
+            recKey === 'no_key_info_upfront'
+              ? 'info'
+              : getRecommendationPriority(recKey) >= 8
+                ? 'high'
+                : 'medium';
+          await chrome.tabs.sendMessage(tab.id, {
+            action: 'highlight',
+            targets,
+            severity,
+          });
+          activeHighlightKey = recKey;
+        }
+        updateHighlightButtons(container);
+      } catch {
+        // Content script unreachable — tab navigated/reloaded, activeTab grant
+        // is gone. Brief inline feedback; a fresh icon click fixes it.
+        const label = btn.querySelector('.highlight-toggle-label');
+        if (label) {
+          const original = label.textContent;
+          label.textContent = t('ui_highlightFailed');
+          btn.classList.add('failed');
+          setTimeout(() => {
+            label.textContent = original;
+            btn.classList.remove('failed');
+          }, 2500);
+        }
       }
     });
   });
@@ -444,21 +527,27 @@ async function startAnalysis() {
       return;
     }
 
-    // Inject content script. Capture any error — silently swallowing here
-    // masks the real root cause when sendMessage later fails.
+    // Content script injection is normally done by the service worker's
+    // onClicked handler — that's where the activeTab grant is freshest. We
+    // skip it here in the side-panel flow to avoid the "Extension manifest
+    // must request permission to access this host" error that Chrome
+    // returns when executeScript is called from the side-panel context.
+    //
+    // Exception: the popup-window fallback (?tabId=…) — those windows can
+    // open through the chrome.windows.create fallback path where the SW
+    // didn't get a chance to inject (e.g. sidePanel.open failed). Re-attempt
+    // here as a safety net, but don't fail loud if it errors.
     let injectError: unknown = null;
-    try {
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ['content/content-script.js'],
-      });
-    } catch (err) {
-      injectError = err;
-      // A "Cannot access contents of url" error means activeTab wasn't granted
-      // for this tab. The script may also already be injected on a re-run; we
-      // can't distinguish here, so try sendMessage and use injectError only
-      // if it ultimately fails.
-      console.warn('executeScript failed:', err);
+    if (getForcedTabId() !== null) {
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content/content-script.js'],
+        });
+      } catch (err) {
+        injectError = err;
+        console.warn('executeScript failed (popup-window fallback):', err);
+      }
     }
 
     // Wait for content script to initialize
@@ -477,6 +566,9 @@ async function startAnalysis() {
           historyClearEl.classList.remove('hidden');
           renderResults(cached.result);
           renderHistoryList(cached.result.url);
+          // Cached path skips the analyze message (which clears markers) —
+          // remove any leftover highlights from a previous round explicitly.
+          chrome.tabs.sendMessage(tab.id, { action: 'clear-highlights' }).catch(() => {});
           return;
         }
       }
@@ -535,10 +627,13 @@ async function startAnalysis() {
     if (!response) {
       if (injectError) {
         const msg = injectError instanceof Error ? injectError.message : String(injectError);
-        // Most common: activeTab not granted. Tell the user how to recover.
         throw new Error(`${msg} — Click the extension icon again on this page.`);
       }
-      throw new Error('Content script not reachable');
+      // Side-panel flow: SW should have injected the content script. If
+      // sendMessage still fails, most likely cause is the user opened the
+      // panel through a non-click path (pinned panel, panel-reload), so no
+      // fresh activeTab grant. Steer them to the action button.
+      throw new Error('Click the extension icon on this page to analyze it.');
     }
 
     if (response.success && response.result) {

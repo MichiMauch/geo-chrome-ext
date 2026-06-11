@@ -36,6 +36,16 @@ export interface GEOAnalysisResult {
     onPageSeo: AnalysisCategory;
   };
   topRecommendations: string[];
+  // Recommendation key → affected page elements, computed in the content
+  // script at analysis time. Only keys with visible DOM targets are present;
+  // consumed by the "show on page" buttons in the panel. Labels are localized
+  // per-element explanations rendered as badges next to the marker.
+  highlightTargets?: Record<string, HighlightTarget[]>;
+}
+
+export interface HighlightTarget {
+  selector: string;
+  label: string;
 }
 
 export interface ScoreRating {

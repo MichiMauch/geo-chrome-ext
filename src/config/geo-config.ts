@@ -32,6 +32,14 @@ export const GEO_CONFIG = {
         conclusion: 0.15,
         clearStructure: 0.2,
         optimalLength: 0.1,
+      },
+      // Average paragraph length tiers (characters) used by the scanability
+      // check AND by highlight-targets to mark the paragraphs that drag the
+      // average up. Single source so highlights never diverge from the score.
+      paragraphLengthChars: {
+        good: 300,
+        ok: 500,
+        max: 800,
       }
     }
   },
