@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.2] - 2026-05-27
+
+### Fixed
+
+- **„Extension manifest must request permission to access this host":** 3.0.1 hat das Content-Script weiter aus dem Side-Panel-Kontext injiziert (`chrome.scripting.executeScript`). Chrome propagiert die `activeTab`-Gewährung von einem Action-Klick aber nicht zuverlässig in Side-Panel-API-Calls — der Inject scheiterte deshalb mit „Extension manifest must request permission". Fix: Service-Worker injiziert das Content-Script jetzt direkt im `onClicked`-Handler (im selben User-Gesten-Stack wie der Klick), synchron neben `sidePanel.open()`. Das Side-Panel selbst macht nur noch `sendMessage`. Inject-Fallback im Popup gibt es nur noch für den Popup-Fenster-Modus (sidePanel-API nicht verfügbar).
+
 ## [3.0.1] - 2026-05-26
 
 ### Fixed

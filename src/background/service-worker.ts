@@ -15,6 +15,11 @@ function disableAutoOpenBehavior() {
 chrome.runtime.onInstalled.addListener(disableAutoOpenBehavior);
 chrome.runtime.onStartup.addListener(disableAutoOpenBehavior);
 
+function isRestrictedUrl(url: string | undefined): boolean {
+  if (!url) return true;
+  return /^(chrome|edge|brave|about|chrome-extension):/.test(url);
+}
+
 // Open the side panel on toolbar-icon click and tell it to (re-)analyze the
 // active tab. We intentionally do NOT use setPanelBehavior({
 // openPanelOnActionClick: true }) because that suppresses action.onClicked —
@@ -22,18 +27,39 @@ chrome.runtime.onStartup.addListener(disableAutoOpenBehavior);
 // current tab. This is what lets the extension run without persistent
 // host_permissions.
 //
-// CRITICAL: chrome.sidePanel.open() must be called synchronously in the
-// user-gesture handler. Any `await` before it consumes the gesture and the
-// call throws with "may only be called in response to a user gesture". So we
-// keep the listener non-async and do setOptions/messaging in .then() chains.
+// CRITICAL: two synchronous calls must happen inside this user-gesture
+// listener, with NO `await` between them:
+//   1. chrome.sidePanel.open() — requires "in response to a user gesture"
+//   2. chrome.scripting.executeScript() — relies on the activeTab grant
+//      that the action click just produced. We inject from HERE (the
+//      service-worker click handler) rather than from the side panel,
+//      because the activeTab grant doesn't reliably propagate to API
+//      calls made later from the side-panel context (observed: Chrome
+//      returns "Extension manifest must request permission to access
+//      this host" when executeScript is called from popup.ts even though
+//      the click just happened).
 chrome.action.onClicked.addListener((tab) => {
   if (!tab.id || tab.windowId === undefined) return;
   const tabId = tab.id;
   const windowId = tab.windowId;
+  const tabUrl = tab.url;
 
+  // 1. Inject content script — synchronous in user-gesture context.
+  //    Restricted URLs (chrome://, etc.) are skipped; the side panel will
+  //    show the "not supported" state for those.
+  if (!isRestrictedUrl(tabUrl)) {
+    chrome.scripting
+      .executeScript({
+        target: { tabId },
+        files: ['content/content-script.js'],
+      })
+      .catch((err) => {
+        console.warn('Content script inject failed:', err);
+      });
+  }
+
+  // 2. Open side panel — synchronous in user-gesture context.
   if (!chrome.sidePanel?.open) {
-    // Browser without sidePanel API — open as standalone window, passing the
-    // user's tab id so the popup can analyze the right page.
     chrome.windows.create({
       url: chrome.runtime.getURL(`popup/popup.html?tabId=${tabId}`),
       type: 'popup',
@@ -43,7 +69,6 @@ chrome.action.onClicked.addListener((tab) => {
     return;
   }
 
-  // Synchronous call — preserves the user gesture for sidePanel.open().
   chrome.sidePanel
     .open({ tabId })
     .then(() => {
