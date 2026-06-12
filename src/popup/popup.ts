@@ -2,6 +2,13 @@ import type { GEOAnalysisResult, AnalyzeResponse, AnalysisCategory, TrendInfo } 
 import { getCategoryColor } from '../utils/scoring';
 import { loadHistory, saveAnalysis, clearHistory, getDomainOverview } from '../utils/history';
 import { generateDomainDashboardHtml } from '../utils/export-domain-html';
+import {
+  reportAnalysis,
+  isAnalyticsEnabled,
+  setAnalyticsEnabled,
+  isNoticeSeen,
+  markNoticeSeen,
+} from '../utils/analytics';
 import { formatTrendLabel } from '../utils/trend';
 import { setBadgeForTab } from '../utils/badge';
 import { initI18n, t, getDateLocale, setLang, getLang } from '../utils/i18n';
@@ -711,6 +718,10 @@ async function startAnalysis() {
       // Set badge on extension icon
       await setBadgeForTab(tab.id, response.result);
 
+      // Anonymous usage stats (opt-out, URL-free, deduped locally) —
+      // only on fresh analyses, never on cache hits.
+      void reportAnalysis(response.result);
+
       // Render UI
       renderResults(response.result);
       renderTrend(trend);
@@ -902,6 +913,43 @@ chrome.runtime.onMessage.addListener((msg) => {
   }
 });
 
+// Analytics: footer toggle + one-time notice
+const analyticsToggleEl = document.getElementById('analytics-toggle') as HTMLInputElement;
+const analyticsNoticeEl = document.getElementById('analytics-notice')!;
+
+function hideAnalyticsNotice() {
+  analyticsNoticeEl.classList.add('hidden');
+  analyticsNoticeEl.classList.remove('flex');
+}
+
+async function initAnalyticsUi() {
+  analyticsToggleEl.checked = await isAnalyticsEnabled();
+  if (analyticsToggleEl.checked && !(await isNoticeSeen())) {
+    analyticsNoticeEl.classList.remove('hidden');
+    analyticsNoticeEl.classList.add('flex');
+  }
+}
+
+analyticsToggleEl.addEventListener('change', () => {
+  void setAnalyticsEnabled(analyticsToggleEl.checked);
+  if (!analyticsToggleEl.checked) {
+    void markNoticeSeen();
+    hideAnalyticsNotice();
+  }
+});
+
+document.getElementById('analytics-notice-ok')!.addEventListener('click', () => {
+  void markNoticeSeen();
+  hideAnalyticsNotice();
+});
+
+document.getElementById('analytics-notice-disable')!.addEventListener('click', () => {
+  void setAnalyticsEnabled(false);
+  void markNoticeSeen();
+  analyticsToggleEl.checked = false;
+  hideAnalyticsNotice();
+});
+
 // Event listeners
 retryBtn.addEventListener('click', startAnalysis);
 
@@ -936,6 +984,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     langToggleEl.innerHTML = `${getLang().toUpperCase()} <span class="text-[8px]">&#9660;</span>`;
     applyI18nToDOM();
+    void initAnalyticsUi();
     startAnalysis();
   });
 });

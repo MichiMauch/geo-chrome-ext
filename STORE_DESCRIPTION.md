@@ -156,9 +156,9 @@ Paul AI GEO Analyzer is designed with privacy at its core:
 
 - 100% local analysis: All processing happens in your browser.
 - No persistent host permissions: The extension uses Chrome's `activeTab` model — access is granted for one tab at a time, only when you click the toolbar icon. No "Read your data on all websites" warning at install or after updates.
-- No tracking: No telemetry, no usage analytics, no cookies.
+- No tracking of your browsing: URLs and page contents never leave your browser — not even hashed. Optional anonymous usage statistics (scores and check results only) help improve the tool; a one-time notice explains this and you can disable it anytime in the panel footer.
 - No account required: Install and use immediately — no sign-up, no subscription.
-- Open and transparent: The extension makes at most two network requests per analysis — a check for `llms.txt` and `robots.txt` on the site you are analyzing.
+- Open and transparent: Per analysis the extension makes at most two requests to the site you are analyzing (`llms.txt`, `robots.txt`) plus, unless disabled, one anonymous, URL-free statistics ping.
 
 ---
 

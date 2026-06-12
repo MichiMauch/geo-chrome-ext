@@ -2,169 +2,170 @@
 
 ## [4.0.0] - 2026-06-12
 
-> **Kurz gesagt:** Die neue Domain-Übersicht zeigt alle analysierten Seiten einer Website auf einen Blick — die schwächste zuoberst. Im Panel stehen die Empfehlungen jetzt direkt unter dem Score, eine Fokus-Zeile nennt den grössten Hebel, und beim Seitenwechsel erklärt die Extension freundlich, was zu tun ist, statt einen Fehler zu zeigen.
+> **In short:** The new domain overview shows every analyzed page of a website at a glance — the weakest one at the top. In the panel, the recommendations now sit directly below the score, a focus line names the biggest lever, and when you switch pages the extension explains what to do in a friendly way instead of showing an error.
 
 ### Added
 
-- **Domain-Übersicht:** Neuer Button im Panel-Footer („Domain-Übersicht (N)") öffnet eine eigene Dashboard-Seite mit allen analysierten URLs der aktuellen Domain: Pfad (klickbar), letzter Score (farbig), Bewertungs-Badge, Trend-Delta, Datum, Anzahl Analysen. Sortiert nach Score aufsteigend — die Seiten mit Handlungsbedarf stehen oben. Kopfbereich mit Seitenzahl, Ø-Score und Gesamtbewertung. Läuft über den bestehenden Report-Viewer, kein neues Build-Target.
-  - **Einträge entfernen:** ×-Button pro Zeile mit Zwei-Klick-Inline-Bestätigung (kein `window.confirm`) löscht die History der jeweiligen URL — z.B. nach Projektabschluss. Zähler und Ø-Score rechnen live nach.
-  - Datenhaltung: `chrome.storage.local`, kein Verfall; max. 50 Analysen pro URL (älteste fällt raus).
-- **Fokus-Zeile:** Über den Top-Empfehlungen nennt „🎯 Grösster Hebel: {Kategorie} ({Score}/5)" die schwächste Kategorie — eine Handlungsanweisung statt sechs Zahlen. Erscheint nur, wenn die schwächste Kategorie unter 4/5 liegt.
-- **„Neue Seite erkannt"-Zustand:** Wechselt man bei offenem Panel den Tab und klickt Refresh, zeigt das Panel jetzt das Extension-Icon mit 👆-Zeiger und der Anweisung „Klick aufs Extension-Icon" — statt rotem Fehler mit sinnlosem Retry-Button (ein Panel-Button kann den activeTab-Zugriff technisch nicht erteilen, nur der Icon-Klick).
-- Dritte lokale Testseite `testpage/best-practice.html`: Best-Practice-Fall (besteht fast alles) mit absichtlichem Canonical-Mismatch — demonstriert den Orange-Status des Canonical-Checks und die Score-Spannweite im Domain-Dashboard.
-- **Agentur-CTA (Lead-Gen):** Dezenter Link „Zu viele Baustellen? NETNODE optimiert Ihre Website für KI-Suche" auf geo.mauch.rocks — im Panel nur bei Rating „Kritisch"/„Verbesserungsbedarf" (Schmerz-Moment), im HTML-Report und Domain-Dashboard als Footer-Karte (diese Dokumente werden an Entscheider weitergegeben). UTM-Parameter pro Fläche (panel/report/dashboard) für Conversion-Messung. Privacy-konform: reine Links, keine Datenübertragung ohne Klick. In 6 Sprachen.
+- **Domain overview:** A new button in the panel footer ("Domain overview (N)") opens a dedicated dashboard page with all analyzed URLs of the current domain: path (clickable), last score (color-coded), rating badge, trend delta, date, number of analyses. Sorted by score ascending — the pages that need attention are at the top. Header area with page count, average score and overall rating. Runs through the existing report viewer, no new build target.
+  - **Remove entries:** An ×-button per row with two-click inline confirmation (no `window.confirm`) deletes the history of the respective URL — e.g. after a project is finished. Counter and average score recalculate live.
+  - Data storage: `chrome.storage.local`, no expiry; max. 50 analyses per URL (oldest is dropped).
+- **Focus line:** Above the top recommendations, "🎯 Biggest lever: {Category} ({Score}/5)" names the weakest category — one actionable instruction instead of six numbers. Only appears when the weakest category is below 4/5.
+- **"New page detected" state:** If you switch tabs with the panel open and click Refresh, the panel now shows the extension icon with a 👆 pointer and the instruction "Click the extension icon" — instead of a red error with a pointless retry button (a panel button technically cannot grant activeTab access, only the icon click can).
+- Third local test page `testpage/best-practice.html`: a best-practice case (passes almost everything) with an intentional canonical mismatch — demonstrates the orange state of the canonical check and the score range in the domain dashboard.
+- **Anonymous usage statistics (opt-out):** After each fresh analysis the extension sends an anonymous, URL-free payload (scores, fired recommendation keys, language, version, random install id) to `api.geo.mauch.rocks`. Strictly nothing URL- or content-derived leaves the browser — deduplication (one report per page per day) happens locally. A one-time notice explains it; a footer toggle disables it anytime. No new permissions (CORS-based fetch).
+- **Agency CTA (lead generation):** A subtle link "Too much to fix? NETNODE optimizes your website for AI search" to geo.mauch.rocks — in the panel only for "Critical"/"Needs improvement" ratings (pain moment), in the HTML report and domain dashboard as a footer card (these documents get shared with decision makers). UTM parameters per surface (panel/report/dashboard) for conversion measurement. Privacy-compliant: plain links, no data transmitted without a click. In 6 languages.
 
 ### Changed
 
-- **Panel-Reihenfolge:** Empfehlungen (inkl. Fokus-Zeile) stehen jetzt direkt unter dem Score, die Kategorie-Karten als Detail-Teil danach. Lesefluss: Wie gut? → Was tun? → Warum? Vorher lagen wichtige Empfehlungen (z.B. Canonical, Priorität 7) drei Scroll-Höhen tief hinter den sechs Kategorie-Karten.
-- README komplett auf aktuellen Stand gebracht (war auf v1.x-Stand von Januar).
+- **Panel order:** Recommendations (including the focus line) now sit directly below the score, the category cards follow as the detail section. Reading flow: How good? → What to do? → Why? Previously, important recommendations (e.g. canonical, priority 7) were buried three scroll-heights down behind the six category cards.
+- README brought fully up to date (was stuck on the v1.x state from January).
 
 ### Fixed
 
-- **Refresh auf nicht analysiertem Tab:** Der Refresh-Button lud bei fehlendem activeTab-Grant die fremde Seite ungefragt neu und zeigte danach die rohe englische Chrome-Fehlermeldung („Cannot access contents of url …"). Der Reload-Recovery-Pfad läuft jetzt nur noch auf der bereits analysierten Seite (verwaistes Content-Script nach Extension-Update); auf anderen Tabs erscheint sofort der neue „Neue Seite erkannt"-Zustand.
+- **Refresh on a non-analyzed tab:** The refresh button used to reload the foreign page without asking when the activeTab grant was missing, then showed the raw English Chrome error message ("Cannot access contents of url …"). The reload-recovery path now only runs on the page that was already analyzed (orphaned content script after an extension update); on other tabs the new "New page detected" state appears immediately.
 
 ### Technical
 
-- `getDomainOverview()` in history.ts, Generator `export-domain-html.ts`, Lösch-Handler im Report-Viewer; neuer Panel-Zustand `needs-click`; 111 Tests (8 neue, inkl. chrome.storage-Stub).
+- `getDomainOverview()` in history.ts, generator `export-domain-html.ts`, delete handler in the report viewer; new panel state `needs-click`; 111 tests (8 new, including a chrome.storage stub).
 
 ## [3.2.0] - 2026-06-11
 
 ### Added
 
-- **Canonical-Tag-Check (7. Sub-Check in On-Page SEO, Weight 1.0):** Drei Stati analog zum Viewport-Check: fehlendes/kaputtes `<link rel="canonical">` = rot (Empfehlung `canonical_missing` mit Copy-Paste-Snippet), Canonical auf eine **andere** URL = orange mit Teilpunkten (Empfehlung `canonical_mismatch` mit Tipp-Box — fremdzeigende Canonicals können beabsichtigt sein, z.B. Syndication), self-referencing = grün. URL-Vergleich ignoriert Query-String und Hash auf beiden Seiten (ein Canonical, das Tracking-Parameter strippt, ist korrekte Nutzung) und normalisiert Trailing-Slash sowie Host-Schreibweise. Relative hrefs werden aufgelöst. Report-Erklärungen und alle Strings in 6 Sprachen.
+- **Canonical tag check (7th sub-check in On-Page SEO, weight 1.0):** Three states analogous to the viewport check: missing/broken `<link rel="canonical">` = red (recommendation `canonical_missing` with copy-paste snippet), canonical pointing to a **different** URL = orange with partial points (recommendation `canonical_mismatch` with a tip box — canonicals pointing elsewhere can be intentional, e.g. syndication), self-referencing = green. The URL comparison ignores query string and hash on both sides (a canonical that strips tracking parameters is correct usage) and normalizes trailing slash as well as host casing. Relative hrefs are resolved. Report explanations and all strings in 6 languages.
 
 ### Technical
 
-- `PageData.canonical` (`extractCanonical()` in dom-helpers), neue Recommendation-Keys `canonical_missing` (Prio 6) / `canonical_mismatch` (Prio 7), Cache-Prefix `v6`, 103 Tests (5 neue).
+- `PageData.canonical` (`extractCanonical()` in dom-helpers), new recommendation keys `canonical_missing` (prio 6) / `canonical_mismatch` (prio 7), cache prefix `v6`, 103 tests (5 new).
 
 ## [3.1.0] - 2026-06-11
 
 ### Added
 
-- **In-Page Issue-Highlighting (Overlay-Modus):** Pro Empfehlung mit sichtbaren DOM-Zielen gibt es im Panel einen „Auf Seite zeigen (n)"-Button. Klick markiert die betroffenen Elemente direkt auf der analysierten Seite (Outline + erklärendes Badge) und scrollt sanft zum ersten Treffer. Toggle-Verhalten: ein aktiver Befund zur Zeit; Re-Analyse räumt Marker auf. Sieben markierbare Befunde:
-  - **Überschriften-Hierarchie** (`bad_hierarchy`, rot): Ebenensprünge mit Handlungsanweisung im Badge („Diese H4 folgt auf H2 und müsste eine H3 sein") plus doppelte H1s
-  - **H1-Qualität** (`no_h1`, rot): zu kurze/zu lange H1s mit Zeichenzahl und Grenzwert im Badge
-  - **Bild-Alt-Texte** (`images_missing_alts`, orange): Bilder ohne `alt`-Attribut; dekorative (`alt=""`) korrekt ausgenommen
-  - **Überlange Absätze** (`low_scanability`, orange): Absätze über dem Scanability-Schwellwert, Zeichenzahl im Badge
-  - **Schwer lesbare Absätze** (`low_readability`, orange): pro Absatz mit Flesch-/LIX-Wert im Badge, gleiche Formelwahl wie der Score
-  - **Unbelegte Faktenaussagen** (`no_sourced_claims`, orange): Absätze mit Zahlen-/„laut"-Mustern ohne Zitationsmuster und ohne externen Link
-  - **Kerninfo am Anfang** (`no_key_info_upfront`, **blau gestrichelt**): markiert den Ort (erster Absatz), an dem die Definition stehen sollte — bewusst anderer Stil, weil hier nichts kaputt ist, sondern etwas fehlt
-  - Badges sind eigenständige, absolut positionierte Elemente (Bilder können keine CSS-Pseudo-Elemente tragen), lokalisiert in 6 Sprachen, erzeugt zur Analysezeit im Page-Context
-  - **Keine neuen Permissions:** alles läuft über das bestehende activeTab + Messaging; der `permissions`-Block im Manifest ist unverändert
-  - Fehlerfall (Tab navigiert, activeTab-Grant weg): Button zeigt kurz „Seite nicht erreichbar — Icon erneut klicken"
+- **In-page issue highlighting (overlay mode):** Each recommendation with visible DOM targets gets a "Show on page (n)" button in the panel. A click marks the affected elements directly on the analyzed page (outline + explanatory badge) and scrolls smoothly to the first match. Toggle behavior: one active finding at a time; re-analysis cleans up markers. Seven highlightable findings:
+  - **Heading hierarchy** (`bad_hierarchy`, red): level jumps with an actionable instruction in the badge ("This H4 follows an H2 and should be an H3") plus duplicate H1s
+  - **H1 quality** (`no_h1`, red): too short/too long H1s with character count and threshold in the badge
+  - **Image alt texts** (`images_missing_alts`, orange): images without an `alt` attribute; decorative ones (`alt=""`) correctly excluded
+  - **Overly long paragraphs** (`low_scanability`, orange): paragraphs above the scanability threshold, character count in the badge
+  - **Hard-to-read paragraphs** (`low_readability`, orange): per paragraph with a Flesch/LIX value in the badge, same formula choice as the score
+  - **Unsourced factual claims** (`no_sourced_claims`, orange): paragraphs with number/"according to" patterns without a citation pattern and without an external link
+  - **Key info upfront** (`no_key_info_upfront`, **blue dashed**): marks the spot (first paragraph) where the definition should be — deliberately a different style, because nothing is broken here, something is missing
+  - Badges are standalone, absolutely positioned elements (images can't carry CSS pseudo-elements), localized in 6 languages, generated at analysis time in the page context
+  - **No new permissions:** everything runs through the existing activeTab + messaging; the `permissions` block in the manifest is unchanged
+  - Error case (tab navigated, activeTab grant gone): the button briefly shows "Page not reachable — click the icon again"
 
 ### Changed
 
-- **Empfehlungs-Layout:** Jede Empfehlung ist jetzt eine eigene Karte mit fester Reihenfolge Text → Hinweis → Buttons → Snippet-Vorschau. Vorher hob CSS (`order: -1`) die Button-Zeile über den Text, wodurch Buttons optisch an der falschen Empfehlung klebten.
-- **„Kein Code-Snippet"-Hinweis ersetzt:** Die grauen Hinweis-Boxen sagen jetzt direkt, was zu tun ist („💡 Tipp: …"), ohne Entwickler-Jargon. Beim Hierarchie-Tipp wird die Alternative erklärt (Ebene ändern oder Zwischenüberschrift ergänzen), da das Badge nur den häufigsten Fix nennt.
-- **Cache-Fingerprint erweitert:** Der Content-Hash enthält jetzt die Anzahl Bilder ohne `alt` — Alt-Texte nachzutragen invalidiert den Cache, vorher blieben Score und Marker stale.
-- **Scanability-Längen-Schwellwerte** (300/500/800 Zeichen) aus `content-clarity.ts` nach `geo-config.ts` zentralisiert; Highlight-Collector und Score nutzen dieselbe Konstante.
+- **Recommendation layout:** Each recommendation is now its own card with a fixed order text → hint → buttons → snippet preview. Previously CSS (`order: -1`) lifted the button row above the text, which made buttons visually stick to the wrong recommendation.
+- **"No code snippet" hint replaced:** The gray hint boxes now say directly what to do ("💡 Tip: …") without developer jargon. For the hierarchy tip the alternative is explained (change the level or add an intermediate heading), since the badge only names the most common fix.
+- **Cache fingerprint extended:** The content hash now includes the number of images without `alt` — adding alt texts now invalidates the cache, previously score and markers stayed stale.
+- **Scanability length thresholds** (300/500/800 characters) centralized from `content-clarity.ts` into `geo-config.ts`; highlight collector and score use the same constant.
 
 ### Technical
 
-- Drei neue Module: `src/utils/selector.ts` (eindeutige CSS-Pfade), `src/utils/highlight-targets.ts` (Collector-Map, läuft nur für gefeuerte Empfehlungen), `src/utils/highlight.ts` (Overlay-Rendering im Page-Context).
-- `GEOAnalysisResult.highlightTargets?: Record<string, HighlightTarget[]>` (`{selector, label}`); Message-Protokoll `highlight`/`clear-highlights`; Cache-Prefix `v3` → `v5`.
-- Test-Suite: 98 Tests (von 71); neue jsdom-Tests für Selector-Generierung und alle sieben Collectors; `jsdom` als devDependency.
-- Lokale Testseiten unter `testpage/` (nicht im Build): Seite 1 für das Element-Fehler-Trio, Seite 2 für H1/Lesbarkeit/Quellen/Kerninfo.
+- Three new modules: `src/utils/selector.ts` (unique CSS paths), `src/utils/highlight-targets.ts` (collector map, runs only for fired recommendations), `src/utils/highlight.ts` (overlay rendering in the page context).
+- `GEOAnalysisResult.highlightTargets?: Record<string, HighlightTarget[]>` (`{selector, label}`); message protocol `highlight`/`clear-highlights`; cache prefix `v3` → `v5`.
+- Test suite: 98 tests (up from 71); new jsdom tests for selector generation and all seven collectors; `jsdom` as a devDependency.
+- Local test pages under `testpage/` (not in the build): page 1 for the element-error trio, page 2 for H1/readability/sources/key-info.
 
 ## [3.0.2] - 2026-05-27
 
 ### Fixed
 
-- **„Extension manifest must request permission to access this host":** 3.0.1 hat das Content-Script weiter aus dem Side-Panel-Kontext injiziert (`chrome.scripting.executeScript`). Chrome propagiert die `activeTab`-Gewährung von einem Action-Klick aber nicht zuverlässig in Side-Panel-API-Calls — der Inject scheiterte deshalb mit „Extension manifest must request permission". Fix: Service-Worker injiziert das Content-Script jetzt direkt im `onClicked`-Handler (im selben User-Gesten-Stack wie der Klick), synchron neben `sidePanel.open()`. Das Side-Panel selbst macht nur noch `sendMessage`. Inject-Fallback im Popup gibt es nur noch für den Popup-Fenster-Modus (sidePanel-API nicht verfügbar).
+- **"Extension manifest must request permission to access this host":** 3.0.1 still injected the content script from the side-panel context (`chrome.scripting.executeScript`). However, Chrome does not reliably propagate the `activeTab` grant from an action click into side-panel API calls — so the inject failed with "Extension manifest must request permission". Fix: the service worker now injects the content script directly in the `onClicked` handler (in the same user-gesture stack as the click), synchronously alongside `sidePanel.open()`. The side panel itself only does `sendMessage`. The inject fallback in the popup now only exists for the popup-window mode (sidePanel API not available).
 
 ## [3.0.1] - 2026-05-26
 
 ### Fixed
 
-- **Side-Panel öffnet nicht / „Content script not reachable":** In 3.0.0 wurde `chrome.sidePanel.open()` nach einem `await chrome.sidePanel.setOptions(...)` aufgerufen. Das verbraucht die User-Geste, und `open()` warf in Chrome silently „may only be called in response to a user gesture", landete im Fallback-Popup-Window — wo `chrome.tabs.query({ currentWindow: true })` das Popup-Fenster selbst zurückgab und „Nicht unterstützt" anzeigte. Fix: `sidePanel.open()` wird jetzt synchron im `chrome.action.onClicked`-Handler aufgerufen; `setOptions`/Messaging laufen in `.then()`-Chains.
-- **Upgrader von 2.x bekamen die neue Flow nie zu sehen:** v2.x hatte `chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })` gesetzt, und Chrome persistiert das Setting über Updates hinweg. Das unterdrückte `chrome.action.onClicked` weiter, sodass die neue Logik bei Upgradern nie lief. Fix: Service-Worker setzt das Setting beim `onInstalled`/`onStartup` explizit auf `false` zurück.
-- **Popup-Window-Fallback findet jetzt den richtigen Tab:** Wenn die sidePanel-API nicht verfügbar ist oder `open()` doch fehlschlägt, übergibt der Service-Worker die Tab-ID via `?tabId=…` an die Popup-URL. Der Popup liest sie via `chrome.tabs.get()` aus, statt fälschlich seinen eigenen Window-Tab zu queryen.
-- **Aussagekräftige Fehlermeldung statt „Content script not reachable":** `chrome.scripting.executeScript`-Fehler werden nicht mehr stillschweigend verschluckt — wenn die Injection scheitert (typischerweise fehlende activeTab-Gewährung), zeigt das Panel die Original-Chrome-Fehlermeldung plus einen Hinweis, das Icon erneut zu klicken.
+- **Side panel doesn't open / "Content script not reachable":** In 3.0.0, `chrome.sidePanel.open()` was called after an `await chrome.sidePanel.setOptions(...)`. That consumes the user gesture, and `open()` threw silently in Chrome ("may only be called in response to a user gesture"), landing in the fallback popup window — where `chrome.tabs.query({ currentWindow: true })` returned the popup window itself and showed "Not supported". Fix: `sidePanel.open()` is now called synchronously in the `chrome.action.onClicked` handler; `setOptions`/messaging run in `.then()` chains.
+- **Upgraders from 2.x never saw the new flow:** v2.x had set `chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })`, and Chrome persists that setting across updates. This kept suppressing `chrome.action.onClicked`, so the new logic never ran for upgraders. Fix: the service worker now explicitly resets the setting to `false` on `onInstalled`/`onStartup`.
+- **Popup-window fallback now finds the right tab:** When the sidePanel API isn't available or `open()` does fail, the service worker passes the tab ID via `?tabId=…` to the popup URL. The popup reads it via `chrome.tabs.get()` instead of incorrectly querying its own window tab.
+- **Meaningful error message instead of "Content script not reachable":** `chrome.scripting.executeScript` errors are no longer silently swallowed — when the injection fails (typically a missing activeTab grant), the panel shows the original Chrome error message plus a hint to click the icon again.
 
 ## [3.0.0] - 2026-05-18
 
 ### Added
 
-- **Side-Panel-Modus:** Klick auf das Extension-Icon öffnet jetzt das Chrome Side-Panel statt eines Popups. Das Panel bleibt beim Tab-Wechsel offen, sodass der Workflow „Seite editieren → re-analysieren → vergleichen" ohne Schließen und Wiederöffnen funktioniert. Beim Wechsel auf einen anderen Tab zeigt das Panel einen informativen Hinweis-Banner („Klick aufs Extension-Icon, um diese Seite zu analysieren"). Layout ist responsive: Side-Panel füllt die volle Breite und Höhe, Footer sitzt am unteren Rand.
-  - Manifest: neue Permissions `sidePanel` und `tabs` — **keine** `host_permissions` nötig, die Extension läuft weiterhin mit `activeTab`, das beim Icon-Klick automatisch erteilt wird (kein Permission-Dialog beim Install, kein Re-Aktivieren beim Update)
-  - Service-Worker: `chrome.action.onClicked`-Handler öffnet das Side-Panel via `chrome.sidePanel.open()` und schickt dem Panel eine `analyze-tab`-Message, damit es für den Tab, auf dem das Icon geklickt wurde, neu analysiert (der Klick erteilt frisch `activeTab` für genau diesen Tab)
-  - Banner-String in 6 Sprachen (`ui_otherPageDetected`)
+- **Side-panel mode:** Clicking the extension icon now opens the Chrome side panel instead of a popup. The panel stays open when switching tabs, so the "edit page → re-analyze → compare" workflow works without closing and reopening. When switching to another tab, the panel shows an informative hint banner ("Click the extension icon to analyze this page"). The layout is responsive: the side panel fills the full width and height, the footer sits at the bottom.
+  - Manifest: new permissions `sidePanel` and `tabs` — **no** `host_permissions` needed, the extension still runs with `activeTab`, which is granted automatically on the icon click (no permission dialog on install, no re-activation on update)
+  - Service worker: the `chrome.action.onClicked` handler opens the side panel via `chrome.sidePanel.open()` and sends the panel an `analyze-tab` message so it re-analyzes for the tab where the icon was clicked (the click freshly grants `activeTab` for exactly that tab)
+  - Banner string in 6 languages (`ui_otherPageDetected`)
 
-- **One-Click Fix-Snippets:** Pro Empfehlung gibt es jetzt einen „Snippet anzeigen"- und einen „Kopieren"-Button. Generiert konkrete Code-Snippets (JSON-LD-Schema für Article/FAQPage/Person/Organization, semantisches HTML, llms.txt-Template, robots.txt-Anweisungen etc.), die mit einem Klick in die Zwischenablage gehen. Wandelt die Extension vom Diagnose- in ein Umsetzungs-Tool. 16 Snippets + 2 No-Snippet-Hinweise für alle 18 Recommendation-Keys. Funktioniert im Popup und im HTML-Report. UI-Strings in 6 Sprachen.
+- **One-click fix snippets:** Each recommendation now has a "Show snippet" and a "Copy" button. Generates concrete code snippets (JSON-LD schema for Article/FAQPage/Person/Organization, semantic HTML, llms.txt template, robots.txt directives etc.) that go to the clipboard with one click. Turns the extension from a diagnostic into an implementation tool. 16 snippets + 2 no-snippet hints for all 18 recommendation keys. Works in the popup and in the HTML report. UI strings in 6 languages.
 
-- **Lesbarkeits-Score (Flesch / LIX):** Neuer Sub-Check in der Kategorie „Inhaltliche Klarheit & Struktur". Wählt automatisch die richtige Formel basierend auf der aktiven UI-Sprache: Flesch Reading Ease für EN/FR/ES/PT/IT (höher = einfacher; ≥60 ist Plain English), LIX für DE (niedriger = einfacher; ≤30 sehr leicht, ≥60 sehr schwer; gut geeignet für lange deutsche Komposita). Zeigt den Rohwert direkt im Kriterium („42 Flesch" / „45 LIX") plus Erklärung im HTML-Report. Bei zu komplexen Texten gibt es die Empfehlung „Vereinfachen Sie den Text: kürzere Sätze, einfachere Wörter, weniger lange Komposita." in 6 Sprachen.
+- **Readability score (Flesch / LIX):** New sub-check in the "Content clarity & structure" category. Automatically picks the right formula based on the active UI language: Flesch Reading Ease for EN/FR/ES/PT/IT (higher = easier; ≥60 is plain English), LIX for DE (lower = easier; ≤30 very easy, ≥60 very hard; well suited for long German compounds). Shows the raw value directly in the criterion ("42 Flesch" / "45 LIX") plus an explanation in the HTML report. For texts that are too complex, there's the recommendation "Simplify the text: shorter sentences, simpler words, fewer long compounds." in 6 languages.
 
-- **Schema.org-Vollständigkeits-Validierung:** Zusätzlich zum bestehenden `@type`-Presence-Check prüft die Maschinenlesbarkeits-Analyse jetzt auch die Pflichtfelder pro Schema-Typ. Ein leeres `Article`-Schema ohne `author` und `datePublished` wird nicht mehr als „Pass" gewertet. Validiert werden Article / NewsArticle / BlogPosting (headline, author, datePublished), FAQPage (mainEntity), HowTo (name, step), Product (name, offers), Organization (name, url), Person (name), BreadcrumbList (itemListElement), WebPage (name). Shallow-Schemas aus Microdata/RDFa-Extraktion (nur `@type` ohne Properties) werden fair übersprungen. Zeigt im Sub-Kriterium konkret welche Felder fehlen („Article: author, datePublished"). Neue Empfehlung `rec_schema_incomplete` in 6 Sprachen.
+- **Schema.org completeness validation:** In addition to the existing `@type` presence check, the machine-readability analysis now also checks the required fields per schema type. An empty `Article` schema without `author` and `datePublished` is no longer counted as "Pass". Validated are Article / NewsArticle / BlogPosting (headline, author, datePublished), FAQPage (mainEntity), HowTo (name, step), Product (name, offers), Organization (name, url), Person (name), BreadcrumbList (itemListElement), WebPage (name). Shallow schemas from microdata/RDFa extraction (only `@type` without properties) are fairly skipped. Shows specifically which fields are missing in the sub-criterion ("Article: author, datePublished"). New recommendation `rec_schema_incomplete` in 6 languages.
 
-- **6. Analyse-Kategorie: On-Page SEO:** Neue Kategorie erweitert das Tool von GEO-only zu kombiniertem GEO+SEO-Audit. Gesamtscore geht neu von 0–30 (statt 0–25); Rating-Schwellen entsprechend skaliert (Exzellent ≥25, Gut ≥19, Verbesserungsbedarf ≥12). Sechs Sub-Checks:
-  - **Seitentitel-Qualität** (Pflicht, Länge 30–60 Zeichen, Weight 2.0)
-  - **Meta-Description** (Pflicht, Länge 120–160 Zeichen, Weight 1.5)
-  - **Bild-Alt-Texte** (Anteil Bilder mit `alt`-Attribut; `alt=""` für decorative Images zählt korrekt; Seiten ohne Bilder = volle Punkte, Weight 1.5)
-  - **Indexierbarkeit** (`<meta name="robots">` mit `noindex` triggert eine kritische Empfehlung mit Priority 12 — höher als alles andere im System; Weight 2.5)
-  - **Mobile-Viewport** (drei Stati: kein Tag = rot/0, Tag ohne `width=device-width` = orange/0.4, korrekt = grün/1; Weight 1.5)
-  - **Open Graph & Twitter Cards** (og:title + og:description + og:image + twitter:card mit OG-Fallback, Weight 1.0)
+- **6th analysis category: On-Page SEO:** A new category extends the tool from GEO-only to a combined GEO+SEO audit. The total score now goes from 0–30 (instead of 0–25); rating thresholds scaled accordingly (Excellent ≥25, Good ≥19, Needs improvement ≥12). Six sub-checks:
+  - **Page title quality** (required, length 30–60 characters, weight 2.0)
+  - **Meta description** (required, length 120–160 characters, weight 1.5)
+  - **Image alt texts** (share of images with an `alt` attribute; `alt=""` for decorative images counts correctly; pages without images = full points, weight 1.5)
+  - **Indexability** (`<meta name="robots">` with `noindex` triggers a critical recommendation with priority 12 — higher than anything else in the system; weight 2.5)
+  - **Mobile viewport** (three states: no tag = red/0, tag without `width=device-width` = orange/0.4, correct = green/1; weight 1.5)
+  - **Open Graph & Twitter Cards** (og:title + og:description + og:image + twitter:card with OG fallback, weight 1.0)
 
 ### Changed
 
-- **Kategorie-Layout im Popup:** Sub-Kriterien werden jetzt jedes auf einer eigenen Zeile dargestellt (vorher horizontal mit `•`-Separator und Flex-Wrap). Bessere Lesbarkeit insbesondere bei langen Kriterien-Namen und vielen Sub-Checks pro Kategorie.
-- **Empfehlungs-Bullet-Position:** Der orange Bullet sitzt jetzt korrekt auf Höhe der ersten Textzeile — auch wenn die Snippet-Buttons („Snippet anzeigen", „Kopieren") darüber stehen. Vorher war der Bullet bei Items mit Snippet-Buttons leicht verrutscht.
-- **Score-Range 0–30 statt 0–25:** Durch die neue 6. Kategorie. Total-Score-Anzeige im Popup, History-Liste und HTML-Report zeigt jetzt `X/30`.
-- **`schemaOrg`-Weight in Maschinenlesbarkeit:** Von 2.5 auf 2.0 reduziert, um Platz für das neue `schemaCompleteness` (Weight 1.5) zu machen ohne den Kategorie-Gesamtscore zu verfälschen.
-- **Header-Titel:** „Paul AI GEO Analyzer 2.0" → „Paul AI GEO Analyzer 3.0".
+- **Category layout in the popup:** Sub-criteria are now each shown on their own line (previously horizontal with a `•` separator and flex-wrap). Better readability especially for long criterion names and many sub-checks per category.
+- **Recommendation bullet position:** The orange bullet now sits correctly at the height of the first text line — even when the snippet buttons ("Show snippet", "Copy") are above it. Previously the bullet was slightly off for items with snippet buttons.
+- **Score range 0–30 instead of 0–25:** Due to the new 6th category. The total score display in the popup, history list and HTML report now shows `X/30`.
+- **`schemaOrg` weight in machine readability:** Reduced from 2.5 to 2.0 to make room for the new `schemaCompleteness` (weight 1.5) without distorting the category total score.
+- **Header title:** "Paul AI GEO Analyzer 2.0" → "Paul AI GEO Analyzer 3.0".
 
 ### Technical
 
-- Komplette Test-Suite: 71 Tests (von 8 vor dem Release-Zyklus). Neue Test-Dateien: `readability.test.ts` (13), `machine-readability.test.ts` (6), `on-page-seo.test.ts` (16), `fix-snippets.test.ts`.
-- Manifest v3-konformes Side-Panel-Setup ohne `default_popup` (damit `sidePanel.setPanelBehavior` greift).
-- Cache-Prefix in `src/utils/cache.ts` zweimal gebumpt: `v1` → `v2` (Fix-Snippets-Integration änderte `topRecommendations` von Text auf Keys) → `v3` (neue On-Page-SEO-Kategorie änderte die Result-Shape). Alte Caches werden automatisch ignoriert.
-- `PageData`-Type um `ImageData[]`, `OpenGraphData`, `TwitterCardData`, `RobotsMetaData`, `ViewportData` erweitert; neue Extract-Funktionen `extractImages`, `extractOpenGraph`, `extractTwitterCard`, `extractRobotsMeta`, `extractViewport` in `dom-helpers.ts`.
+- Complete test suite: 71 tests (up from 8 before the release cycle). New test files: `readability.test.ts` (13), `machine-readability.test.ts` (6), `on-page-seo.test.ts` (16), `fix-snippets.test.ts`.
+- Manifest v3-compliant side-panel setup without `default_popup` (so that `sidePanel.setPanelBehavior` takes effect).
+- Cache prefix in `src/utils/cache.ts` bumped twice: `v1` → `v2` (fix-snippets integration changed `topRecommendations` from text to keys) → `v3` (the new On-Page SEO category changed the result shape). Old caches are automatically ignored.
+- `PageData` type extended with `ImageData[]`, `OpenGraphData`, `TwitterCardData`, `RobotsMetaData`, `ViewportData`; new extract functions `extractImages`, `extractOpenGraph`, `extractTwitterCard`, `extractRobotsMeta`, `extractViewport` in `dom-helpers.ts`.
 
 ## [2.0.0] - 2026-04-05
 
 ### Added
 
-- **Vollständige Internationalisierung (i18n):** Die gesamte Extension-Oberfläche wird nun automatisch in der Browsersprache des Users angezeigt. Unterstützte Sprachen: Deutsch, Englisch, Französisch, Spanisch, Portugiesisch und Italienisch. Die Spracherkennung erfolgt automatisch via `navigator.language` mit Fallback auf Englisch.
-  - Alle UI-Texte (Loading, Fehler, Not Supported, History etc.)
-  - Scoring-Labels (Excellent/Exzellent/Eccellente etc.)
-  - Kategorie-Namen und Kriterien-Bezeichnungen
-  - Alle 13 Empfehlungstexte
-  - Trend-Anzeige und Zeitangaben
-  - Lokalisierte Datumsformate im Analyse-Verlauf
+- **Full internationalization (i18n):** The entire extension interface is now automatically displayed in the user's browser language. Supported languages: German, English, French, Spanish, Portuguese and Italian. Language detection happens automatically via `navigator.language` with a fallback to English.
+  - All UI texts (loading, errors, not supported, history etc.)
+  - Scoring labels (Excellent/Exzellent/Eccellente etc.)
+  - Category names and criterion labels
+  - All 13 recommendation texts
+  - Trend display and time information
+  - Localized date formats in the analysis history
 
-- **Opt-in Analytics:** Analysedaten können optional an einen eigenen Server gesendet werden. Toggle im Footer mit Erklärungs-Text ("Keine persönlichen Daten oder Seiteninhalte werden gesendet"). Fire-and-forget mit 5s Timeout. Standard: deaktiviert. Wird der Toggle nach einer Analyse aktiviert, wird das letzte Ergebnis sofort gesendet.
+- **Opt-in analytics:** Analysis data can optionally be sent to your own server. Toggle in the footer with explanatory text ("No personal data or page content is sent"). Fire-and-forget with a 5s timeout. Default: disabled. If the toggle is enabled after an analysis, the last result is sent immediately.
 
-- **HTML-Report Export:** Analyse-Ergebnisse können als professioneller HTML-Report in einem neuen Tab geöffnet werden. Enthält Gesamtscore, alle Kategorie-Karten mit Fortschrittsbalken, und Top-Empfehlungen. Vollständig lokalisiert in 6 Sprachen. Includes "Als PDF speichern"-Button.
+- **HTML report export:** Analysis results can be opened as a professional HTML report in a new tab. Contains the total score, all category cards with progress bars, and top recommendations. Fully localized in 6 languages. Includes a "Save as PDF" button.
 
-- **Detaillierte Fehler-Erklärungen:** Im HTML-Report wird pro Kriterium erklärt, warum es bestanden oder nicht bestanden hat. Farbcodierte Boxen (grün/gelb/rot) mit konkreten Verbesserungshinweisen. Alle Erklärungen in 6 Sprachen.
+- **Detailed error explanations:** In the HTML report, each criterion explains why it passed or failed. Color-coded boxes (green/yellow/red) with concrete improvement hints. All explanations in 6 languages.
 
-- **5. Analyse-Kategorie: KI-Zitierbarkeit (AI Citation Readiness):** Neuer Analyzer prüft, wie gut Inhalte von KI-Systemen zitiert werden können. Gesamtscore geht neu von 0-25 (statt 0-20). Rating-Schwellen angepasst (Exzellent ≥21, Gut ≥16, Verbesserungsbedarf ≥10). Vier Kriterien:
-  - Zitierbare Faktenaussagen (Zahlen, Statistiken, "laut"-Patterns)
-  - FAQ-/Frage-Antwort-Sektionen (FAQPage-Schema + Heading-Patterns)
-  - Aussagen mit Quellenangaben (Zitationsmuster, externe Links)
-  - Kerninformationen am Anfang (Definition in den ersten 150 Wörtern)
+- **5th analysis category: AI Citation Readiness:** A new analyzer checks how well content can be cited by AI systems. The total score now goes from 0–25 (instead of 0–20). Rating thresholds adjusted (Excellent ≥21, Good ≥16, Needs improvement ≥10). Four criteria:
+  - Citable factual statements (numbers, statistics, "according to" patterns)
+  - FAQ / question-answer sections (FAQPage schema + heading patterns)
+  - Statements with source references (citation patterns, external links)
+  - Key information upfront (definition in the first 150 words)
 
-- **Dark Mode:** Automatische Erkennung via System-Einstellung + manueller Toggle (Mond/Sonne-Icon) oben rechts im Header. Einstellung wird gespeichert. Alle Popup-Elemente, Kategorie-Cards, History-Panel und Footer sind Dark-Mode-kompatibel.
+- **Dark mode:** Automatic detection via system setting + a manual toggle (moon/sun icon) at the top right of the header. The setting is saved. All popup elements, category cards, history panel and footer are dark-mode compatible.
 
-- **Trend-Sparkline:** Mini-Chart im History-Panel zeigt den Score-Verlauf über Zeit als türkise Linie mit Flächenfüllung. Erscheint ab 2+ Einträgen. Canvas-basiert, Dark-Mode-kompatibel.
+- **Trend sparkline:** A mini chart in the history panel shows the score progression over time as a turquoise line with area fill. Appears from 2+ entries. Canvas-based, dark-mode compatible.
 
-- **History löschen:** Mülleimer-Icon neben "Analyse-Verlauf" ermöglicht das Löschen der gesamten History für die aktuelle URL.
+- **Clear history:** A trash-can icon next to "Analysis history" lets you clear the entire history for the current URL.
 
-- **Manuelle Sprachwahl:** Dropdown im Header (z.B. `DE ▼`) ermöglicht das manuelle Umschalten zwischen allen 6 Sprachen — mit Flaggen-Emojis. Einstellung wird gespeichert und überschreibt die Browser-Erkennung.
+- **Manual language selection:** A dropdown in the header (e.g. `DE ▼`) lets you manually switch between all 6 languages — with flag emojis. The setting is saved and overrides browser detection.
 
-- **Vergleichsansicht:** Aktuelle Seite mit einer beliebigen URL vergleichen. "Vergleichen"-Button neben dem Export öffnet ein URL-Eingabefeld. Die zweite Seite wird im Hintergrund analysiert, dann öffnet sich ein Side-by-Side-Vergleich mit Gesamtscore, allen Kategorien nebeneinander und einer Zusammenfassung (Stärken/Schwächen pro Seite).
+- **Comparison view:** Compare the current page with any URL. A "Compare" button next to the export opens a URL input field. The second page is analyzed in the background, then a side-by-side comparison opens with the total score, all categories next to each other and a summary (strengths/weaknesses per page).
 
-- **Accessibility:** ARIA-Labels auf allen interaktiven Elementen (Buttons, Toggles, Dropdowns, Progressbars). Korrekte Rollen (role="menu", role="alert", role="status", role="progressbar"). aria-expanded auf Dropdowns und History-Panel. Keyboard-Navigation: Escape schliesst Dropdowns. Screen-Reader-kompatibel.
+- **Accessibility:** ARIA labels on all interactive elements (buttons, toggles, dropdowns, progress bars). Correct roles (role="menu", role="alert", role="status", role="progressbar"). aria-expanded on dropdowns and the history panel. Keyboard navigation: Escape closes dropdowns. Screen-reader compatible.
 
-- **Modernes SaaS-Design für Report & Vergleich:** Beide Exportseiten wurden neu gestaltet mit Inter-Font, Mesh-Gradient-Header, Glaseffekt-Cards, 2-Spalten Bento-Grid, Line-Icons pro Kategorie, animiertem Count-up für Scores, gleitenden Progress-Bars und Flash-Animationen auf Delta-Badges.
+- **Modern SaaS design for report & comparison:** Both export pages were redesigned with the Inter font, a mesh-gradient header, glass-effect cards, a 2-column bento grid, line icons per category, animated count-up for scores, sliding progress bars and flash animations on delta badges.
 
 ### Changed
 
-- Analytics-Toggle zeigt jetzt "GEO Analyzer verbessern" mit Erklärungstext statt einfacher Checkbox
-- Export-Button und Analytics-Toggle sind in separate Bereiche aufgeteilt
-- History-Liste hat Abstand zum Scrollbar (pr-2)
-- Vergleichslogik läuft jetzt im Background Service Worker (Popup kann sich schließen ohne den Vorgang abzubrechen)
-- `host_permissions` für alle URLs hinzugefügt (für Hintergrund-Analyse beim Vergleich)
+- The analytics toggle now shows "Improve GEO Analyzer" with explanatory text instead of a plain checkbox
+- Export button and analytics toggle are split into separate areas
+- The history list has spacing to the scrollbar (pr-2)
+- The comparison logic now runs in the background service worker (the popup can close without aborting the process)
+- Added `host_permissions` for all URLs (for background analysis during comparison)
 
 ## [1.1.0]
 

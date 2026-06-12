@@ -62,6 +62,13 @@
   <main id="results" class="hidden flex-1" role="main">
 
     <!-- Tab-change banner (side panel only): purely informational hint -->
+    <!-- One-time analytics notice (opt-out model: visible until acknowledged) -->
+    <div id="analytics-notice" class="hidden items-start gap-2 px-4 py-2 bg-[#E6FAFA] dark:bg-[#2BA3A3]/10 border-b border-[#33CCCC]/20 text-xs text-gray-600 dark:text-gray-300" role="status">
+      <p class="flex-1" data-i18n="ui_analyticsNotice">Paul is free — anonymous statistics (no URLs, no page content) help improve the tool.</p>
+      <button id="analytics-notice-disable" class="underline cursor-pointer hover:text-[#2BA3A3] whitespace-nowrap" data-i18n="ui_analyticsDisable">Disable</button>
+      <button id="analytics-notice-ok" class="font-semibold cursor-pointer text-[#2BA3A3] hover:text-[#33CCCC]">OK</button>
+    </div>
+
     <div id="tab-change-banner" class="hidden flex items-start gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200" role="status" aria-live="polite">
       <svg class="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -197,6 +204,10 @@
       </svg>
       <span id="domain-overview-label" data-i18n="ui_domainOverview">Domain Overview</span>
     </button>
+    <label class="mt-0.5 flex items-center justify-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 cursor-pointer py-1 select-none">
+      <input type="checkbox" id="analytics-toggle" class="accent-[#2BA3A3] cursor-pointer">
+      <span data-i18n="ui_analyticsToggle">Share anonymous statistics</span>
+    </label>
   </div>
 
   <!-- Footer -->
