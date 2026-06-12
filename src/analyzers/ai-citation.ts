@@ -1,15 +1,19 @@
-import { PageData, AnalysisCategory, CategoryDetail } from '../types/analysis';
+import { PageData, AnalysisCategory, CategoryDetail, PageType } from '../types/analysis';
 import { BaseAnalyzer } from './base';
 import { GEO_CONFIG } from '../config/geo-config';
 
 export class AiCitationAnalyzer extends BaseAnalyzer {
   protected readonly categoryKey = 'cat_aiCitation';
 
-  analyze(pageData: PageData): AnalysisCategory {
+  analyze(pageData: PageData, pageType?: PageType): AnalysisCategory {
     const details: CategoryDetail[] = [];
     let weightedScore = 0;
     let totalWeight = 0;
     const config = GEO_CONFIG.aiCitation;
+
+    // A homepage is a hub, not an answer document — FAQ sections and an
+    // upfront definition belong on content pages, not here.
+    const isHomepage = pageType === 'homepage';
 
     // Check 1: Citable fact statements
     const factScore = this.evaluateFactStatements(pageData.paragraphs);
@@ -36,20 +40,24 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
     const hasFaq = faqScore > 0;
     const faqPercent = Math.round(faqScore * 100);
 
-    details.push({
-      criterionKey: 'criterion_faq',
-      found: hasFaq,
-      value: `${faqPercent}%`,
-      weight: config.weights.faqQa,
-      progress: {
-        current: faqPercent,
-        target: 100,
-        unitKey: 'unit_percent',
-      },
-    });
+    if (isHomepage) {
+      details.push(this.notApplicable('criterion_faq'));
+    } else {
+      details.push({
+        criterionKey: 'criterion_faq',
+        found: hasFaq,
+        value: `${faqPercent}%`,
+        weight: config.weights.faqQa,
+        progress: {
+          current: faqPercent,
+          target: 100,
+          unitKey: 'unit_percent',
+        },
+      });
 
-    weightedScore += faqScore * config.weights.faqQa;
-    totalWeight += config.weights.faqQa;
+      weightedScore += faqScore * config.weights.faqQa;
+      totalWeight += config.weights.faqQa;
+    }
 
     // Check 3: Sourced claims
     const sourcedScore = this.evaluateSourcedClaims(pageData);
@@ -76,26 +84,30 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
     const hasKeyInfoUpfront = upfrontScore > 0.5;
     const upfrontPercent = Math.round(upfrontScore * 100);
 
-    details.push({
-      criterionKey: 'criterion_keyInfoUpfront',
-      found: hasKeyInfoUpfront,
-      value: `${upfrontPercent}%`,
-      weight: config.weights.keyInfoUpfront,
-      progress: {
-        current: upfrontPercent,
-        target: 100,
-        unitKey: 'unit_percent',
-      },
-    });
+    if (isHomepage) {
+      details.push(this.notApplicable('criterion_keyInfoUpfront'));
+    } else {
+      details.push({
+        criterionKey: 'criterion_keyInfoUpfront',
+        found: hasKeyInfoUpfront,
+        value: `${upfrontPercent}%`,
+        weight: config.weights.keyInfoUpfront,
+        progress: {
+          current: upfrontPercent,
+          target: 100,
+          unitKey: 'unit_percent',
+        },
+      });
 
-    weightedScore += upfrontScore * config.weights.keyInfoUpfront;
-    totalWeight += config.weights.keyInfoUpfront;
+      weightedScore += upfrontScore * config.weights.keyInfoUpfront;
+      totalWeight += config.weights.keyInfoUpfront;
+    }
 
     const recommendations: string[] = [];
     if (!hasFacts) recommendations.push('no_facts');
-    if (!hasFaq) recommendations.push('no_faq');
+    if (!isHomepage && !hasFaq) recommendations.push('no_faq');
     if (!hasSourcedClaims) recommendations.push('no_sourced_claims');
-    if (!hasKeyInfoUpfront) recommendations.push('no_key_info_upfront');
+    if (!isHomepage && !hasKeyInfoUpfront) recommendations.push('no_key_info_upfront');
 
     return this.createCategory(0, weightedScore, totalWeight, details, recommendations);
   }

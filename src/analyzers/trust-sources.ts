@@ -1,4 +1,4 @@
-import { PageData, AnalysisCategory, CategoryDetail } from '../types/analysis';
+import { PageData, AnalysisCategory, CategoryDetail, PageType } from '../types/analysis';
 import { BaseAnalyzer } from './base';
 import { GEO_CONFIG } from '../config/geo-config';
 import { isWithinLastYear } from '../utils/dom-helpers';
@@ -6,29 +6,37 @@ import { isWithinLastYear } from '../utils/dom-helpers';
 export class TrustSourcesAnalyzer extends BaseAnalyzer {
   protected readonly categoryKey = 'cat_trustSources';
 
-  analyze(pageData: PageData): AnalysisCategory {
+  analyze(pageData: PageData, pageType?: PageType): AnalysisCategory {
     const details: CategoryDetail[] = [];
     let weightedScore = 0;
     let totalWeight = 0;
     const config = GEO_CONFIG.trustSources;
 
+    // Homepages and product pages legitimately have no author/byline or
+    // publication date — don't penalize what doesn't belong there.
+    const skipAuthorDate = pageType === 'homepage' || pageType === 'product';
+
     // Check 1: Autor/Organisation erkennbar
     const hasAuthor = pageData.author !== null;
 
-    details.push({
-      criterionKey: 'criterion_author',
-      found: hasAuthor,
-      value: pageData.author?.name || 'value_notRecognizable',
-      weight: config.weights.authorOrg,
-      progress: {
-        current: hasAuthor ? 1 : 0,
-        target: 1,
-        unitKey: 'unit_author',
-      },
-    });
+    if (skipAuthorDate) {
+      details.push(this.notApplicable('criterion_author'));
+    } else {
+      details.push({
+        criterionKey: 'criterion_author',
+        found: hasAuthor,
+        value: pageData.author?.name || 'value_notRecognizable',
+        weight: config.weights.authorOrg,
+        progress: {
+          current: hasAuthor ? 1 : 0,
+          target: 1,
+          unitKey: 'unit_author',
+        },
+      });
 
-    if (hasAuthor) weightedScore += config.weights.authorOrg;
-    totalWeight += config.weights.authorOrg;
+      if (hasAuthor) weightedScore += config.weights.authorOrg;
+      totalWeight += config.weights.authorOrg;
+    }
 
     // Check 2: Datum/Aktualität
     const hasDate = pageData.dates.length > 0;
@@ -43,7 +51,9 @@ export class TrustSourcesAnalyzer extends BaseAnalyzer {
       dateValue = 'value_olderThanYear'; // Mapping layer will handle interpolation
     }
 
-    details.push({
+    if (skipAuthorDate) {
+      details.push(this.notApplicable('criterion_date'));
+    } else details.push({
       criterionKey: 'criterion_date',
       found: hasDate,
       value: dateValue,
@@ -55,12 +65,14 @@ export class TrustSourcesAnalyzer extends BaseAnalyzer {
       },
     });
 
-    if (hasRecentDate) {
-      weightedScore += config.weights.date;
-    } else if (hasDate) {
-      weightedScore += config.thresholds.datePartialCredit;
+    if (!skipAuthorDate) {
+      if (hasRecentDate) {
+        weightedScore += config.weights.date;
+      } else if (hasDate) {
+        weightedScore += config.thresholds.datePartialCredit;
+      }
+      totalWeight += config.weights.date;
     }
-    totalWeight += config.weights.date;
 
     // Check 3: Externe Quellen/Referenzen
     const externalLinks = pageData.links.filter((l) => l.isExternal);
@@ -98,8 +110,8 @@ export class TrustSourcesAnalyzer extends BaseAnalyzer {
     totalWeight += config.weights.externalSources;
 
     const recommendations: string[] = [];
-    if (!hasAuthor) recommendations.push('no_author');
-    if (!hasDate) recommendations.push('no_date');
+    if (!skipAuthorDate && !hasAuthor) recommendations.push('no_author');
+    if (!skipAuthorDate && !hasDate) recommendations.push('no_date');
     if (!hasQualityLinks) recommendations.push('few_sources');
 
     return this.createCategory(0, weightedScore, totalWeight, details, recommendations);

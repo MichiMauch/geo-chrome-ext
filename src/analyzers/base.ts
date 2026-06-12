@@ -1,4 +1,4 @@
-import { PageData, AnalysisCategory, CategoryDetail } from '../types/analysis';
+import { PageData, AnalysisCategory, CategoryDetail, PageType } from '../types/analysis';
 import { normalizeScore } from '../utils/scoring';
 
 export interface AnalyzerResult {
@@ -26,9 +26,26 @@ export abstract class BaseAnalyzer {
   }
 
   /**
-   * Core analysis method implemented by each specific analyzer.
+   * Core analysis method implemented by each specific analyzer. pageType is
+   * passed to analyzers that relax expectations per page type (a homepage is
+   * not scored like an article); undefined behaves like 'other'.
    */
-  abstract analyze(pageData: PageData): AnalysisCategory;
+  abstract analyze(pageData: PageData, pageType?: PageType): AnalysisCategory;
+
+  /**
+   * Detail entry for a check that doesn't apply to the detected page type
+   * (e.g. author/date on a homepage). Weight 0 keeps it out of the score;
+   * found=true renders it neutral instead of as a failure.
+   */
+  protected notApplicable(criterionKey: string): CategoryDetail {
+    return {
+      criterionKey,
+      found: true,
+      value: 'value_notApplicable',
+      weight: 0,
+      progress: { current: 1, target: 1, unitKey: 'unit_status' },
+    };
+  }
 
   /**
    * Helper to create a standard category result object.

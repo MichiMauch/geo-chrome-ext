@@ -22,6 +22,10 @@ function formatDate(iso: string): string {
 }
 
 function getExplanation(d: CategoryDetail): string {
+  // Check skipped for the detected page type (e.g. author/date on a homepage)
+  if (d.value === t('value_notApplicable')) {
+    return t('explain_not_applicable');
+  }
   const criterion = d.criterionKey;
   const value = String(d.value || '');
   const current = d.progress?.current ?? 0;

@@ -100,7 +100,10 @@
       <div class="mt-3 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="30" aria-valuenow="0">
         <div id="score-bar" class="h-full rounded-full transition-all duration-700 ease-out" style="width: 0%"></div>
       </div>
-      <p id="page-url" class="mt-2 text-xs text-gray-400 dark:text-gray-500 truncate"></p>
+      <p class="mt-2 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5 min-w-0">
+        <span id="page-type-badge" class="hidden flex-shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#E6FAFA] dark:bg-[#2BA3A3]/20 text-[#2BA3A3] border border-[#33CCCC]/30"></span>
+        <span id="page-url" class="truncate"></span>
+      </p>
       <p id="score-trend" class="mt-1 text-xs font-medium hidden" role="status" aria-live="polite"></p>
     </div>
 

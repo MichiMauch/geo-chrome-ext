@@ -8,6 +8,7 @@ import { OnPageSeoAnalyzer } from './on-page-seo';
 import { calculateTotalScore, getScoreRating } from '../utils/scoring';
 import { collectAllRecommendations } from '../utils/recommendations';
 import { mapAnalysisResult } from '../utils/analysis-mapper';
+import { detectPageType } from '../utils/page-type';
 
 const analyzers = {
   contentClarity: new ContentClarityAnalyzer(),
@@ -22,12 +23,16 @@ export function runFullAnalysis(pageData: PageData): GEOAnalysisResult {
   // Optimize performance: join text once for all analyzers
   (pageData as any).fullText = pageData.paragraphs.join(' ');
 
+  // Page type relaxes expectations where checks don't apply (homepage ≠
+  // article); 'other' keeps the exact pre-detection behavior.
+  const pageType = detectPageType(pageData);
+
   const categories = {
     contentClarity: mapAnalysisResult(analyzers.contentClarity.analyze(pageData)),
-    answerability: mapAnalysisResult(analyzers.answerability.analyze(pageData)),
-    trustSources: mapAnalysisResult(analyzers.trustSources.analyze(pageData)),
+    answerability: mapAnalysisResult(analyzers.answerability.analyze(pageData, pageType)),
+    trustSources: mapAnalysisResult(analyzers.trustSources.analyze(pageData, pageType)),
     machineReadability: mapAnalysisResult(analyzers.machineReadability.analyze(pageData)),
-    aiCitation: mapAnalysisResult(analyzers.aiCitation.analyze(pageData)),
+    aiCitation: mapAnalysisResult(analyzers.aiCitation.analyze(pageData, pageType)),
     onPageSeo: mapAnalysisResult(analyzers.onPageSeo.analyze(pageData)),
   };
 
@@ -43,6 +48,7 @@ export function runFullAnalysis(pageData: PageData): GEOAnalysisResult {
     rating,
     categories,
     topRecommendations,
+    pageType,
   };
 }
 

@@ -246,6 +246,15 @@ function renderResults(result: GEOAnalysisResult) {
     pageUrlEl.textContent = result.url;
   }
 
+  // Page-type badge — only for confident detections ('other' shows nothing)
+  const pageTypeBadgeEl = document.getElementById('page-type-badge')!;
+  if (result.pageType && result.pageType !== 'other') {
+    pageTypeBadgeEl.textContent = t(`pagetype_${result.pageType}`);
+    pageTypeBadgeEl.classList.remove('hidden');
+  } else {
+    pageTypeBadgeEl.classList.add('hidden');
+  }
+
   // Categories
   categoriesEl.innerHTML = '';
   const categoryOrder: (keyof typeof result.categories)[] = [

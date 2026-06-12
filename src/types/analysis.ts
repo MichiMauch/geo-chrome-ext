@@ -20,6 +20,11 @@ export interface CategoryDetail {
   };
 }
 
+// Detected page type — drives adjusted check expectations (a homepage is not
+// scored like an article) and the badge in the panel. 'other' means "not
+// confidently detected" and MUST behave exactly like the pre-detection logic.
+export type PageType = 'homepage' | 'article' | 'product' | 'other';
+
 // Gesamtergebnis
 export interface GEOAnalysisResult {
   url: string;
@@ -36,6 +41,7 @@ export interface GEOAnalysisResult {
     onPageSeo: AnalysisCategory;
   };
   topRecommendations: string[];
+  pageType?: PageType;
   // Recommendation key → affected page elements, computed in the content
   // script at analysis time. Only keys with visible DOM targets are present;
   // consumed by the "show on page" buttons in the panel. Labels are localized

@@ -1,35 +1,43 @@
-import { PageData, AnalysisCategory, CategoryDetail } from '../types/analysis';
+import { PageData, AnalysisCategory, CategoryDetail, PageType } from '../types/analysis';
 import { BaseAnalyzer } from './base';
 import { GEO_CONFIG } from '../config/geo-config';
 
 export class AnswerabilityAnalyzer extends BaseAnalyzer {
   protected readonly categoryKey = 'cat_answerability';
 
-  analyze(pageData: PageData): AnalysisCategory {
+  analyze(pageData: PageData, pageType?: PageType): AnalysisCategory {
     const details: CategoryDetail[] = [];
     let weightedScore = 0;
     let totalWeight = 0;
     const config = GEO_CONFIG.answerability;
+
+    // Homepages are navigation hubs — definition sentences ("X is …")
+    // belong on content pages, so don't demand them here.
+    const isHomepage = pageType === 'homepage';
 
     // Check 1: Direkte Antworten/Definitionen
     const definitionScore = this.evaluateDefinitions(pageData.paragraphs);
     const hasDefinitions = definitionScore > 0.3;
     const definitionPercent = Math.round(definitionScore * 100);
 
-    details.push({
-      criterionKey: 'criterion_definitions',
-      found: hasDefinitions,
-      value: `${definitionPercent}%`,
-      weight: config.weights.definitions,
-      progress: {
-        current: definitionPercent,
-        target: 100,
-        unitKey: 'unit_percent',
-      },
-    });
+    if (isHomepage) {
+      details.push(this.notApplicable('criterion_definitions'));
+    } else {
+      details.push({
+        criterionKey: 'criterion_definitions',
+        found: hasDefinitions,
+        value: `${definitionPercent}%`,
+        weight: config.weights.definitions,
+        progress: {
+          current: definitionPercent,
+          target: 100,
+          unitKey: 'unit_percent',
+        },
+      });
 
-    weightedScore += definitionScore * config.weights.definitions;
-    totalWeight += config.weights.definitions;
+      weightedScore += definitionScore * config.weights.definitions;
+      totalWeight += config.weights.definitions;
+    }
 
     // Check 2: Listen & Aufzählungen
     const listCount = pageData.lists.length;
@@ -75,7 +83,7 @@ export class AnswerabilityAnalyzer extends BaseAnalyzer {
     totalWeight += config.weights.sections;
 
     const recommendations: string[] = [];
-    if (!hasDefinitions) recommendations.push('no_definitions');
+    if (!isHomepage && !hasDefinitions) recommendations.push('no_definitions');
     if (!hasLists) recommendations.push('no_lists');
     if (!hasStructuredSections) recommendations.push('few_sections');
 

@@ -1,10 +1,9 @@
 import type { GEOAnalysisResult } from '../types/analysis';
 import { normalizeUrl } from './history';
 
-// v6 prefix: canonical sub-check added to On-Page SEO (new detail entry +
-// recommendation keys changed the result shape). Old caches are ignored
-// automatically.
-const CACHE_PREFIX = 'geo_cache_v6:';
+// v7 prefix: page-type detection changes scores and adds pageType to the
+// result shape. Old caches are ignored automatically.
+const CACHE_PREFIX = 'geo_cache_v7:';
 
 interface CachedAnalysis {
   hash: string;
