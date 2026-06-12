@@ -29,7 +29,7 @@
 
 ### Technical
 
-- `getDomainOverview()` in history.ts, generator `export-domain-html.ts`, delete handler in the report viewer; new panel state `needs-click`; 111 tests (8 new, including a chrome.storage stub).
+- `getDomainOverview()` in history.ts, generator `export-domain-html.ts`, delete handler in the report viewer; new panel state `needs-click`; all DOM extractors accept a `Document` + URL parameter (enables batch analysis on DOMParser documents); cache prefix `v8`; 138 tests.
 
 ## [3.2.0] - 2026-06-11
 
