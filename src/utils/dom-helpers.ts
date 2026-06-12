@@ -19,50 +19,56 @@ import type {
 } from '../types/analysis';
 import { GEO_CONFIG } from '../config/geo-config';
 
-export async function extractPageData(): Promise<PageData> {
-  const [llmsTxt, robotsTxt] = await Promise.all([
-    checkLlmsTxt(),
-    checkRobotsTxt(),
-  ]);
+// Extracts everything the analyzers need. Defaults work on the live page;
+// the sitemap batch passes a DOMParser document + its URL instead, plus the
+// domain-level llms.txt/robots.txt data fetched once per batch.
+export async function extractPageData(
+  doc: Document = document,
+  pageUrl: string = window.location.href,
+  domainData?: { llmsTxt: LlmsTxtData; robotsTxt: RobotsTxtData }
+): Promise<PageData> {
+  const [llmsTxt, robotsTxt] = domainData
+    ? [domainData.llmsTxt, domainData.robotsTxt]
+    : await Promise.all([checkLlmsTxt(), checkRobotsTxt()]);
 
   return {
-    url: window.location.href,
-    headings: extractHeadings(),
-    paragraphs: extractParagraphs(),
-    lists: extractLists(),
-    links: extractLinks(),
-    meta: extractMetaData(),
-    schema: extractSchemaData(),
-    author: extractAuthorInfo(),
-    dates: extractDates(),
-    semanticElements: extractSemanticElements(),
+    url: pageUrl,
+    headings: extractHeadings(doc),
+    paragraphs: extractParagraphs(doc),
+    lists: extractLists(doc),
+    links: extractLinks(doc, pageUrl),
+    meta: extractMetaData(doc),
+    schema: extractSchemaData(doc),
+    author: extractAuthorInfo(doc),
+    dates: extractDates(doc),
+    semanticElements: extractSemanticElements(doc),
     llmsTxt,
     robotsTxt,
-    faqQuestions: extractFaqQuestions(),
-    images: extractImages(),
-    openGraph: extractOpenGraph(),
-    twitterCard: extractTwitterCard(),
-    robotsMeta: extractRobotsMeta(),
-    viewport: extractViewport(),
-    canonical: extractCanonical(),
+    faqQuestions: extractFaqQuestions(doc),
+    images: extractImages(doc),
+    openGraph: extractOpenGraph(doc),
+    twitterCard: extractTwitterCard(doc),
+    robotsMeta: extractRobotsMeta(doc),
+    viewport: extractViewport(doc),
+    canonical: extractCanonical(doc, pageUrl),
   };
 }
 
-export function extractCanonical(): CanonicalData {
-  const link = document.querySelector('link[rel="canonical"]');
+export function extractCanonical(doc: Document = document, baseUrl: string = window.location.href): CanonicalData {
+  const link = doc.querySelector('link[rel="canonical"]');
   const raw = link?.getAttribute('href')?.trim() || '';
   if (!raw) return { href: null };
   try {
     // Resolve relative hrefs against the page; an unparseable href is as
     // good as no canonical at all.
-    return { href: new URL(raw, window.location.href).href };
+    return { href: new URL(raw, baseUrl).href };
   } catch {
     return { href: null };
   }
 }
 
-export function extractViewport(): ViewportData {
-  const meta = document.querySelector('meta[name="viewport"]');
+export function extractViewport(doc: Document = document): ViewportData {
+  const meta = doc.querySelector('meta[name="viewport"]');
   const rawContent = meta?.getAttribute('content') ?? null;
   if (!rawContent) {
     return {
@@ -81,9 +87,9 @@ export function extractViewport(): ViewportData {
   };
 }
 
-export function extractImages(): ImageData[] {
+export function extractImages(doc: Document = document): ImageData[] {
   const images: ImageData[] = [];
-  document.querySelectorAll('img').forEach((img) => {
+  doc.querySelectorAll('img').forEach((img) => {
     const src = img.getAttribute('src') || img.getAttribute('data-src') || '';
     if (!src) return;
     const hasAltAttribute = img.hasAttribute('alt');
@@ -93,9 +99,9 @@ export function extractImages(): ImageData[] {
   return images;
 }
 
-function getMetaContent(selectors: string[]): string | null {
+function getMetaContent(selectors: string[], doc: Document): string | null {
   for (const sel of selectors) {
-    const el = document.querySelector(sel);
+    const el = doc.querySelector(sel);
     const content = el?.getAttribute('content');
     if (content !== null && content !== undefined && content.trim().length > 0) {
       return content;
@@ -104,26 +110,26 @@ function getMetaContent(selectors: string[]): string | null {
   return null;
 }
 
-export function extractOpenGraph(): OpenGraphData {
+export function extractOpenGraph(doc: Document = document): OpenGraphData {
   return {
-    title: getMetaContent(['meta[property="og:title"]', 'meta[name="og:title"]']),
-    description: getMetaContent(['meta[property="og:description"]', 'meta[name="og:description"]']),
-    image: getMetaContent(['meta[property="og:image"]', 'meta[name="og:image"]']),
-    url: getMetaContent(['meta[property="og:url"]', 'meta[name="og:url"]']),
-    type: getMetaContent(['meta[property="og:type"]', 'meta[name="og:type"]']),
+    title: getMetaContent(['meta[property="og:title"]', 'meta[name="og:title"]'], doc),
+    description: getMetaContent(['meta[property="og:description"]', 'meta[name="og:description"]'], doc),
+    image: getMetaContent(['meta[property="og:image"]', 'meta[name="og:image"]'], doc),
+    url: getMetaContent(['meta[property="og:url"]', 'meta[name="og:url"]'], doc),
+    type: getMetaContent(['meta[property="og:type"]', 'meta[name="og:type"]'], doc),
   };
 }
 
-export function extractTwitterCard(): TwitterCardData {
+export function extractTwitterCard(doc: Document = document): TwitterCardData {
   return {
-    card: getMetaContent(['meta[name="twitter:card"]', 'meta[property="twitter:card"]']),
-    title: getMetaContent(['meta[name="twitter:title"]', 'meta[property="twitter:title"]']),
-    description: getMetaContent(['meta[name="twitter:description"]', 'meta[property="twitter:description"]']),
-    image: getMetaContent(['meta[name="twitter:image"]', 'meta[property="twitter:image"]']),
+    card: getMetaContent(['meta[name="twitter:card"]', 'meta[property="twitter:card"]'], doc),
+    title: getMetaContent(['meta[name="twitter:title"]', 'meta[property="twitter:title"]'], doc),
+    description: getMetaContent(['meta[name="twitter:description"]', 'meta[property="twitter:description"]'], doc),
+    image: getMetaContent(['meta[name="twitter:image"]', 'meta[property="twitter:image"]'], doc),
   };
 }
 
-export function extractRobotsMeta(): RobotsMetaData {
+export function extractRobotsMeta(doc: Document = document): RobotsMetaData {
   // Check both name="robots" and name="googlebot"; merge content tokens.
   const tokens: string[] = [];
   let rawContent: string | null = null;
@@ -149,9 +155,9 @@ export function extractRobotsMeta(): RobotsMetaData {
   };
 }
 
-export function extractHeadings(): HeadingData[] {
+export function extractHeadings(doc: Document = document): HeadingData[] {
   const headings: HeadingData[] = [];
-  document.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((h) => {
+  doc.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((h) => {
     const text = h.textContent?.trim() || '';
     if (text.length > 0) {
       headings.push({
@@ -163,12 +169,12 @@ export function extractHeadings(): HeadingData[] {
   return headings;
 }
 
-export function extractParagraphs(): string[] {
+export function extractParagraphs(doc: Document = document): string[] {
   const paragraphs: string[] = [];
   const mainContent =
-    document.querySelector('article') ||
-    document.querySelector('main') ||
-    document.body;
+    doc.querySelector('article') ||
+    doc.querySelector('main') ||
+    doc.body;
 
   const seen = new Set<string>();
   const pushIfGood = (text: string) => {
@@ -202,7 +208,7 @@ export function extractParagraphs(): string[] {
   return paragraphs;
 }
 
-export function extractFaqQuestions(): string[] {
+export function extractFaqQuestions(doc: Document = document): string[] {
   const questions = new Set<string>();
   const add = (text: string | null | undefined) => {
     const t = (text || '').trim().replace(/\s+/g, ' ');
@@ -227,7 +233,7 @@ export function extractFaqQuestions(): string[] {
     });
 
   // <details><summary> accordions
-  document.querySelectorAll('details > summary').forEach((s) => {
+  doc.querySelectorAll('details > summary').forEach((s) => {
     const t = s.textContent?.trim() || '';
     if (t.endsWith('?')) add(t);
   });
@@ -240,16 +246,16 @@ export function extractFaqQuestions(): string[] {
     '[class*="accordion__title" i]',
     '[class*="accordion-header" i]',
   ];
-  document.querySelectorAll(classSelectors.join(',')).forEach((el) => {
+  doc.querySelectorAll(classSelectors.join(',')).forEach((el) => {
     add(el.textContent);
   });
 
   return [...questions];
 }
 
-export function extractLists(): ListData[] {
+export function extractLists(doc: Document = document): ListData[] {
   const lists: ListData[] = [];
-  document.querySelectorAll('ul, ol').forEach((list) => {
+  doc.querySelectorAll('ul, ol').forEach((list) => {
     const items = Array.from(list.querySelectorAll(':scope > li'))
       .slice(0, 10)
       .map((li) => li.textContent?.trim() || '')
@@ -266,18 +272,19 @@ export function extractLists(): ListData[] {
   return lists;
 }
 
-export function extractLinks(): LinkData[] {
+export function extractLinks(doc: Document = document, baseUrl: string = window.location.href): LinkData[] {
   const links: LinkData[] = [];
-  const currentHost = window.location.hostname;
+  const base = new URL(baseUrl);
+  const currentHost = base.hostname;
 
-  document.querySelectorAll('a[href]').forEach((a) => {
+  doc.querySelectorAll('a[href]').forEach((a) => {
     const href = a.getAttribute('href') || '';
     const text = a.textContent?.trim() || '';
 
     if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
       let isExternal = false;
       try {
-        const url = new URL(href, window.location.origin);
+        const url = new URL(href, base.href);
         isExternal = url.hostname !== currentHost;
       } catch {
         // Relative URL, not external
@@ -290,10 +297,10 @@ export function extractLinks(): LinkData[] {
   return links;
 }
 
-export function extractMetaData(): MetaData {
+export function extractMetaData(doc: Document = document): MetaData {
   const getMeta = (name: string): string | null => {
-    const byName = document.querySelector(`meta[name="${name}"]`);
-    const byProperty = document.querySelector(`meta[property="${name}"]`);
+    const byName = doc.querySelector(`meta[name="${name}"]`);
+    const byProperty = doc.querySelector(`meta[property="${name}"]`);
     return (
       byName?.getAttribute('content') ||
       byProperty?.getAttribute('content') ||
@@ -302,7 +309,7 @@ export function extractMetaData(): MetaData {
   };
 
   return {
-    title: document.title,
+    title: doc.title,
     description: getMeta('description') || '',
     author: getMeta('author') || '',
     publishDate:
@@ -315,7 +322,7 @@ export function extractMetaData(): MetaData {
   };
 }
 
-export function extractSchemaData(): SchemaData[] {
+export function extractSchemaData(doc: Document = document): SchemaData[] {
   const schemas: SchemaData[] = [];
 
   document
@@ -337,8 +344,8 @@ export function extractSchemaData(): SchemaData[] {
       }
     });
 
-  schemas.push(...extractMicrodata());
-  schemas.push(...extractRdfa());
+  schemas.push(...extractMicrodata(doc));
+  schemas.push(...extractRdfa(doc));
 
   return schemas;
 }
@@ -350,10 +357,10 @@ function typeFromUrl(url: string | null): string | null {
   return m ? m[1] : null;
 }
 
-export function extractMicrodata(): SchemaData[] {
+export function extractMicrodata(doc: Document = document): SchemaData[] {
   const results: SchemaData[] = [];
   const seen = new Set<Element>();
-  document.querySelectorAll('[itemscope][itemtype]').forEach((el) => {
+  doc.querySelectorAll('[itemscope][itemtype]').forEach((el) => {
     const type = typeFromUrl(el.getAttribute('itemtype'));
     if (!type || seen.has(el)) return;
     seen.add(el);
@@ -404,9 +411,9 @@ function parseMicrodataItem(el: Element): SchemaData {
   return item;
 }
 
-export function extractRdfa(): SchemaData[] {
+export function extractRdfa(doc: Document = document): SchemaData[] {
   const results: SchemaData[] = [];
-  document.querySelectorAll('[typeof]').forEach((el) => {
+  doc.querySelectorAll('[typeof]').forEach((el) => {
     const raw = el.getAttribute('typeof') || '';
     // Resolve type; may look like "schema:FAQPage" or just "FAQPage"
     const last = raw.split(/[\s:/]/).pop();
@@ -417,9 +424,9 @@ export function extractRdfa(): SchemaData[] {
   return results;
 }
 
-export function extractAuthorInfo(): AuthorData | null {
+export function extractAuthorInfo(doc: Document = document): AuthorData | null {
   // 1. Try Schema.org
-  const schemas = extractSchemaData();
+  const schemas = extractSchemaData(doc);
   for (const schema of schemas) {
     if (schema.author) {
       const authorName =
@@ -434,7 +441,7 @@ export function extractAuthorInfo(): AuthorData | null {
 
   // 2. Try meta tags
   const metaAuthor =
-    document.querySelector('meta[name="author"]')?.getAttribute('content') ||
+    doc.querySelector('meta[name="author"]')?.getAttribute('content') ||
     document
       .querySelector('meta[property="article:author"]')
       ?.getAttribute('content');
@@ -451,7 +458,7 @@ export function extractAuthorInfo(): AuthorData | null {
   ];
 
   for (const selector of authorSelectors) {
-    const element = document.querySelector(selector);
+    const element = doc.querySelector(selector);
     const text = element?.textContent?.trim();
     if (text && text.length > 2 && text.length < 100) {
       // Clean up common prefixes
@@ -467,11 +474,11 @@ export function extractAuthorInfo(): AuthorData | null {
   return null;
 }
 
-export function extractDates(): DateData[] {
+export function extractDates(doc: Document = document): DateData[] {
   const dates: DateData[] = [];
 
   // 1. Time elements
-  document.querySelectorAll('time[datetime]').forEach((time) => {
+  doc.querySelectorAll('time[datetime]').forEach((time) => {
     const datetime = time.getAttribute('datetime');
     if (datetime) {
       try {
@@ -497,7 +504,7 @@ export function extractDates(): DateData[] {
   ];
 
   for (const selector of metaDateSelectors) {
-    const meta = document.querySelector(selector);
+    const meta = doc.querySelector(selector);
     const content = meta?.getAttribute('content');
     if (content) {
       try {
@@ -517,7 +524,7 @@ export function extractDates(): DateData[] {
   }
 
   // 3. Schema.org dates
-  const schemas = extractSchemaData();
+  const schemas = extractSchemaData(doc);
   for (const schema of schemas) {
     const dateStr = schema.datePublished || schema.dateModified;
     if (dateStr && typeof dateStr === 'string') {
@@ -539,15 +546,15 @@ export function extractDates(): DateData[] {
   return dates;
 }
 
-export function extractSemanticElements(): SemanticElements {
+export function extractSemanticElements(doc: Document = document): SemanticElements {
   return {
-    hasArticle: document.querySelector('article') !== null,
-    hasMain: document.querySelector('main') !== null,
-    hasNav: document.querySelector('nav') !== null,
-    hasAside: document.querySelector('aside') !== null,
-    hasHeader: document.querySelector('header') !== null,
-    hasFooter: document.querySelector('footer') !== null,
-    hasSection: document.querySelector('section') !== null,
+    hasArticle: doc.querySelector('article') !== null,
+    hasMain: doc.querySelector('main') !== null,
+    hasNav: doc.querySelector('nav') !== null,
+    hasAside: doc.querySelector('aside') !== null,
+    hasHeader: doc.querySelector('header') !== null,
+    hasFooter: doc.querySelector('footer') !== null,
+    hasSection: doc.querySelector('section') !== null,
   };
 }
 
@@ -557,9 +564,8 @@ export function isWithinLastYear(date: Date): boolean {
   return date >= oneYearAgo;
 }
 
-export async function checkLlmsTxt(): Promise<LlmsTxtData> {
+export async function checkLlmsTxt(origin: string = window.location.origin): Promise<LlmsTxtData> {
   try {
-    const origin = window.location.origin;
     const response = await fetch(`${origin}/llms.txt`);
 
     if (response.ok) {
@@ -583,7 +589,7 @@ export async function checkLlmsTxt(): Promise<LlmsTxtData> {
   }
 }
 
-export async function checkRobotsTxt(bots?: readonly string[]): Promise<RobotsTxtData> {
+export async function checkRobotsTxt(bots?: readonly string[], origin: string = window.location.origin): Promise<RobotsTxtData> {
   const targetBots = bots ?? GEO_CONFIG.machineReadability.aiBots;
   const allAllowed = (exists: boolean, url?: string): RobotsTxtData => ({
     exists,
@@ -594,7 +600,6 @@ export async function checkRobotsTxt(bots?: readonly string[]): Promise<RobotsTx
   });
 
   try {
-    const origin = window.location.origin;
     const url = `${origin}/robots.txt`;
     const response = await fetch(url);
 

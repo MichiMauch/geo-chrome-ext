@@ -623,6 +623,7 @@ async function startAnalysis() {
           renderResults(cached.result);
           renderHistoryList(cached.result.url);
           updateDomainOverviewButton();
+          if (!batchRunning) setBatchEnabled(true);
           // Cached path skips the analyze message (which clears markers) —
           // remove any leftover highlights from a previous round explicitly.
           chrome.tabs.sendMessage(tab.id, { action: 'clear-highlights' }).catch(() => {});
@@ -742,6 +743,7 @@ async function startAnalysis() {
       historyClearEl.classList.remove('hidden');
       renderHistoryList(response.result.url);
       updateDomainOverviewButton();
+      if (!batchRunning) setBatchEnabled(true);
     } else {
       errorMessageEl.textContent = response.error || 'Unknown error';
       showState('error');
@@ -913,12 +915,88 @@ chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
   }
 });
 
+// Sitemap batch analysis: the content script does the work (same-origin
+// fetches + analysis + saving); the panel only triggers it and shows
+// progress. The batch keeps running even if the panel closes.
+const batchBtnEl = document.getElementById('batch-btn')!;
+const batchLabelEl = document.getElementById('batch-label')!;
+let batchRunning = false;
+
+function setBatchEnabled(enabled: boolean) {
+  if (enabled) {
+    batchBtnEl.classList.remove('opacity-30', 'pointer-events-none');
+    batchBtnEl.removeAttribute('disabled');
+  } else {
+    batchBtnEl.classList.add('opacity-30', 'pointer-events-none');
+    batchBtnEl.setAttribute('disabled', '');
+  }
+}
+
+batchBtnEl.addEventListener('click', async () => {
+  if (batchRunning) return;
+  const tab = await getTargetTab();
+  if (!tab?.id) return;
+  try {
+    await chrome.tabs.sendMessage(tab.id, { action: 'batch-analyze', maxPages: 10 });
+    batchRunning = true;
+    setBatchEnabled(false);
+    batchLabelEl.textContent = t('ui_batchProgress', { current: 0, total: '…' });
+  } catch {
+    // Content script unreachable — same remedy as everywhere: icon click
+    batchLabelEl.textContent = t('ui_otherPageDetected');
+    setTimeout(() => {
+      batchLabelEl.textContent = t('ui_batchAnalyze');
+    }, 3000);
+  }
+});
+
+function handleBatchMessage(msg: { type: string; current?: number; total?: number; analyzed?: number; noSitemap?: boolean }) {
+  if (msg.type === 'batch-start') {
+    batchRunning = true;
+    setBatchEnabled(false);
+    batchLabelEl.textContent = t('ui_batchProgress', { current: 0, total: msg.total ?? 0 });
+  } else if (msg.type === 'batch-progress') {
+    batchLabelEl.textContent = t('ui_batchProgress', {
+      current: msg.current ?? 0,
+      total: msg.total ?? 0,
+    });
+  } else if (msg.type === 'batch-done') {
+    batchRunning = false;
+    setBatchEnabled(true);
+    if (msg.noSitemap) {
+      batchLabelEl.textContent = t('ui_batchNoSitemap');
+      setTimeout(() => {
+        batchLabelEl.textContent = t('ui_batchAnalyze');
+      }, 4000);
+      return;
+    }
+    batchLabelEl.textContent = t('ui_batchDone', {
+      analyzed: msg.analyzed ?? 0,
+      total: msg.total ?? 0,
+    });
+    void updateDomainOverviewButton();
+    // The payoff: open the domain dashboard with all fresh results
+    const hostname = currentHostname();
+    if (hostname) {
+      void getDomainOverview(hostname).then((pages) => {
+        const html = generateDomainDashboardHtml(hostname, pages);
+        chrome.storage.local.set({ 'geo_report_html': html }, () => {
+          chrome.tabs.create({ url: chrome.runtime.getURL('report/report.html') });
+        });
+      });
+    }
+  }
+}
+
 // Message channel from the service worker: fires when the user clicks the
 // toolbar icon (which freshly grants activeTab for the clicked tab).
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg?.type === 'analyze-tab') {
     hideTabChangeBanner();
     startAnalysis();
+  }
+  if (typeof msg?.type === 'string' && msg.type.startsWith('batch-')) {
+    handleBatchMessage(msg);
   }
 });
 

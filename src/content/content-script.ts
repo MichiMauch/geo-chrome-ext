@@ -1,10 +1,71 @@
 import type { AnalyzeResponse, HighlightTarget } from '../types/analysis';
-import { extractPageData } from '../utils/dom-helpers';
+import { extractPageData, checkLlmsTxt, checkRobotsTxt } from '../utils/dom-helpers';
 import { runFullAnalysis } from '../analyzers';
 import { initI18n, setLang } from '../utils/i18n';
 import type { Lang } from '../utils/i18n';
 import { computeHighlightTargets } from '../utils/highlight-targets';
 import { applyHighlights, clearHighlights, scrollToFirst } from '../utils/highlight';
+import { discoverSitemapPages } from '../utils/sitemap';
+import { saveAnalysis } from '../utils/history';
+import { reportAnalysis } from '../utils/analytics';
+
+async function loadSavedLang(): Promise<void> {
+  const data = await chrome.storage.local.get('geo_lang');
+  if (data['geo_lang']) setLang(data['geo_lang'] as Lang);
+}
+
+// Sitemap batch: fetch sibling pages of THIS site (same-origin, so no host
+// permission needed), parse them with DOMParser and run the full analysis on
+// the static HTML. Results go straight into history/analytics from here, so
+// the batch survives even if the panel closes; progress messages are
+// fire-and-forget for the panel UI. Note: client-side-rendered SPAs yield
+// the raw HTML only — their scores reflect what crawlers without JS see.
+async function runBatchAnalysis(maxPages: number): Promise<void> {
+  const notify = (payload: Record<string, unknown>) => {
+    chrome.runtime.sendMessage(payload).catch(() => {});
+  };
+  try {
+    await loadSavedLang();
+    const urls = await discoverSitemapPages(
+      window.location.origin,
+      window.location.href,
+      maxPages
+    );
+    if (urls.length === 0) {
+      notify({ type: 'batch-done', analyzed: 0, total: 0, noSitemap: true });
+      return;
+    }
+    notify({ type: 'batch-start', total: urls.length });
+
+    // Domain-level checks once per batch, not per page
+    const [llmsTxt, robotsTxt] = await Promise.all([checkLlmsTxt(), checkRobotsTxt()]);
+
+    let analyzed = 0;
+    let processed = 0;
+    for (const url of urls) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const html = await res.text();
+        const parsed = new DOMParser().parseFromString(html, 'text/html');
+        const pageData = await extractPageData(parsed, url, { llmsTxt, robotsTxt });
+        const result = runFullAnalysis(pageData);
+        await saveAnalysis(result);
+        void reportAnalysis(result);
+        analyzed++;
+      } catch {
+        // Single page failed — keep going
+      }
+      processed++;
+      notify({ type: 'batch-progress', current: processed, total: urls.length });
+      // Be polite to the server
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+    notify({ type: 'batch-done', analyzed, total: urls.length });
+  } catch {
+    notify({ type: 'batch-done', analyzed: 0, total: 0, noSitemap: true });
+  }
+}
 
 // Initialize i18n for analyzer strings
 initI18n();
@@ -46,10 +107,15 @@ function computeContentHash(): string {
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener(
   (
-    message: { action: string; targets?: HighlightTarget[]; severity?: string },
+    message: { action: string; targets?: HighlightTarget[]; severity?: string; maxPages?: number },
     _sender: chrome.runtime.MessageSender,
     sendResponse: (
-      response: AnalyzeResponse | { hash: string } | { count: number } | { cleared: boolean }
+      response:
+        | AnalyzeResponse
+        | { hash: string }
+        | { count: number }
+        | { cleared: boolean }
+        | { started: boolean }
     ) => void
   ) => {
     if (message.action === 'getHash') {
@@ -73,6 +139,14 @@ chrome.runtime.onMessage.addListener(
     if (message.action === 'clear-highlights') {
       clearHighlights();
       sendResponse({ cleared: true });
+      return false;
+    }
+
+    if (message.action === 'batch-analyze') {
+      void runBatchAnalysis(
+        typeof message.maxPages === 'number' ? message.maxPages : 10
+      );
+      sendResponse({ started: true });
       return false;
     }
 
