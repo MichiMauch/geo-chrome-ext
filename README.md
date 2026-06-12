@@ -77,4 +77,4 @@ MIT
 
 ## Credits
 
-Developed by [NETNODE](https://www.netnode.ch) — Swiss digital agency
+Developed by [geo.mauch.rocks](https://geo.mauch.rocks)

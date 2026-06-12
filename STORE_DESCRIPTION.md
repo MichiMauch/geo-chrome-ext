@@ -4,7 +4,7 @@ Is your website ready for the age of AI-powered search? As tools like ChatGPT, P
 
 Paul AI GEO Analyzer is a privacy-first Chrome extension that instantly analyzes any web page across six dimensions (five GEO + on-page SEO). Get a detailed score, copy-paste fix snippets for every issue, in-page highlighting that marks problems right where they are, a domain dashboard that compares every page you've analyzed, and a polished side-panel UI that stays open while you edit.
 
-Built by NETNODE (netnode.ch), a Swiss digital agency specializing in AI-driven marketing strategies.
+Built and maintained by the team behind geo.mauch.rocks.
 
 ---
 
@@ -193,9 +193,9 @@ Paul AI GEO Analyzer checks all of these factors in seconds.
 
 SUPPORT & FEEDBACK
 
-Paul AI GEO Analyzer is built and maintained by NETNODE, a Swiss digital agency.
+Paul AI GEO Analyzer is built and maintained by the team behind geo.mauch.rocks.
 
-- Website: www.netnode.ch
-- Contact: info@netnode.ch
+- Website: https://geo.mauch.rocks
+- Contact: via geo.mauch.rocks
 
 We welcome your feedback and feature suggestions. If you find Paul AI GEO Analyzer useful, please leave a rating on the Chrome Web Store — it helps others discover the tool.

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Paul AI GEO Analyzer",
   "version": "4.0.0",
-  "description": "Analyzes web pages for Generative Engine Optimization (GEO) with score tracking, trend analysis and history - by NETNODE",
+  "description": "Analyzes web pages for Generative Engine Optimization (GEO) with score tracking, trend analysis and history - geo.mauch.rocks",
   "permissions": ["activeTab", "scripting", "storage", "alarms", "sidePanel", "tabs"],
   "background": {
     "service_worker": "background/service-worker.js"

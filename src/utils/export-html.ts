@@ -622,7 +622,7 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
         <a href="https://geo.mauch.rocks/?utm_source=extension&utm_medium=report&utm_campaign=geo-audit" target="_blank" rel="noopener">${escapeHtml(t('ui_agencyCta'))} →</a>
       </div>
       <p>${escapeHtml(t('report_generatedBy'))}</p>
-      <p style="margin-top:4px"><a href="https://www.netnode.ch" target="_blank" rel="noopener">www.netnode.ch</a></p>
+      <p style="margin-top:4px"><a href="https://geo.mauch.rocks" target="_blank" rel="noopener">geo.mauch.rocks</a></p>
     </footer>
   </div>
 </body>

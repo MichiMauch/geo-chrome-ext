@@ -251,7 +251,7 @@ export function generateDomainDashboardHtml(
     <div class="cta-card">
       <a href="https://geo.mauch.rocks/?utm_source=extension&utm_medium=dashboard&utm_campaign=geo-audit" target="_blank" rel="noopener">${escapeHtml(t('ui_agencyCta'))} →</a>
     </div>
-    Paul AI GEO Analyzer — netnode.ch
+    Paul AI GEO Analyzer — geo.mauch.rocks
   </footer>
 </body>
 </html>`;
