@@ -190,6 +190,18 @@ export interface RobotsTxtData {
   totalChecked: number;
 }
 
+// Domain dashboard: one row per analyzed URL of a domain
+export interface DomainPageSummary {
+  url: string; // normalized URL
+  path: string; // pathname + search for display
+  lastScore: number;
+  ratingLabel: string;
+  ratingColor: string;
+  lastTimestamp: string;
+  delta: number | null; // score change vs previous analysis, null if only one
+  analysisCount: number;
+}
+
 // History
 export interface HistoryEntry {
   timestamp: string;

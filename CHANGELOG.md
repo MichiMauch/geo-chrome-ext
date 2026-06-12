@@ -1,5 +1,31 @@
 # Changelog
 
+## [4.0.0] - 2026-06-12
+
+> **Kurz gesagt:** Die neue Domain-Übersicht zeigt alle analysierten Seiten einer Website auf einen Blick — die schwächste zuoberst. Im Panel stehen die Empfehlungen jetzt direkt unter dem Score, eine Fokus-Zeile nennt den grössten Hebel, und beim Seitenwechsel erklärt die Extension freundlich, was zu tun ist, statt einen Fehler zu zeigen.
+
+### Added
+
+- **Domain-Übersicht:** Neuer Button im Panel-Footer („Domain-Übersicht (N)") öffnet eine eigene Dashboard-Seite mit allen analysierten URLs der aktuellen Domain: Pfad (klickbar), letzter Score (farbig), Bewertungs-Badge, Trend-Delta, Datum, Anzahl Analysen. Sortiert nach Score aufsteigend — die Seiten mit Handlungsbedarf stehen oben. Kopfbereich mit Seitenzahl, Ø-Score und Gesamtbewertung. Läuft über den bestehenden Report-Viewer, kein neues Build-Target.
+  - **Einträge entfernen:** ×-Button pro Zeile mit Zwei-Klick-Inline-Bestätigung (kein `window.confirm`) löscht die History der jeweiligen URL — z.B. nach Projektabschluss. Zähler und Ø-Score rechnen live nach.
+  - Datenhaltung: `chrome.storage.local`, kein Verfall; max. 50 Analysen pro URL (älteste fällt raus).
+- **Fokus-Zeile:** Über den Top-Empfehlungen nennt „🎯 Grösster Hebel: {Kategorie} ({Score}/5)" die schwächste Kategorie — eine Handlungsanweisung statt sechs Zahlen. Erscheint nur, wenn die schwächste Kategorie unter 4/5 liegt.
+- **„Neue Seite erkannt"-Zustand:** Wechselt man bei offenem Panel den Tab und klickt Refresh, zeigt das Panel jetzt das Extension-Icon mit 👆-Zeiger und der Anweisung „Klick aufs Extension-Icon" — statt rotem Fehler mit sinnlosem Retry-Button (ein Panel-Button kann den activeTab-Zugriff technisch nicht erteilen, nur der Icon-Klick).
+- Dritte lokale Testseite `testpage/best-practice.html`: Best-Practice-Fall (besteht fast alles) mit absichtlichem Canonical-Mismatch — demonstriert den Orange-Status des Canonical-Checks und die Score-Spannweite im Domain-Dashboard.
+
+### Changed
+
+- **Panel-Reihenfolge:** Empfehlungen (inkl. Fokus-Zeile) stehen jetzt direkt unter dem Score, die Kategorie-Karten als Detail-Teil danach. Lesefluss: Wie gut? → Was tun? → Warum? Vorher lagen wichtige Empfehlungen (z.B. Canonical, Priorität 7) drei Scroll-Höhen tief hinter den sechs Kategorie-Karten.
+- README komplett auf aktuellen Stand gebracht (war auf v1.x-Stand von Januar).
+
+### Fixed
+
+- **Refresh auf nicht analysiertem Tab:** Der Refresh-Button lud bei fehlendem activeTab-Grant die fremde Seite ungefragt neu und zeigte danach die rohe englische Chrome-Fehlermeldung („Cannot access contents of url …"). Der Reload-Recovery-Pfad läuft jetzt nur noch auf der bereits analysierten Seite (verwaistes Content-Script nach Extension-Update); auf anderen Tabs erscheint sofort der neue „Neue Seite erkannt"-Zustand.
+
+### Technical
+
+- `getDomainOverview()` in history.ts, Generator `export-domain-html.ts`, Lösch-Handler im Report-Viewer; neuer Panel-Zustand `needs-click`; 111 Tests (8 neue, inkl. chrome.storage-Stub).
+
 ## [3.2.0] - 2026-06-11
 
 ### Added

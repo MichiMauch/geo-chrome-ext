@@ -1,6 +1,7 @@
 import type { GEOAnalysisResult, AnalyzeResponse, AnalysisCategory, TrendInfo } from '../types/analysis';
 import { getCategoryColor } from '../utils/scoring';
-import { loadHistory, saveAnalysis, clearHistory } from '../utils/history';
+import { loadHistory, saveAnalysis, clearHistory, getDomainOverview } from '../utils/history';
+import { generateDomainDashboardHtml } from '../utils/export-domain-html';
 import { formatTrendLabel } from '../utils/trend';
 import { setBadgeForTab } from '../utils/badge';
 import { initI18n, t, getDateLocale, setLang, getLang } from '../utils/i18n';
@@ -46,7 +47,13 @@ const loadingEl = document.getElementById('loading')!;
 const resultsEl = document.getElementById('results')!;
 const errorEl = document.getElementById('error')!;
 const notSupportedEl = document.getElementById('not-supported')!;
+const needsClickEl = document.getElementById('needs-click')!;
 const retryBtn = document.getElementById('retry-btn')!;
+
+// Sentinel for "no activeTab grant — only a toolbar-icon click helps".
+// Rendered as its own instructional state instead of the error state,
+// because a retry button cannot fix a missing permission grant.
+const NEEDS_ICON_CLICK = '__needs_icon_click__';
 
 const totalScoreEl = document.getElementById('total-score')!;
 const scoreBadgeEl = document.getElementById('score-badge')!;
@@ -56,6 +63,7 @@ const scoreTrendEl = document.getElementById('score-trend')!;
 const categoriesEl = document.getElementById('categories')!;
 const recommendationsSectionEl = document.getElementById('recommendations-section')!;
 const recommendationsEl = document.getElementById('recommendations')!;
+const focusHintEl = document.getElementById('focus-hint')!;
 const errorMessageEl = document.getElementById('error-message')!;
 
 // History elements
@@ -67,6 +75,8 @@ const historyClearEl = document.getElementById('history-clear')!;
 const sparklineEl = document.getElementById('sparkline') as HTMLCanvasElement;
 
 const exportBtnEl = document.getElementById('export-btn')!;
+const domainOverviewBtnEl = document.getElementById('domain-overview-btn')!;
+const domainOverviewLabelEl = document.getElementById('domain-overview-label')!;
 
 // Tab-change banner (visible only when active tab changes while side panel is open)
 const tabChangeBannerEl = document.getElementById('tab-change-banner')!;
@@ -116,11 +126,12 @@ function applyI18nToDOM() {
 }
 
 // State management
-function showState(state: 'loading' | 'results' | 'error' | 'not-supported') {
+function showState(state: 'loading' | 'results' | 'error' | 'not-supported' | 'needs-click') {
   loadingEl.classList.add('hidden');
   resultsEl.classList.add('hidden');
   errorEl.classList.add('hidden');
   notSupportedEl.classList.add('hidden');
+  needsClickEl.classList.add('hidden');
 
   switch (state) {
     case 'loading':
@@ -134,6 +145,9 @@ function showState(state: 'loading' | 'results' | 'error' | 'not-supported') {
       break;
     case 'not-supported':
       notSupportedEl.classList.remove('hidden');
+      break;
+    case 'needs-click':
+      needsClickEl.classList.remove('hidden');
       break;
   }
 }
@@ -240,6 +254,22 @@ function renderResults(result: GEOAnalysisResult) {
     const category = result.categories[key];
     categoriesEl.innerHTML += renderCategory(category);
   });
+
+  // Focus hint: name the weakest category — the single place where work
+  // pays off most. Hidden when even the weakest category is solid (≥ 4).
+  const weakest = Object.values(result.categories).reduce((min, cat) =>
+    cat.score < min.score ? cat : min
+  );
+  if (weakest.score < 4 && result.topRecommendations.length > 0) {
+    // nameKey is already translated by mapAnalysisResult at analysis time
+    focusHintEl.textContent = `🎯 ${t('ui_biggestLever', {
+      cat: weakest.nameKey,
+      score: weakest.score.toFixed(1),
+    })}`;
+    focusHintEl.classList.remove('hidden');
+  } else {
+    focusHintEl.classList.add('hidden');
+  }
 
   // Recommendations
   activeHighlightKey = null;
@@ -566,6 +596,7 @@ async function startAnalysis() {
           historyClearEl.classList.remove('hidden');
           renderResults(cached.result);
           renderHistoryList(cached.result.url);
+          updateDomainOverviewButton();
           // Cached path skips the analyze message (which clears markers) —
           // remove any leftover highlights from a previous round explicitly.
           chrome.tabs.sendMessage(tab.id, { action: 'clear-highlights' }).catch(() => {});
@@ -595,9 +626,14 @@ async function startAnalysis() {
 
     // Falls Content Script nicht erreichbar (orphaned context nach Extension-Reload),
     // Seite neu laden und erneut versuchen.
-    // Skip the reload path if executeScript itself failed — reloading won't
-    // help if the underlying problem is a missing activeTab grant.
-    if (!response && !injectError) {
+    // Only for the page we already analyzed (activeTab grant still valid
+    // there). On a different tab — e.g. the user switched pages and hit the
+    // refresh button — there is no grant: reloading the page would be a
+    // pointless side effect and injection can never succeed. That case gets
+    // the friendly "click the icon" hint below instead.
+    // Also skip if executeScript itself failed — reloading won't help when
+    // the underlying problem is a missing activeTab grant.
+    if (!response && !injectError && analyzedUrl === tab.url) {
       // Tab neu laden
       await chrome.tabs.reload(tab.id);
 
@@ -625,15 +661,17 @@ async function startAnalysis() {
     }
 
     if (!response) {
+      // Most likely cause in all of these paths: no fresh activeTab grant
+      // for this tab (page switch + refresh button, pinned panel, panel
+      // reload). The fix is always the same user action — click the toolbar
+      // icon on this page — rendered as the dedicated needs-click state.
       if (injectError) {
         const msg = injectError instanceof Error ? injectError.message : String(injectError);
-        throw new Error(`${msg} — Click the extension icon again on this page.`);
+        if (!/permission|cannot access/i.test(msg)) {
+          throw new Error(`${msg} — ${t('ui_otherPageDetected')}`);
+        }
       }
-      // Side-panel flow: SW should have injected the content script. If
-      // sendMessage still fails, most likely cause is the user opened the
-      // panel through a non-click path (pinned panel, panel-reload), so no
-      // fresh activeTab grant. Steer them to the action button.
-      throw new Error('Click the extension icon on this page to analyze it.');
+      throw new Error(NEEDS_ICON_CLICK);
     }
 
     if (response.success && response.result) {
@@ -673,11 +711,16 @@ async function startAnalysis() {
       historyToggleEl.classList.remove('hidden');
       historyClearEl.classList.remove('hidden');
       renderHistoryList(response.result.url);
+      updateDomainOverviewButton();
     } else {
       errorMessageEl.textContent = response.error || 'Unknown error';
       showState('error');
     }
   } catch (error) {
+    if (error instanceof Error && error.message === NEEDS_ICON_CLICK) {
+      showState('needs-click');
+      return;
+    }
     console.error('Analysis error:', error);
     errorMessageEl.textContent =
       error instanceof Error ? error.message : 'Connection to page failed';
@@ -690,6 +733,42 @@ exportBtnEl.addEventListener('click', () => {
   if (!lastResult) return;
   const html = generateHtmlReport(lastResult);
   // Store report HTML, then open the report viewer page
+  chrome.storage.local.set({ 'geo_report_html': html }, () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('report/report.html') });
+  });
+});
+
+// Domain overview: enable the button (with page count) once the current
+// domain has at least one stored analysis.
+function currentHostname(): string | null {
+  try {
+    return new URL(analyzedUrl || lastResult?.url || '').hostname;
+  } catch {
+    return null;
+  }
+}
+
+async function updateDomainOverviewButton() {
+  const hostname = currentHostname();
+  if (!hostname) return;
+  try {
+    const pages = await getDomainOverview(hostname);
+    domainOverviewLabelEl.textContent = `${t('ui_domainOverview')} (${pages.length})`;
+    if (pages.length > 0) {
+      domainOverviewBtnEl.classList.remove('opacity-30', 'pointer-events-none');
+      domainOverviewBtnEl.removeAttribute('disabled');
+    }
+  } catch {
+    // Storage error — leave the button disabled
+  }
+}
+
+domainOverviewBtnEl.addEventListener('click', async () => {
+  const hostname = currentHostname();
+  if (!hostname) return;
+  const pages = await getDomainOverview(hostname);
+  const html = generateDomainDashboardHtml(hostname, pages);
+  // Same handoff as the report export: viewer renders whatever is stored.
   chrome.storage.local.set({ 'geo_report_html': html }, () => {
     chrome.tabs.create({ url: chrome.runtime.getURL('report/report.html') });
   });
@@ -836,6 +915,9 @@ refreshBtnEl.addEventListener('click', async () => {
 
 // Start analysis on popup open
 document.addEventListener('DOMContentLoaded', () => {
+  // Resolve at runtime so the build doesn't try to bundle the asset path
+  (document.getElementById('needs-click-icon') as HTMLImageElement).src =
+    chrome.runtime.getURL('assets/icon-48.png');
   // Load saved language, then initialize UI
   chrome.storage.local.get('geo_lang', (data) => {
     const savedLang = data['geo_lang'] as Lang | undefined;

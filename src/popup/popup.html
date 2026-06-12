@@ -27,7 +27,7 @@
         </g>
       </svg>
       <div class="flex-1">
-        <h1 class="text-base sm:text-lg font-bold leading-tight">Paul AI GEO Analyzer 3.2</h1>
+        <h1 class="text-base sm:text-lg font-bold leading-tight">Paul AI GEO Analyzer 4.0</h1>
         <p class="text-xs opacity-80">by NETNODE</p>
       </div>
       <div class="relative">
@@ -118,13 +118,9 @@
       </div>
     </div>
 
-    <!-- Analysis Content -->
+    <!-- Analysis Content: action layer first (focus + recommendations),
+         category details below — "how good? → what to do? → why?" -->
     <div id="analysis-content">
-      <!-- Categories -->
-      <div class="p-4 space-y-3" id="categories" role="region" aria-label="Analysis categories">
-        <!-- Dynamically generated -->
-      </div>
-
       <!-- Recommendations -->
       <div id="recommendations-section" class="p-4 bg-[#E6FAFA] dark:bg-[#2BA3A3]/10 border-t border-[#33CCCC]/20 hidden" role="region" aria-label="Recommendations">
         <h2 class="font-semibold text-[#2BA3A3] mb-3 flex items-center">
@@ -133,13 +129,31 @@
           </svg>
           <span data-i18n="ui_topRecommendations">Top Recommendations</span>
         </h2>
+        <p id="focus-hint" class="hidden mb-3 px-3 py-2 rounded-md bg-white/70 dark:bg-gray-800/60 border border-[#33CCCC]/30 text-xs font-medium text-gray-700 dark:text-gray-300"></p>
         <ul id="recommendations" class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
           <!-- Dynamically generated -->
         </ul>
       </div>
+
+      <!-- Categories (detail layer) -->
+      <div class="p-4 space-y-3 border-t border-gray-100 dark:border-gray-700" id="categories" role="region" aria-label="Analysis categories">
+        <!-- Dynamically generated -->
+      </div>
     </div>
 
   </main>
+
+  <!-- Needs icon click: no activeTab grant for this tab (page switch,
+       pinned panel). Not an error — instructs the one gesture that helps.
+       Deliberately NO retry button: retrying cannot grant access. -->
+  <div id="needs-click" class="hidden flex-1 p-8 text-center flex flex-col items-center justify-center" role="status">
+    <div class="relative mb-5">
+      <img id="needs-click-icon" alt="" class="w-14 h-14 rounded-xl shadow-lg">
+      <span class="absolute -top-4 -right-4 text-2xl" aria-hidden="true">👆</span>
+    </div>
+    <p class="text-gray-700 dark:text-gray-300 font-medium mb-2" data-i18n="ui_clickIconTitle">New page detected</p>
+    <p class="text-gray-500 dark:text-gray-400 text-sm" data-i18n="ui_otherPageDetected">Click the extension icon to analyze this page</p>
+  </div>
 
   <!-- Error State -->
   <div id="error" class="hidden flex-1 p-8 text-center flex flex-col items-center justify-center" role="alert">
@@ -173,6 +187,12 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
       </svg>
       <span data-i18n="ui_exportReport">Export Report</span>
+    </button>
+    <button id="domain-overview-btn" class="w-full flex items-center justify-center gap-1.5 text-xs text-[#2BA3A3] hover:text-[#33CCCC] hover:bg-[#E6FAFA] dark:hover:bg-[#2BA3A3]/10 transition-colors py-1.5 rounded-md cursor-pointer opacity-30 pointer-events-none" disabled aria-label="Open domain overview">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h18M3 6h18M3 18h12"/>
+      </svg>
+      <span id="domain-overview-label" data-i18n="ui_domainOverview">Domain Overview</span>
     </button>
   </div>
 

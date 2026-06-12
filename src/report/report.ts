@@ -60,6 +60,56 @@ chrome.storage.local.get('geo_report_html', (data) => {
       });
     });
 
+    // Domain dashboard: per-row remove buttons. Two-step inline confirm
+    // (no window.confirm): first click arms the button, second click deletes
+    // the page's history entry and drops the row. Header stats (count +
+    // average) are recomputed from the remaining rows; the rating badge
+    // keeps its snapshot value until the dashboard is reopened.
+    document.querySelectorAll<HTMLButtonElement>('.dash-remove').forEach((btn) => {
+      let armed = false;
+      let disarmTimer: ReturnType<typeof setTimeout> | undefined;
+      btn.addEventListener('click', async () => {
+        if (!armed) {
+          armed = true;
+          btn.classList.add('confirm');
+          btn.textContent = btn.dataset.confirm || '×';
+          disarmTimer = setTimeout(() => {
+            armed = false;
+            btn.classList.remove('confirm');
+            btn.textContent = '×';
+          }, 3000);
+          return;
+        }
+        if (disarmTimer) clearTimeout(disarmTimer);
+        const row = btn.closest('tr');
+        const key = row?.getAttribute('data-key');
+        if (!row || !key) return;
+        try {
+          await chrome.storage.local.remove(key);
+        } catch {
+          return; // keep the row if deletion failed
+        }
+        const tbody = row.parentElement;
+        row.remove();
+        const rows = Array.from(document.querySelectorAll<HTMLElement>('tr[data-key]'));
+        const countEl = document.getElementById('dash-count');
+        if (countEl) countEl.textContent = String(rows.length);
+        const avgEl = document.getElementById('dash-avg');
+        if (avgEl && rows.length > 0) {
+          const avg = rows.reduce((sum, r) => sum + parseFloat(r.dataset.score || '0'), 0) / rows.length;
+          avgEl.textContent = (Math.round(avg * 10) / 10).toFixed(1);
+        }
+        if (rows.length === 0) {
+          if (avgEl) avgEl.textContent = '0.0';
+          const card = tbody?.closest('.card');
+          if (card) {
+            card.innerHTML = `<p class="empty"></p>`;
+            card.querySelector('.empty')!.textContent = card.getAttribute('data-empty') || '';
+          }
+        }
+      });
+    });
+
     // Fix-snippet copy buttons
     document.querySelectorAll<HTMLButtonElement>('.snippet-copy').forEach((btn) => {
       btn.addEventListener('click', async () => {

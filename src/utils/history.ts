@@ -1,4 +1,10 @@
-import type { GEOAnalysisResult, HistoryEntry, StoredHistory, TrendInfo } from '../types/analysis';
+import type {
+  GEOAnalysisResult,
+  HistoryEntry,
+  StoredHistory,
+  TrendInfo,
+  DomainPageSummary,
+} from '../types/analysis';
 import { computeTrend } from './trend';
 
 const STORAGE_PREFIX = 'geo_history:';
@@ -58,4 +64,43 @@ export async function saveAnalysis(result: GEOAnalysisResult): Promise<TrendInfo
 export async function clearHistory(url: string): Promise<void> {
   const key = storageKey(url);
   await chrome.storage.local.remove(key);
+}
+
+/**
+ * Collects the latest analysis of every stored URL whose hostname matches
+ * exactly (www. and non-www are distinct hosts). Sorted worst-score-first —
+ * the dashboard's job is to surface the pages that need work.
+ */
+export async function getDomainOverview(hostname: string): Promise<DomainPageSummary[]> {
+  const all = await chrome.storage.local.get(null);
+  const pages: DomainPageSummary[] = [];
+
+  for (const [key, value] of Object.entries(all)) {
+    if (!key.startsWith(STORAGE_PREFIX)) continue;
+    const stored = value as StoredHistory;
+    if (!stored?.entries?.length) continue;
+
+    let parsed: URL;
+    try {
+      parsed = new URL(stored.url);
+    } catch {
+      continue;
+    }
+    if (parsed.hostname !== hostname) continue;
+
+    const latest = stored.entries[0];
+    const previous = stored.entries[1];
+    pages.push({
+      url: stored.url,
+      path: parsed.pathname || '/',
+      lastScore: latest.totalScore,
+      ratingLabel: latest.ratingLabel,
+      ratingColor: latest.ratingColor,
+      lastTimestamp: latest.timestamp,
+      delta: previous ? Math.round((latest.totalScore - previous.totalScore) * 10) / 10 : null,
+      analysisCount: stored.entries.length,
+    });
+  }
+
+  return pages.sort((a, b) => a.lastScore - b.lastScore);
 }
