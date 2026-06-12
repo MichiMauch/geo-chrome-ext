@@ -12,6 +12,7 @@
 - **Fokus-Zeile:** Über den Top-Empfehlungen nennt „🎯 Grösster Hebel: {Kategorie} ({Score}/5)" die schwächste Kategorie — eine Handlungsanweisung statt sechs Zahlen. Erscheint nur, wenn die schwächste Kategorie unter 4/5 liegt.
 - **„Neue Seite erkannt"-Zustand:** Wechselt man bei offenem Panel den Tab und klickt Refresh, zeigt das Panel jetzt das Extension-Icon mit 👆-Zeiger und der Anweisung „Klick aufs Extension-Icon" — statt rotem Fehler mit sinnlosem Retry-Button (ein Panel-Button kann den activeTab-Zugriff technisch nicht erteilen, nur der Icon-Klick).
 - Dritte lokale Testseite `testpage/best-practice.html`: Best-Practice-Fall (besteht fast alles) mit absichtlichem Canonical-Mismatch — demonstriert den Orange-Status des Canonical-Checks und die Score-Spannweite im Domain-Dashboard.
+- **Agentur-CTA (Lead-Gen):** Dezenter Link „Zu viele Baustellen? NETNODE optimiert Ihre Website für KI-Suche" auf geo.mauch.rocks — im Panel nur bei Rating „Kritisch"/„Verbesserungsbedarf" (Schmerz-Moment), im HTML-Report und Domain-Dashboard als Footer-Karte (diese Dokumente werden an Entscheider weitergegeben). UTM-Parameter pro Fläche (panel/report/dashboard) für Conversion-Messung. Privacy-konform: reine Links, keine Datenübertragung ohne Klick. In 6 Sprachen.
 
 ### Changed
 

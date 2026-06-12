@@ -189,6 +189,11 @@ export function generateDomainDashboardHtml(
     .trend-down { color: #dc2626; }
     .trend-flat { color: var(--subtle); }
     .empty { color: var(--muted); text-align: center; padding: 24px 0; }
+    .cta-card { margin: 0 auto 16px; max-width: 560px; padding: 14px 20px; border-radius: 12px;
+      background: linear-gradient(135deg, rgba(51,204,204,0.10), rgba(16,185,129,0.08));
+      border: 1px solid rgba(43,163,163,0.25); font-size: 13px; text-align: center; }
+    .cta-card a { color: var(--accent-deep); font-weight: 600; text-decoration: none; }
+    .cta-card a:hover { text-decoration: underline; }
     .col-remove { text-align: right; width: 1%; }
     .dash-remove {
       border: 1px solid transparent;
@@ -242,7 +247,12 @@ export function generateDomainDashboardHtml(
   <div class="container">
     <div class="card" data-empty="${escapeHtml(t('dash_empty'))}">${tableHtml}</div>
   </div>
-  <footer>Paul AI GEO Analyzer — netnode.ch</footer>
+  <footer>
+    <div class="cta-card">
+      <a href="https://geo.mauch.rocks/?utm_source=extension&utm_medium=dashboard&utm_campaign=geo-audit" target="_blank" rel="noopener">${escapeHtml(t('ui_agencyCta'))} →</a>
+    </div>
+    Paul AI GEO Analyzer — netnode.ch
+  </footer>
 </body>
 </html>`;
 }

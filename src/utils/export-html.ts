@@ -548,6 +548,10 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
     footer { text-align: center; padding: 16px 0 40px; font-size: 12px; color: var(--subtle); }
     footer a { color: var(--accent); text-decoration: none; font-weight: 500; }
     footer a:hover { text-decoration: underline; }
+    .cta-card { margin: 0 auto 16px; max-width: 560px; padding: 14px 20px; border-radius: 12px;
+      background: linear-gradient(135deg, rgba(51,204,204,0.10), rgba(16,185,129,0.08));
+      border: 1px solid rgba(43,163,163,0.25); font-size: 13px; }
+    .cta-card a { color: var(--accent-deep); font-weight: 600; }
 
     @keyframes slide-up {
       from { opacity: 0; transform: translateY(12px); }
@@ -605,6 +609,9 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
     </div>
 
     <footer>
+      <div class="cta-card">
+        <a href="https://geo.mauch.rocks/?utm_source=extension&utm_medium=report&utm_campaign=geo-audit" target="_blank" rel="noopener">${escapeHtml(t('ui_agencyCta'))} →</a>
+      </div>
       <p>${escapeHtml(t('report_generatedBy'))}</p>
       <p style="margin-top:4px"><a href="https://www.netnode.ch" target="_blank" rel="noopener">www.netnode.ch</a></p>
     </footer>

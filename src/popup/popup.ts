@@ -271,6 +271,16 @@ function renderResults(result: GEOAnalysisResult) {
     focusHintEl.classList.add('hidden');
   }
 
+  // Agency CTA: only at the pain moment (poor/moderate rating) — on good
+  // pages a sales link would just be noise.
+  const ctaEl = document.getElementById('agency-cta')!;
+  if (result.rating.level === 'poor' || result.rating.level === 'moderate') {
+    ctaEl.textContent = `${t('ui_agencyCta')} →`;
+    ctaEl.classList.remove('hidden');
+  } else {
+    ctaEl.classList.add('hidden');
+  }
+
   // Recommendations
   activeHighlightKey = null;
   if (result.topRecommendations.length > 0) {
