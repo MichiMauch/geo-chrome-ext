@@ -8,15 +8,21 @@ Built and maintained by the team behind geo.mauch.rocks.
 
 ---
 
-NEW IN VERSION 4.0 — THE DOMAIN DASHBOARD
+NEW IN VERSION 4.0 — ANALYZE WHOLE SITES, NOT JUST PAGES
 
-- Domain Overview: One click opens a dashboard with every page of the current domain you have analyzed — clickable path, latest score, rating badge, trend arrow, date, and analysis count. Sorted worst-first, so the pages that need work are always on top, with page count and average score in the header. Perfect for working through a whole site or preparing a client review. Entries can be removed per row (with inline confirmation) when a project is done.
+- Sitemap Batch Analysis: One click reads the site's sitemap.xml and analyzes up to 10 pages of the domain in the background — with live progress and, at the end, the domain dashboard opening automatically with all results. Still no host permissions: the batch runs entirely through same-origin requests on the site you're already analyzing.
 
-- Action First: Recommendations now sit directly below the score — what to do comes before the detailed category breakdown. A new focus line ("Biggest lever: Machine Readability (1.3/5)") names the one category where improvements pay off most.
+- Domain Overview: A dashboard with every analyzed page of the current domain — clickable path, latest score, rating badge, trend arrow, date, and analysis count. Sorted worst-first, so the pages that need work are always on top, with page count and average score in the header. Perfect for working through a whole site or preparing a client review. Entries can be removed per row when a project is done.
 
-- Canonical Tag Check: The On-Page SEO category now validates `<link rel="canonical">` — missing canonicals are flagged with a ready-to-paste snippet, and canonicals pointing to a different URL get a warning with context (sometimes intentional, often a CMS bug). Smart comparison: a canonical that strips tracking parameters counts as correct.
+- Page-Type Detection: The analyzer now recognizes whether a page is a homepage, an article, or a product page — and adjusts its expectations. Homepages are no longer penalized for missing author bylines, publication dates, FAQ sections, or definition sentences; those checks show as "not relevant for this page type" instead of failing. Fewer false alarms, fairer scores.
 
-- Friendlier Page Switching: If you switch tabs while the panel is open, the extension now shows its icon with a clear "click the extension icon to analyze this page" instruction — instead of a technical error message.
+- Internal Linking Check: New Machine Readability sub-check for the paths AI agents and crawlers actually follow — enough internal links, with descriptive anchor texts instead of "click here" (generic anchors are detected in six languages).
+
+- Action First: Recommendations now sit directly below the score, and a focus line ("Biggest lever: Machine Readability (1.3/5)") names the one category where improvements pay off most.
+
+- Canonical Tag Check: The On-Page SEO category now validates `<link rel="canonical">` — missing canonicals get a ready-to-paste snippet, canonicals pointing to a different URL get a contextual warning. Smart comparison: a canonical that strips tracking parameters counts as correct.
+
+- Friendlier Page Switching: If you switch tabs while the panel is open, the extension shows its icon with a clear "click the extension icon to analyze this page" instruction — instead of a technical error message.
 
 ---
 
@@ -48,7 +54,7 @@ HOW IT WORKS
 3. Get an instant GEO + SEO score (0–30) with a detailed breakdown across six key categories
 4. Follow the prioritized recommendations — copy fix snippets directly from each issue, or click "Show on page" to see the affected elements highlighted right on the page
 5. Edit your page, click the icon again to re-analyze, and track your progress with built-in trend comparison
-6. Open the domain overview to compare all analyzed pages of the site and find the ones that need work
+6. Run the sitemap batch analysis to score up to 10 pages of the site at once, then open the domain overview to see which pages need work first
 
 ---
 
@@ -83,6 +89,7 @@ Beyond human-readable content, AI crawlers rely on structured data and semantic 
 - Schema.org completeness — required fields per type are validated, so empty markup no longer slips through
 - Named entity recognition (people, organizations, products clearly identified)
 - Semantic HTML (proper use of `article`, `main`, `nav`, `section`, `header`, `footer`, `aside`)
+- Internal linking (enough contextual links, descriptive anchor texts instead of "click here")
 - llms.txt file (does the site provide one in the root directory to give LLMs context?)
 - AI crawler access in robots.txt (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot — are any blocked?)
 
