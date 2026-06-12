@@ -1,10 +1,22 @@
-Paul AI GEO Analyzer 3.1 — Optimize Your Content for AI Search and Classic SEO
+Paul AI GEO Analyzer 4.0 — Optimize Your Content for AI Search and Classic SEO
 
 Is your website ready for the age of AI-powered search? As tools like ChatGPT, Perplexity, Google AI Overviews, and other generative engines become the primary way people discover information, your content needs to be structured so AI systems can understand, cite, and surface it effectively — while still nailing the classic on-page SEO fundamentals.
 
-Paul AI GEO Analyzer is a privacy-first Chrome extension that instantly analyzes any web page across six dimensions (five GEO + on-page SEO). Get a detailed score, copy-paste fix snippets for every issue, in-page highlighting that marks problems right where they are, a polished side-panel UI that stays open while you edit, and track your progress over time.
+Paul AI GEO Analyzer is a privacy-first Chrome extension that instantly analyzes any web page across six dimensions (five GEO + on-page SEO). Get a detailed score, copy-paste fix snippets for every issue, in-page highlighting that marks problems right where they are, a domain dashboard that compares every page you've analyzed, and a polished side-panel UI that stays open while you edit.
 
 Built by NETNODE (netnode.ch), a Swiss digital agency specializing in AI-driven marketing strategies.
+
+---
+
+NEW IN VERSION 4.0 — THE DOMAIN DASHBOARD
+
+- Domain Overview: One click opens a dashboard with every page of the current domain you have analyzed — clickable path, latest score, rating badge, trend arrow, date, and analysis count. Sorted worst-first, so the pages that need work are always on top, with page count and average score in the header. Perfect for working through a whole site or preparing a client review. Entries can be removed per row (with inline confirmation) when a project is done.
+
+- Action First: Recommendations now sit directly below the score — what to do comes before the detailed category breakdown. A new focus line ("Biggest lever: Machine Readability (1.3/5)") names the one category where improvements pay off most.
+
+- Canonical Tag Check: The On-Page SEO category now validates `<link rel="canonical">` — missing canonicals are flagged with a ready-to-paste snippet, and canonicals pointing to a different URL get a warning with context (sometimes intentional, often a CMS bug). Smart comparison: a canonical that strips tracking parameters counts as correct.
+
+- Friendlier Page Switching: If you switch tabs while the panel is open, the extension now shows its icon with a clear "click the extension icon to analyze this page" instruction — instead of a technical error message.
 
 ---
 
@@ -29,30 +41,6 @@ NEW IN VERSION 3.1 — SEE YOUR ISSUES RIGHT ON THE PAGE
 
 ---
 
-NEW IN VERSION 3.0
-
-- Chrome Side Panel: The extension now opens in the Chrome side panel instead of a popup. The panel stays open while you edit your page, so you can re-analyze after every change without losing context. No new permissions — a single click on the toolbar icon opens the panel and analyzes the active tab.
-
-- One-Click Fix Snippets: Every recommendation now comes with a "Show snippet" and "Copy" button. Get ready-to-paste JSON-LD schemas (Article, FAQPage, Person, Organization), semantic HTML, llms.txt templates, robots.txt directives, viewport meta tags, Open Graph blocks — straight from the analysis into your clipboard. Turns the extension from a diagnostic tool into an implementation tool.
-
-- New 6th Category — On-Page SEO: Beyond GEO, the analyzer now covers the classic on-page SEO fundamentals every site needs:
-  - Page title quality (length 30–60 characters)
-  - Meta description quality (length 120–160 characters)
-  - Image alt-text coverage (decorative `alt=""` correctly recognised)
-  - Indexability — catches accidental `noindex` (a catastrophic, easy-to-miss bug)
-  - Mobile viewport meta tag (`width=device-width` enforcement)
-  - Open Graph & Twitter Card completeness (so shared links render with a preview)
-
-- Readability Score (Flesch / LIX): A new sub-check in the Content Clarity category. Automatically picks the right formula per language: Flesch Reading Ease for EN/FR/ES/PT/IT, LIX for German (where long compound words make Flesch misleading). Shows the raw value next to the criterion (e.g. "42 Flesch" / "45 LIX") plus a plain-language explanation.
-
-- Schema.org Completeness Validation: Schema markup is no longer scored just for presence — required fields per type are now validated. An empty `Article` schema without `author` or `datePublished` no longer passes. Covers Article / NewsArticle / BlogPosting, FAQPage, HowTo, Product, Organization, Person, BreadcrumbList, WebPage — and tells you exactly which fields are missing.
-
-- Score Range 0–30: With the new On-Page SEO category, your total score is now out of 30 (was 25). Rating thresholds were rebalanced to the same percentages: Excellent ≥ 25, Good ≥ 19, Needs Improvement ≥ 12, Critical < 12.
-
-- Permission-free install: No "Read your data on all websites" warning at install or after updates. The extension uses Chrome's `activeTab` model — a click on the icon grants access for that one tab, nothing else.
-
----
-
 HOW IT WORKS
 
 1. Navigate to any web page you want to analyze
@@ -60,6 +48,7 @@ HOW IT WORKS
 3. Get an instant GEO + SEO score (0–30) with a detailed breakdown across six key categories
 4. Follow the prioritized recommendations — copy fix snippets directly from each issue, or click "Show on page" to see the affected elements highlighted right on the page
 5. Edit your page, click the icon again to re-analyze, and track your progress with built-in trend comparison
+6. Open the domain overview to compare all analyzed pages of the site and find the ones that need work
 
 ---
 
@@ -106,7 +95,7 @@ Being machine-readable is one thing; being actually citable by AI assistants is 
 
 Content that scores high here is much more likely to be quoted verbatim by ChatGPT, Perplexity, and Google AI Overviews.
 
-On-Page SEO (0–5 points) — NEW
+On-Page SEO (0–5 points)
 Classic search-engine fundamentals — the basics that AI engines also respect:
 - Page title quality (30–60 characters, present, non-generic)
 - Meta description quality (120–160 characters, present, useful as a SERP snippet)
@@ -114,6 +103,7 @@ Classic search-engine fundamentals — the basics that AI engines also respect:
 - Indexability — accidental `noindex` is flagged with the highest priority of any recommendation
 - Mobile viewport (`width=device-width` for Google's mobile-first index)
 - Open Graph & Twitter Cards for rich social-media previews
+- Canonical tag — missing or pointing to a different URL (tracking-parameter-stripping canonicals correctly count as self-referencing)
 
 ---
 
@@ -149,6 +139,7 @@ Track your optimization progress over time:
 - Analysis History: A chronological list of all past analyses for the current page, with a mini sparkline chart showing the trend visually. Up to 50 analyses are stored per URL.
 - Smart Caching: If the page hasn't changed, the cached result is shown instantly — no unnecessary re-analysis and no duplicate entries in your history. A refresh button forces a fresh analysis when needed.
 - Clear History: One-click deletion of all entries for the current URL.
+- Domain Overview: A dashboard listing every analyzed page of the current domain with score, rating, trend and date — sorted worst-first. Entries are removable per row.
 
 ---
 
