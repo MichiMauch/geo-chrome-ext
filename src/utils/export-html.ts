@@ -104,6 +104,11 @@ function getExplanation(d: CategoryDetail): string {
     if (!d.found) return t('explain_semantic_bad', { value });
     return t('explain_semantic_ok');
   }
+  // Internal linking
+  if (criterion === t('criterion_internalLinks')) {
+    if (!d.found) return t('explain_internal_links_bad');
+    return t('explain_internal_links_ok');
+  }
   // llms.txt
   if (criterion === t('criterion_llmsTxt')) {
     if (!d.found) return t('explain_llmstxt_missing');

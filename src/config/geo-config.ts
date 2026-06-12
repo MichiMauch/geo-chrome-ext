@@ -93,8 +93,18 @@ export const GEO_CONFIG = {
       schemaCompleteness: 1.5,
       entities: 1.5,
       semanticHtml: 1.0,
+      internalLinks: 1.0,
       llmsTxt: 1.5,
       robotsTxt: 1.5,
+    },
+    internalLinks: {
+      minCount: 3, // contextual paths a page should offer crawlers/agents
+      descriptiveRatioMin: 0.8, // share of anchors that must be descriptive
+      // Generic anchor texts that tell crawlers and agents nothing
+      genericAnchorPatterns: [
+        /^(hier|hier klicken|click here|here|mehr|mehr erfahren|mehr dazu|read more|more|learn more|weiter|weiterlesen|link|jetzt|los)$/i,
+        /^(cliquez ici|en savoir plus|lire la suite|leer más|más información|clique aqui|saiba mais|leia mais|clicca qui|scopri di più|leggi di più)$/i,
+      ],
     },
     aiBots: ['GPTBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended', 'CCBot'] as const,
     // Required fields per Schema.org type. Used to score the completeness of

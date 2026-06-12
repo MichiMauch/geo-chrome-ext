@@ -119,6 +119,30 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     weightedScore += semanticScore * config.weights.semanticHtml;
     totalWeight += config.weights.semanticHtml;
 
+    // Check 3b: Interne Verlinkung — Kontext-Pfade für Crawler und Agents.
+    // Zwei Aspekte, je zur Hälfte gewichtet: genug interne Links und ein
+    // hoher Anteil beschreibender Ankertexte (kein "hier klicken").
+    const linking = this.evaluateInternalLinks(pageData.links);
+    const hasGoodLinking = linking.score > 0.6;
+
+    details.push({
+      criterionKey: 'criterion_internalLinks',
+      found: hasGoodLinking,
+      value:
+        linking.internalCount === 0
+          ? 'value_notPresent'
+          : `${linking.internalCount} (${Math.round(linking.descriptiveRatio * 100)}%)`,
+      weight: config.weights.internalLinks,
+      progress: {
+        current: Math.round(linking.score * 100),
+        target: 100,
+        unitKey: 'unit_percent',
+      },
+    });
+
+    weightedScore += linking.score * config.weights.internalLinks;
+    totalWeight += config.weights.internalLinks;
+
     // Check 4: llms.txt vorhanden
     const hasLlmsTxt = pageData.llmsTxt?.exists ?? false;
     const llmsTxtScore = hasLlmsTxt ? 1 : 0;
@@ -177,10 +201,40 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     }
     if (!hasEntities) recommendations.push('few_entities');
     if (!hasSemanticHTML) recommendations.push('weak_semantic_html');
+    if (!hasGoodLinking) recommendations.push('weak_internal_links');
     if (!hasLlmsTxt) recommendations.push('no_llms_txt');
     if (hasAnyBlock) recommendations.push('ai_bots_blocked');
 
     return this.createCategory(0, weightedScore, totalWeight, details, recommendations);
+  }
+
+  private evaluateInternalLinks(links: PageData['links']): {
+    score: number;
+    internalCount: number;
+    descriptiveRatio: number;
+  } {
+    const config = GEO_CONFIG.machineReadability.internalLinks;
+    const internal = links.filter((l) => !l.isExternal);
+
+    if (internal.length === 0) {
+      return { score: 0, internalCount: 0, descriptiveRatio: 0 };
+    }
+
+    const descriptive = internal.filter((l) => {
+      const text = l.text.trim();
+      if (text.length <= 2) return false; // icons, arrows, bare symbols
+      return !config.genericAnchorPatterns.some((p) => p.test(text));
+    });
+    const descriptiveRatio = descriptive.length / internal.length;
+
+    const countScore = Math.min(1, internal.length / config.minCount);
+    const descriptiveScore = Math.min(1, descriptiveRatio / config.descriptiveRatioMin);
+
+    return {
+      score: countScore * 0.5 + descriptiveScore * 0.5,
+      internalCount: internal.length,
+      descriptiveRatio,
+    };
   }
 
   private evaluateEntities(pageData: PageData): number {

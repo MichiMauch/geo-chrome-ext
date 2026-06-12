@@ -1,9 +1,9 @@
 import type { GEOAnalysisResult } from '../types/analysis';
 import { normalizeUrl } from './history';
 
-// v7 prefix: page-type detection changes scores and adds pageType to the
-// result shape. Old caches are ignored automatically.
-const CACHE_PREFIX = 'geo_cache_v7:';
+// v8 prefix: internal-linking sub-check added to Machine Readability.
+// Old caches are ignored automatically.
+const CACHE_PREFIX = 'geo_cache_v8:';
 
 interface CachedAnalysis {
   hash: string;

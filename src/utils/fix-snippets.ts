@@ -331,6 +331,14 @@ function sourcesSnippet(): string {
 </section>`;
 }
 
+function internalLinksSnippet(): string {
+  return `<!-- ${t('snippet_comment_internal_links')} -->
+<p>
+  ${t('snippet_example_internal_links_prefix')}
+  <a href="/guides/geo-basics">${t('snippet_example_internal_links_anchor')}</a>.
+</p>`;
+}
+
 function canonicalSnippet(): string {
   return `<!-- ${t('snippet_comment_canonical')} -->
 <link rel="canonical" href="https://www.example.com/your-page/">`;
@@ -372,6 +380,8 @@ export function getFixSnippet(key: string): FixSnippetResult | null {
       return { type: 'snippet', language: 'html', code: sourcesSnippet(), note: t('snippet_note_sources') };
     case 'canonical_missing':
       return { type: 'snippet', language: 'html', code: canonicalSnippet(), note: t('snippet_note_canonical') };
+    case 'weak_internal_links':
+      return { type: 'snippet', language: 'html', code: internalLinksSnippet(), note: t('snippet_note_internal_links') };
     case 'canonical_mismatch':
       return { type: 'no-snippet', note: t('snippet_none_canonical_mismatch') };
     case 'bad_hierarchy':

@@ -26,6 +26,7 @@ const RECOMMENDATION_KEYS: Record<string, { i18nKey: string; priority: number }>
   'schema_incomplete': { i18nKey: 'rec_schema_incomplete', priority: 9 },
   'few_entities': { i18nKey: 'rec_few_entities', priority: 5 },
   'weak_semantic_html': { i18nKey: 'rec_weak_semantic_html', priority: 4 },
+  'weak_internal_links': { i18nKey: 'rec_weak_internal_links', priority: 5 },
   'no_llms_txt': { i18nKey: 'rec_no_llms_txt', priority: 8 },
   'ai_bots_blocked': { i18nKey: 'rec_ai_bots_blocked', priority: 11 },
   // AI Citation
