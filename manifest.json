@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Paul AI GEO Analyzer",
-  "version": "4.0.1",
+  "version": "4.1.0",
   "description": "Analyzes web pages for Generative Engine Optimization (GEO) with score tracking, trend analysis and history - geo.mauch.rocks",
   "permissions": ["activeTab", "scripting", "storage", "alarms", "sidePanel", "tabs"],
   "background": {

@@ -47,6 +47,10 @@ export interface GEOAnalysisResult {
   // consumed by the "show on page" buttons in the panel. Labels are localized
   // per-element explanations rendered as badges next to the marker.
   highlightTargets?: Record<string, HighlightTarget[]>;
+  // Heading outline (H1–H6) of the page, attached to the live analyze response
+  // only (not persisted to history). Powers the collapsible outline under the
+  // "Content clarity" category that visualizes skipped heading levels.
+  headings?: HeadingData[];
 }
 
 export interface HighlightTarget {

@@ -1,4 +1,4 @@
-import type { GEOAnalysisResult, AnalyzeResponse, AnalysisCategory, TrendInfo } from '../types/analysis';
+import type { GEOAnalysisResult, AnalyzeResponse, AnalysisCategory, HeadingData, TrendInfo } from '../types/analysis';
 import { getCategoryColor } from '../utils/scoring';
 import { loadHistory, saveAnalysis, clearHistory, getDomainOverview } from '../utils/history';
 import { generateDomainDashboardHtml } from '../utils/export-domain-html';
@@ -268,7 +268,11 @@ function renderResults(result: GEOAnalysisResult) {
 
   categoryOrder.forEach((key) => {
     const category = result.categories[key];
-    categoriesEl.innerHTML += renderCategory(category);
+    // The heading outline makes the abstract "skipped levels" finding concrete,
+    // so it lives inside the Content-Clarity card where that check sits.
+    const extra =
+      key === 'contentClarity' ? renderHeadingOutline(result.headings) : '';
+    categoriesEl.innerHTML += renderCategory(category, extra);
   });
 
   // Focus hint: name the weakest category — the single place where work
@@ -487,7 +491,46 @@ function attachHighlightHandlers(container: HTMLElement) {
   });
 }
 
-function renderCategory(category: AnalysisCategory): string {
+// Collapsible H1–H6 outline (like a table of contents) that visualizes where
+// the heading hierarchy jumps a level — the concrete "where?" behind the
+// abstract "skipped levels" finding. Returns '' when no headings are available
+// (e.g. when re-rendering a history entry, which doesn't carry headings).
+function renderHeadingOutline(headings?: HeadingData[]): string {
+  if (!headings || headings.length === 0) return '';
+
+  const rows = headings
+    .map((h, i) => {
+      // A jump is an increase of more than one level (e.g. H2 → H4) — the same
+      // rule the hierarchy score penalizes in content-clarity.ts.
+      const jump = i > 0 && h.level - headings[i - 1].level > 1;
+      const indent = (h.level - 1) * 12;
+      const textColor = jump
+        ? 'text-red-500'
+        : 'text-gray-600 dark:text-gray-300';
+      const tagColor = jump ? 'text-red-500' : 'text-gray-400';
+      const note = jump
+        ? `<span class="flex-shrink-0 text-[10px] text-red-500">↑ ${t('ui_levelSkipped')}</span>`
+        : '';
+      return `<div class="flex items-baseline gap-1.5 ${textColor}" style="padding-left: ${indent}px">
+        <span class="font-mono ${tagColor} flex-shrink-0">H${h.level}</span>
+        <span class="truncate">${escapeHtml(h.text)}</span>
+        ${note}
+      </div>`;
+    })
+    .join('');
+
+  return `
+    <details class="mt-2 border-t border-gray-100 dark:border-gray-700 pt-2">
+      <summary class="cursor-pointer select-none text-xs text-gray-500 dark:text-gray-400">
+        📑 ${t('ui_headingOutline')} (${headings.length})
+      </summary>
+      <div class="mt-1.5 space-y-0.5 text-xs">
+        ${rows}
+      </div>
+    </details>`;
+}
+
+function renderCategory(category: AnalysisCategory, extraHtml = ''): string {
   const percentage = (category.score / 5) * 100;
   const color = getCategoryColor(category.score);
 
@@ -540,6 +583,7 @@ function renderCategory(category: AnalysisCategory): string {
       <div class="text-xs text-gray-500 dark:text-gray-400">
         ${detailsHtml}
       </div>
+      ${extraHtml}
     </div>
   `;
 }

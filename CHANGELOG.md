@@ -1,6 +1,10 @@
 # Changelog
 
-## [4.0.1] - 2026-06-13
+## [4.1.0] - 2026-06-13
+
+### Added
+
+- **Heading outline in the panel:** A collapsible, indented H1–H6 outline (like a table of contents) sits under the "Content clarity" category. Each heading shows its level and text; wherever the hierarchy jumps a level (e.g. H2 → H4) the entry is marked red with a "Level skipped" note — turning the previously abstract "skipped levels" finding into a concrete "here it is". Uses a native `<details>` element (no extra JS) and appears only for a fresh/cached analysis, not for history-only re-renders.
 
 ### Fixed
 

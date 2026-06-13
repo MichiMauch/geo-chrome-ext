@@ -177,6 +177,10 @@ chrome.runtime.onMessage.addListener(
           );
           result.highlightTargets = computeHighlightTargets(document, fired);
 
+          // Heading outline for the collapsible structure view in the panel.
+          // Live-response only — saveAnalysis persists just the score summary.
+          result.headings = pageData.headings;
+
           sendResponse({
             success: true,
             result,
