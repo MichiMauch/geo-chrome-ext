@@ -9,7 +9,22 @@ export interface ParsedSitemap {
   childSitemaps: string[];
 }
 
+// A <loc> that points at another sitemap file rather than a content page.
+// Some sites (e.g. netnode.ch) declare a sitemap *index* as a plain <urlset>
+// with <url><loc>…sitemap-pages.xml</loc> entries instead of the standard
+// <sitemapindex>/<sitemap>. Without this check those .xml files get analyzed
+// as if they were HTML pages, which is meaningless.
+function isSitemapUrl(url: string): boolean {
+  try {
+    return /\.xml(\.gz)?$/i.test(new URL(url).pathname);
+  } catch {
+    return false;
+  }
+}
+
 // Parses <urlset> page URLs (same hostname only) and <sitemapindex> children.
+// <url><loc> entries that themselves point at a .xml sitemap are reclassified
+// as child sitemaps so they get expanded, not analyzed.
 export function parseSitemap(xmlText: string, hostname: string): ParsedSitemap {
   const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
   if (doc.querySelector('parsererror')) return { pages: [], childSitemaps: [] };
@@ -19,11 +34,25 @@ export function parseSitemap(xmlText: string, hostname: string): ParsedSitemap {
       .map((loc) => (loc.textContent || '').trim())
       .filter(Boolean);
 
-  const childSitemaps = locsIn('sitemap').filter((url) => sameHost(url, hostname));
+  const childSitemaps: string[] = [];
+  const childSeen = new Set<string>();
+  const addChild = (url: string) => {
+    if (!sameHost(url, hostname)) return;
+    const key = normalizeUrl(url);
+    if (childSeen.has(key)) return;
+    childSeen.add(key);
+    childSitemaps.push(url);
+  };
+  for (const url of locsIn('sitemap')) addChild(url);
+
   const pages: string[] = [];
   const seen = new Set<string>();
   for (const url of locsIn('url')) {
     if (!sameHost(url, hostname)) continue;
+    if (isSitemapUrl(url)) {
+      addChild(url);
+      continue;
+    }
     const key = normalizeUrl(url);
     if (seen.has(key)) continue;
     seen.add(key);
@@ -50,11 +79,18 @@ async function fetchText(url: string, fetchFn: typeof fetch): Promise<string | n
   }
 }
 
+// Depth of sitemap-index nesting we follow. Real-world sites nest up to two
+// levels (root index → per-language index → per-type urlset, e.g. netnode.ch).
+const MAX_SITEMAP_DEPTH = 3;
+// Hard cap on sitemap files fetched, so a pathological/looping index can't
+// fan out indefinitely.
+const MAX_SITEMAPS_FETCHED = 50;
+
 /**
  * Finds same-origin page URLs to batch-analyze: tries /sitemap.xml, falls
- * back to Sitemap: lines in robots.txt; resolves one level of sitemap-index
- * nesting. The current page is excluded (it's already analyzed), the result
- * capped at maxPages.
+ * back to Sitemap: lines in robots.txt; recursively resolves sitemap-index
+ * nesting (including non-standard <urlset>-as-index files). The current page
+ * is excluded (it's already analyzed), the result capped at maxPages.
  */
 export async function discoverSitemapPages(
   origin: string,
@@ -88,24 +124,28 @@ export async function discoverSitemapPages(
   };
 
   const triedSitemaps = new Set<string>();
-  for (const candidate of candidates) {
-    if (pages.length >= maxPages) break;
-    if (triedSitemaps.has(candidate)) continue;
-    triedSitemaps.add(candidate);
-
-    const xml = await fetchText(candidate, fetchFn);
-    if (!xml) continue;
-    const parsed = parseSitemap(xml, hostname);
-    if (addPages(parsed.pages)) break;
-
-    // One level of sitemap-index nesting, max 3 children
-    for (const child of parsed.childSitemaps.slice(0, 3)) {
-      if (pages.length >= maxPages || triedSitemaps.has(child)) continue;
-      triedSitemaps.add(child);
-      const childXml = await fetchText(child, fetchFn);
-      if (!childXml) continue;
-      if (addPages(parseSitemap(childXml, hostname).pages)) break;
+  // Returns true once maxPages is reached, to short-circuit the whole walk.
+  const visit = async (url: string, depth: number): Promise<boolean> => {
+    if (pages.length >= maxPages) return true;
+    if (triedSitemaps.has(url) || triedSitemaps.size >= MAX_SITEMAPS_FETCHED) {
+      return false;
     }
+    triedSitemaps.add(url);
+
+    const xml = await fetchText(url, fetchFn);
+    if (!xml) return false;
+    const parsed = parseSitemap(xml, hostname);
+    if (addPages(parsed.pages)) return true;
+    if (depth >= MAX_SITEMAP_DEPTH) return false;
+
+    for (const child of parsed.childSitemaps) {
+      if (await visit(child, depth + 1)) return true;
+    }
+    return false;
+  };
+
+  for (const candidate of candidates) {
+    if (await visit(candidate, 0)) break;
   }
 
   return pages;

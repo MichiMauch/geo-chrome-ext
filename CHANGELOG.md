@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **Sitemap batch analyzed sitemap files instead of content pages:** On sites whose sitemap index is declared as a plain `<urlset>` with `<url><loc>…sitemap-*.xml</loc>` entries (instead of the standard `<sitemapindex>`/`<sitemap>` — e.g. netnode.ch), the batch treated those nested `.xml` files as if they were HTML pages and scored every one of them as "Critical" (~6.1/30), never reaching the actual articles/pages behind them. The sitemap parser now recognizes a `<url><loc>` that points at an `.xml` sitemap and expands it instead of analyzing it, and index nesting is now resolved recursively (up to 3 levels, capped at 50 sitemap fetches) rather than a single level.
+
 ## [4.0.0] - 2026-06-12
 
 > **In short:** The new domain overview shows every analyzed page of a website at a glance — the weakest one at the top. In the panel, the recommendations now sit directly below the score, a focus line names the biggest lever, and when you switch pages the extension explains what to do in a friendly way instead of showing an error.
