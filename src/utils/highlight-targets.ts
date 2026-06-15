@@ -1,7 +1,7 @@
 import type { HighlightTarget } from '../types/analysis';
 import { cssPath } from './selector';
 import { GEO_CONFIG } from '../config/geo-config';
-import { computeReadabilityScore } from './readability';
+import { computeReadabilityScore, readabilityBand } from './readability';
 import { getLang, t } from './i18n';
 
 // Maps recommendation keys to the page elements they refer to, as CSS
@@ -170,9 +170,14 @@ function collectHardParagraphs(doc: Document): HighlightTarget[] {
     const readability = computeReadabilityScore([text], lang);
     if (readability === null || readability.score >= minScore) return;
     const value = `${Math.round(readability.raw)} ${readability.formula === 'lix' ? 'LIX' : 'Flesch'}`;
+    // Label and color follow the passage's readability band, so the marker
+    // shows WHERE on the scale it sits (e.g. "Medium (48 LIX)" amber vs.
+    // "Very hard (66 LIX)" red) instead of a flat "Hard to read".
+    const { i18nKey, color } = readabilityBand(readability.raw, readability.formula);
     result.push({
       selector: cssPath(el),
-      label: t('hl_hard_paragraph').replace('{val}', value),
+      label: `${t(i18nKey)} (${value})`,
+      color,
     });
   });
   return result;

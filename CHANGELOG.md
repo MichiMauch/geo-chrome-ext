@@ -5,6 +5,7 @@
 ### Added
 
 - **Heading outline in the panel:** A collapsible, indented H1–H6 outline (like a table of contents) sits under the "Content clarity" category. Each heading shows its level and text; wherever the hierarchy jumps a level (e.g. H2 → H4) the entry is marked red with a "Level skipped" note — turning the previously abstract "skipped levels" finding into a concrete "here it is". Uses a native `<details>` element (no extra JS) and appears only for a fresh/cached analysis, not for history-only re-renders.
+- **Readability markers now show the band, not just the value:** On-page readability markers used to label every flagged passage "Hard to read (N LIX)" in one flat color. They now classify each passage into a five-band scale (LIX: <30 very easy / 30–40 easy / 40–50 medium / 50–60 hard / ≥60 very hard, with an equivalent Flesch mapping for non-German pages) and color it accordingly — green → lime → yellow → amber → red. So a passage at 48 LIX reads "Medium (48 LIX)" in yellow while one at 66 reads "Very hard (66 LIX)" in red, making the classification visible at a glance. Band labels are localized in all six languages.
 
 ### Fixed
 

@@ -4,6 +4,7 @@ import {
   computeLix,
   computeReadabilityScore,
   countSyllables,
+  readabilityBand,
 } from '../readability';
 
 describe('readability', () => {
@@ -106,6 +107,37 @@ describe('readability', () => {
       expect(result).not.toBeNull();
       expect(result!.score).toBeLessThanOrEqual(1);
       expect(result!.score).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('readabilityBand', () => {
+    it('maps LIX values to the five bands (lower = easier)', () => {
+      expect(readabilityBand(25, 'lix').band).toBe('very_easy');
+      expect(readabilityBand(35, 'lix').band).toBe('easy');
+      expect(readabilityBand(48, 'lix').band).toBe('medium');
+      expect(readabilityBand(55, 'lix').band).toBe('hard');
+      expect(readabilityBand(66, 'lix').band).toBe('very_hard');
+    });
+
+    it('uses inclusive lower / exclusive upper LIX boundaries', () => {
+      expect(readabilityBand(30, 'lix').band).toBe('easy');
+      expect(readabilityBand(40, 'lix').band).toBe('medium');
+      expect(readabilityBand(50, 'lix').band).toBe('hard');
+      expect(readabilityBand(60, 'lix').band).toBe('very_hard');
+    });
+
+    it('maps Flesch values to the five bands (higher = easier)', () => {
+      expect(readabilityBand(85, 'flesch').band).toBe('very_easy');
+      expect(readabilityBand(72, 'flesch').band).toBe('easy');
+      expect(readabilityBand(65, 'flesch').band).toBe('medium');
+      expect(readabilityBand(52, 'flesch').band).toBe('hard');
+      expect(readabilityBand(40, 'flesch').band).toBe('very_hard');
+    });
+
+    it('carries an i18n key and a color per band', () => {
+      const band = readabilityBand(66, 'lix');
+      expect(band.i18nKey).toBe('read_band_very_hard');
+      expect(band.color).toMatch(/^#[0-9a-f]{6}$/i);
     });
   });
 });

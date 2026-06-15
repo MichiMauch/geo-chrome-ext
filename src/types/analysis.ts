@@ -56,6 +56,10 @@ export interface GEOAnalysisResult {
 export interface HighlightTarget {
   selector: string;
   label: string;
+  // Optional per-target marker color (outline + badge). When set, it overrides
+  // the call-wide severity color — used by the readability markers to color
+  // each passage by its own LIX/Flesch band.
+  color?: string;
 }
 
 export interface ScoreRating {

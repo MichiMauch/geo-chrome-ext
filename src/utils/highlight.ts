@@ -77,9 +77,11 @@ export function applyHighlights(
     if (!el) return;
 
     count++;
+    // A per-target color (e.g. a readability band) wins over the severity hue.
+    const color = target.color ?? COLORS[severity];
     el.classList.add(HL_CLASS);
     if (severity === 'info') el.classList.add(`${HL_CLASS}--info`);
-    (el as HTMLElement).style.setProperty('--geoa-hl-color', COLORS[severity]);
+    (el as HTMLElement).style.setProperty('--geoa-hl-color', color);
 
     // The badge explains WHY this element is marked (e.g. "Skipped level:
     // H1 → H3"). img & co. can't carry ::before/::after, so badges are own
@@ -89,7 +91,7 @@ export function applyHighlights(
     badge.textContent = target.label;
     badge.style.left = `${Math.max(rect.left + window.scrollX, 0)}px`;
     badge.style.top = `${Math.max(rect.top + window.scrollY, 18)}px`;
-    badge.style.backgroundColor = COLORS[severity];
+    badge.style.backgroundColor = color;
     container.appendChild(badge);
   });
 

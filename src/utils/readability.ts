@@ -102,3 +102,52 @@ export function computeReadabilityScore(
   const score = Math.max(0, Math.min(1, (flesch - 30) / 60));
   return { score, raw: flesch, formula: 'flesch' };
 }
+
+// Five readability bands shared by LIX and Flesch, easiest → hardest. The
+// i18nKey resolves to a localized label; color follows the score palette
+// (green → red) so a marker's hue alone tells you how hard the passage is.
+export type ReadabilityBand =
+  | 'very_easy'
+  | 'easy'
+  | 'medium'
+  | 'hard'
+  | 'very_hard';
+
+interface BandInfo {
+  band: ReadabilityBand;
+  i18nKey: string;
+  color: string;
+}
+
+const BANDS: Record<ReadabilityBand, BandInfo> = {
+  very_easy: { band: 'very_easy', i18nKey: 'read_band_very_easy', color: '#22c55e' },
+  easy: { band: 'easy', i18nKey: 'read_band_easy', color: '#84cc16' },
+  medium: { band: 'medium', i18nKey: 'read_band_medium', color: '#eab308' },
+  hard: { band: 'hard', i18nKey: 'read_band_hard', color: '#f59e0b' },
+  very_hard: { band: 'very_hard', i18nKey: 'read_band_very_hard', color: '#dc2626' },
+};
+
+/**
+ * Maps a raw readability value to one of five bands. LIX scale (lower is
+ * easier): <30 very easy, 30–40 easy, 40–50 medium, 50–60 hard, ≥60 very hard.
+ * Flesch (higher is easier) is mapped to the same five bands so callers can
+ * treat both formulas uniformly.
+ */
+export function readabilityBand(
+  raw: number,
+  formula: 'flesch' | 'lix'
+): BandInfo {
+  if (formula === 'lix') {
+    if (raw < 30) return BANDS.very_easy;
+    if (raw < 40) return BANDS.easy;
+    if (raw < 50) return BANDS.medium;
+    if (raw < 60) return BANDS.hard;
+    return BANDS.very_hard;
+  }
+  // Flesch Reading Ease, higher = easier
+  if (raw >= 80) return BANDS.very_easy;
+  if (raw >= 70) return BANDS.easy;
+  if (raw >= 60) return BANDS.medium;
+  if (raw >= 50) return BANDS.hard;
+  return BANDS.very_hard;
+}
