@@ -139,7 +139,7 @@ export function extractRobotsMeta(doc: Document = document): RobotsMetaData {
   // Check both name="robots" and name="googlebot"; merge content tokens.
   const tokens: string[] = [];
   let rawContent: string | null = null;
-  document
+  doc
     .querySelectorAll('meta[name="robots"], meta[name="googlebot"]')
     .forEach((meta) => {
       const content = meta.getAttribute('content');
@@ -207,7 +207,7 @@ export function extractParagraphs(doc: Document = document): string[] {
     '[class*="accordion-body" i]',
     'details > :not(summary)',
   ];
-  document
+  doc
     .querySelectorAll(answerSelectors.join(','))
     .forEach((el) => pushIfGood(el.textContent || ''));
 
@@ -222,7 +222,7 @@ export function extractFaqQuestions(doc: Document = document): string[] {
   };
 
   // Microdata: schema.org Question
-  document
+  doc
     .querySelectorAll('[itemscope][itemtype*="schema.org/Question" i]')
     .forEach((q) => {
       const nameEl = q.querySelector('[itemprop="name"]');
@@ -230,7 +230,7 @@ export function extractFaqQuestions(doc: Document = document): string[] {
     });
 
   // Within a FAQPage container
-  document
+  doc
     .querySelectorAll('[itemscope][itemtype*="FAQPage" i]')
     .forEach((faq) => {
       faq.querySelectorAll('[itemprop="name"]').forEach((n) =>
@@ -331,7 +331,7 @@ export function extractMetaData(doc: Document = document): MetaData {
 export function extractSchemaData(doc: Document = document): SchemaData[] {
   const schemas: SchemaData[] = [];
 
-  document
+  doc
     .querySelectorAll('script[type="application/ld+json"]')
     .forEach((script) => {
       try {
@@ -448,7 +448,7 @@ export function extractAuthorInfo(doc: Document = document): AuthorData | null {
   // 2. Try meta tags
   const metaAuthor =
     doc.querySelector('meta[name="author"]')?.getAttribute('content') ||
-    document
+    doc
       .querySelector('meta[property="article:author"]')
       ?.getAttribute('content');
   if (metaAuthor) {
