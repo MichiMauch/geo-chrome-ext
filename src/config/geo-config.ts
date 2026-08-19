@@ -100,6 +100,11 @@ export const GEO_CONFIG = {
       // MachineReadabilityAnalyzer check 6.
       crawlerView: 2.0,
     },
+    thresholds: {
+      // llms-full.txt alone is worth partial credit: the long-form text is
+      // there, but the llms.txt index that points crawlers at it is missing.
+      llmsFullOnlyCredit: 0.5,
+    },
     internalLinks: {
       minCount: 3, // contextual paths a page should offer crawlers/agents
       descriptiveRatioMin: 0.8, // share of anchors that must be descriptive

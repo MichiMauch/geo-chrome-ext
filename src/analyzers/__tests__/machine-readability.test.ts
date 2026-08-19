@@ -177,3 +177,61 @@ describe('MachineReadabilityAnalyzer — crawler view', () => {
     expect(detailOf(page)).toBeUndefined();
   });
 });
+
+describe('MachineReadabilityAnalyzer — llms.txt / llms-full.txt', () => {
+  const analyzer = new MachineReadabilityAnalyzer();
+
+  function llmsDetail(llmsTxt: PageData['llmsTxt']) {
+    const result = analyzer.analyze(makePage({ llmsTxt }));
+    return result.details.find((d) => d.criterionKey === 'criterion_llmsTxt')!;
+  }
+
+  it('reports both files when llms.txt and llms-full.txt exist', () => {
+    const d = llmsDetail({ exists: true, fullExists: true });
+    expect(d.found).toBe(true);
+    expect(d.value).toBe('value_llms_both');
+    expect(d.progress?.current).toBe(1);
+  });
+
+  it('gives full credit for llms.txt alone and names the missing long form', () => {
+    const d = llmsDetail({ exists: true, fullExists: false });
+    expect(d.found).toBe(true);
+    expect(d.value).toBe('value_llms_indexOnly');
+    expect(d.progress?.current).toBe(1);
+  });
+
+  it('gives partial credit when only llms-full.txt exists', () => {
+    const d = llmsDetail({ exists: false, fullExists: true });
+    expect(d.found).toBe(true);
+    expect(d.value).toBe('value_llms_fullOnly');
+    expect(d.progress?.current).toBe(0.5);
+  });
+
+  it('scores zero when neither file exists', () => {
+    const d = llmsDetail({ exists: false, fullExists: false });
+    expect(d.found).toBe(false);
+    expect(d.value).toBe('value_notFound');
+    expect(d.progress?.current).toBe(0);
+  });
+
+  it('treats a legacy entry without the fullExists flag as llms.txt only', () => {
+    const d = llmsDetail({ exists: true });
+    expect(d.value).toBe('value_llms_indexOnly');
+    expect(d.progress?.current).toBe(1);
+  });
+
+  it('scores llms.txt-only higher than llms-full.txt-only, and that above nothing', () => {
+    const score = (llmsTxt: PageData['llmsTxt']) => analyzer.analyze(makePage({ llmsTxt })).score;
+    expect(score({ exists: true, fullExists: false })).toBeGreaterThan(
+      score({ exists: false, fullExists: true })
+    );
+    expect(score({ exists: false, fullExists: true })).toBeGreaterThan(
+      score({ exists: false, fullExists: false })
+    );
+  });
+
+  it('does not reward llms-full.txt on top of llms.txt (no score inflation)', () => {
+    const score = (llmsTxt: PageData['llmsTxt']) => analyzer.analyze(makePage({ llmsTxt })).score;
+    expect(score({ exists: true, fullExists: true })).toBe(score({ exists: true, fullExists: false }));
+  });
+});

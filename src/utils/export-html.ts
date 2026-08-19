@@ -113,8 +113,12 @@ function getExplanation(d: CategoryDetail): string {
     if (!d.found) return t('explain_internal_links_bad');
     return t('explain_internal_links_ok');
   }
-  // llms.txt
+  // llms.txt / llms-full.txt
   if (criterion === t('criterion_llmsTxt')) {
+    if (value === t('value_llms_both')) return t('explain_llmstxt_both');
+    if (value === t('value_llms_fullOnly')) return t('explain_llmstxt_full_only');
+    if (value === t('value_llms_indexOnly')) return t('explain_llmstxt_no_full');
+    // Analyses stored before llms-full.txt was checked only know present/absent
     if (!d.found) return t('explain_llmstxt_missing');
     return t('explain_llmstxt_ok');
   }

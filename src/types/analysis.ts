@@ -202,6 +202,11 @@ export interface LlmsTxtData {
   url?: string;
   hasContent?: boolean;
   contentLength?: number;
+  // llms-full.txt — the optional long-form companion carrying the full text
+  // instead of just the link index. Checked separately from llms.txt.
+  fullExists?: boolean;
+  fullUrl?: string;
+  fullContentLength?: number;
 }
 
 // What an AI crawler without JavaScript receives, compared with the rendered

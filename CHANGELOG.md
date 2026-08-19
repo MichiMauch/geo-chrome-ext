@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.3.0] - 2026-08-19
+
+### Added
+
+- **llms-full.txt is now checked alongside llms.txt:** The "llms.txt file" criterion only ever requested `/llms.txt`. Sites that also publish the long-form companion `/llms-full.txt` — the full page text instead of a link index — got no credit for it and no mention in the panel. Both files are now fetched in parallel and the result names what was found: "llms.txt + llms-full.txt", "llms.txt (no llms-full.txt)", "Only llms-full.txt" or "Not found", in all six interface languages.
+  - Scoring stays anchored on llms.txt, so no site loses points: llms.txt alone is still full credit, llms-full.txt on top adds nothing, and llms-full.txt *without* an llms.txt index now earns partial credit (0.5) instead of zero. The progress bar mirrors the score rather than counting files, so a site with a proper llms.txt does not read as half done.
+  - The HTML report explains each of the four cases separately. Analyses stored before this version fall back to the previous present/absent wording.
+  - Both requests share one fetch helper that rejects the HTML a SPA or a custom 404 page returns for unknown paths, so a soft 404 no longer counts as a file.
+
 ## [4.2.1] - 2026-08-19
 
 ### Fixed

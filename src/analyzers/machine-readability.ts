@@ -143,17 +143,33 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     weightedScore += linking.score * config.weights.internalLinks;
     totalWeight += config.weights.internalLinks;
 
-    // Check 4: llms.txt vorhanden
+    // Check 4: llms.txt vorhanden (llms-full.txt zählt als Langfassung mit)
     const hasLlmsTxt = pageData.llmsTxt?.exists ?? false;
-    const llmsTxtScore = hasLlmsTxt ? 1 : 0;
+    const hasLlmsFullTxt = pageData.llmsTxt?.fullExists ?? false;
+    // llms.txt is the index crawlers look for, so it carries the full credit.
+    // llms-full.txt on its own still beats nothing and earns partial credit.
+    const llmsTxtScore = hasLlmsTxt ? 1 : hasLlmsFullTxt ? config.thresholds.llmsFullOnlyCredit : 0;
+
+    let llmsTxtValue: string;
+    if (hasLlmsTxt && hasLlmsFullTxt) {
+      llmsTxtValue = 'value_llms_both';
+    } else if (hasLlmsTxt) {
+      llmsTxtValue = 'value_llms_indexOnly';
+    } else if (hasLlmsFullTxt) {
+      llmsTxtValue = 'value_llms_fullOnly';
+    } else {
+      llmsTxtValue = 'value_notFound';
+    }
 
     details.push({
       criterionKey: 'criterion_llmsTxt',
-      found: hasLlmsTxt,
-      value: hasLlmsTxt ? 'value_present' : 'value_notFound',
+      found: hasLlmsTxt || hasLlmsFullTxt,
+      value: llmsTxtValue,
       weight: config.weights.llmsTxt,
       progress: {
-        current: hasLlmsTxt ? 1 : 0,
+        // Mirrors the score: llms-full.txt is a bonus, not a second requirement,
+        // so a site with just llms.txt must not read as half done.
+        current: llmsTxtScore,
         target: 1,
         unitKey: 'unit_file',
       },

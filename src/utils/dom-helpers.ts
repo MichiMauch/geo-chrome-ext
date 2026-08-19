@@ -574,29 +574,38 @@ export function isWithinLastYear(date: Date): boolean {
   return date >= oneYearAgo;
 }
 
-export async function checkLlmsTxt(origin: string = window.location.origin): Promise<LlmsTxtData> {
+// Fetches a plain-text file and rejects the HTML a SPA or a custom 404 page
+// serves for any unknown path — otherwise every SPA would look like it had one.
+async function fetchPlainTextFile(url: string): Promise<{ length: number } | null> {
   try {
-    const response = await fetch(`${origin}/llms.txt`);
+    const response = await fetch(url);
+    if (!response.ok) return null;
 
-    if (response.ok) {
-      const content = await response.text();
+    const content = await response.text();
+    const looksLikeHtml = /^\s*<!DOCTYPE|^\s*<html|^\s*<head/i.test(content);
+    if (looksLikeHtml || content.trim().length === 0) return null;
 
-      // Prüfen ob Inhalt wie HTML aussieht (False Positive bei SPAs, Custom 404s)
-      const looksLikeHtml = /^\s*<!DOCTYPE|^\s*<html|^\s*<head/i.test(content);
-
-      if (!looksLikeHtml && content.trim().length > 0) {
-        return {
-          exists: true,
-          url: `${origin}/llms.txt`,
-          hasContent: true,
-          contentLength: content.length,
-        };
-      }
-    }
-    return { exists: false };
+    return { length: content.length };
   } catch {
-    return { exists: false };
+    return null;
   }
+}
+
+export async function checkLlmsTxt(origin: string = window.location.origin): Promise<LlmsTxtData> {
+  const indexUrl = `${origin}/llms.txt`;
+  const fullUrl = `${origin}/llms-full.txt`;
+
+  const [index, full] = await Promise.all([
+    fetchPlainTextFile(indexUrl),
+    fetchPlainTextFile(fullUrl),
+  ]);
+
+  return {
+    exists: index !== null,
+    ...(index ? { url: indexUrl, hasContent: true, contentLength: index.length } : {}),
+    fullExists: full !== null,
+    ...(full ? { fullUrl, fullContentLength: full.length } : {}),
+  };
 }
 
 export async function checkRobotsTxt(
