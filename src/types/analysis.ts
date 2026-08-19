@@ -51,6 +51,10 @@ export interface GEOAnalysisResult {
   // only (not persisted to history). Powers the collapsible outline under the
   // "Content clarity" category that visualizes skipped heading levels.
   headings?: HeadingData[];
+  // Comparison of the rendered page with the HTML an AI crawler downloads.
+  // Live analyses only — absent for the sitemap batch (which already analyzes
+  // raw HTML) and when the comparison fetch failed.
+  crawlerView?: CrawlerViewData;
 }
 
 export interface HighlightTarget {
@@ -89,6 +93,10 @@ export interface PageData {
   robotsMeta: RobotsMetaData;
   viewport: ViewportData;
   canonical: CanonicalData;
+  // Only set for a live page analysis. The sitemap batch already works on raw
+  // HTML, so there is nothing to compare there, and history/report re-renders
+  // don't carry it.
+  crawlerView?: CrawlerViewData;
 }
 
 export interface CanonicalData {
@@ -196,9 +204,37 @@ export interface LlmsTxtData {
   contentLength?: number;
 }
 
+// What an AI crawler without JavaScript receives, compared with the rendered
+// page. 'auth-wall' means the cookie-less fetch hit a login screen, so nothing
+// can be said about JS rendering — it must not be scored as missing content.
+export type CrawlerViewStatus = 'ok' | 'partial' | 'js-only' | 'auth-wall';
+
+export interface CrawlerViewData {
+  status: CrawlerViewStatus;
+  httpStatus: number;
+  renderedChars: number;
+  rawChars: number;
+  coverage: number; // rawChars / renderedChars, 0–1
+  renderedHeadings: number;
+  rawHeadings: number;
+  renderedHasH1: boolean;
+  rawHasH1: boolean;
+  renderedSchemaBlocks: number;
+  rawSchemaBlocks: number;
+  rawBytes: number;
+  // Headings visible in the browser but absent from the crawler's HTML
+  missingHeadings: string[];
+}
+
 export interface RobotsTxtData {
   exists: boolean;
   url?: string;
+  // The URL path (incl. query) the allow/disallow verdict was evaluated
+  // against — a site may allow `/` but disallow `/blog/`.
+  path?: string;
+  // Raw robots.txt body, kept so the sitemap batch can re-evaluate the same
+  // file against every analyzed URL without re-fetching it.
+  content?: string;
   allowedBots: Record<string, boolean>;
   blockedBots: string[];
   totalChecked: number;

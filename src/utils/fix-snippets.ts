@@ -386,6 +386,8 @@ export function getFixSnippet(key: string): FixSnippetResult | null {
       return { type: 'no-snippet', note: t('snippet_none_canonical_mismatch') };
     case 'bad_hierarchy':
       return { type: 'no-snippet', note: t('snippet_none_bad_hierarchy') };
+    case 'js_only_content':
+      return { type: 'no-snippet', note: t('snippet_none_js_only_content') };
     case 'low_scanability':
       return { type: 'no-snippet', note: t('snippet_none_low_scanability') };
     default:

@@ -1,5 +1,20 @@
 # Changelog
 
+## [4.2.0] - 2026-08-19
+
+### Added
+
+- **AI crawler view — what a bot without JavaScript actually gets:** The analysis has always run on the rendered DOM, which is what a person sees after hydration. GPTBot, ClaudeBot and PerplexityBot do not execute JavaScript; they index the HTML the server sent. On client-rendered sites those are two very different documents, and the score was far too kind. Every live analysis now re-fetches the same URL without cookies and without running scripts and compares both versions: characters of text, headings, JSON-LD blocks, plus a list of the headings a crawler never sees. A collapsible panel under "Machine readability" shows the comparison, and a new sub-check ("Content without JavaScript") scores it. A fully server-rendered page gains points; a page assembled in the browser loses them.
+  - Same-origin fetch from the page context, so still **no host permissions** and no install warning. Spoofing the User-Agent is deliberately out of scope: `fetch` forbids that header and `declarativeNetRequest` would require host permissions. Servers that cloak by user agent are therefore not detected.
+  - A cookie-less fetch of a members-only page lands on a login form. That case is detected (401/403, redirect to a login URL, or a password field the logged-in page does not have), reported as "no statement possible" and left out of the scoring — it must never look like missing content.
+  - The check degrades silently: a failed request, a non-HTML response or a server error leaves the analysis exactly as it was. The sitemap batch already works on raw HTML, so it carries no comparison and its scores are unchanged.
+- Fourth local test page `testpage/spa.html`: an empty shell whose entire content (headings, text, JSON-LD) is built by JavaScript — demonstrates the new check end to end.
+
+### Fixed
+
+- **robots.txt was evaluated for the site root only:** The AI crawler check asked "is this bot blocked on `/`?" and ignored the path of the page being analyzed. A site with `Allow: /` and `Disallow: /blog/` was reported as fully open while a blog article was on screen. Rules are now matched against the analyzed URL (path plus query) per RFC 9309: the longest matching rule wins, `Allow` wins ties, and `*` wildcards and the ` end anchor are honored. The sitemap batch still fetches robots.txt once per domain but re-evaluates it for every URL.
+- **Rules split across several groups for the same bot were partly ignored:** A robots.txt listing `User-agent: GPTBot` twice (a common way to write these files by hand) only ever used the first group. All groups of a bot are now merged, and having a group of its own still suppresses the `*` fallback.
+
 ## [4.1.0] - 2026-06-13
 
 ### Added

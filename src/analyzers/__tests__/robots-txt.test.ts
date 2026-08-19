@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseRobotsTxt } from '../../utils/dom-helpers';
+import { parseRobotsTxt, robotsForPath, robotsPathFromUrl } from '../../utils/dom-helpers';
 import { MachineReadabilityAnalyzer } from '../machine-readability';
 import type { PageData, RobotsTxtData } from '../../types/analysis';
 
@@ -86,6 +86,119 @@ Allow: /`;
   });
 });
 
+describe('parseRobotsTxt path matching', () => {
+  it('blocks a page inside a disallowed directory', () => {
+    const txt = `User-agent: *
+Disallow: /blog/`;
+    expect(parseRobotsTxt(txt, BOTS, undefined, '/blog/post-1').allowedBots['GPTBot']).toBe(false);
+    expect(parseRobotsTxt(txt, BOTS, undefined, '/about').allowedBots['GPTBot']).toBe(true);
+  });
+
+  it('lets the longer Allow rule win over a shorter Disallow', () => {
+    const txt = `User-agent: *
+Disallow: /
+Allow: /public/`;
+    expect(parseRobotsTxt(txt, BOTS, undefined, '/public/page').allowedBots['GPTBot']).toBe(true);
+    expect(parseRobotsTxt(txt, BOTS, undefined, '/private/page').allowedBots['GPTBot']).toBe(false);
+  });
+
+  it('lets the longer Disallow rule win over a shorter Allow', () => {
+    const txt = `User-agent: *
+Allow: /docs/
+Disallow: /docs/internal/`;
+    expect(parseRobotsTxt(txt, BOTS, undefined, '/docs/guide').allowedBots['GPTBot']).toBe(true);
+    expect(parseRobotsTxt(txt, BOTS, undefined, '/docs/internal/x').allowedBots['GPTBot']).toBe(false);
+  });
+
+  it('gives Allow the win on equally long rules', () => {
+    const txt = `User-agent: *
+Disallow: /page
+Allow: /page`;
+    expect(parseRobotsTxt(txt, BOTS, undefined, '/page').allowedBots['GPTBot']).toBe(true);
+  });
+
+  it('supports * wildcards inside rule paths', () => {
+    const txt = `User-agent: *
+Disallow: /*.pdf`;
+    expect(parseRobotsTxt(txt, BOTS, undefined, '/files/report.pdf').allowedBots['GPTBot']).toBe(false);
+    expect(parseRobotsTxt(txt, BOTS, undefined, '/files/report.html').allowedBots['GPTBot']).toBe(true);
+  });
+
+  it('honors the $ end-of-path anchor', () => {
+    const txt = `User-agent: *
+Disallow: /page$`;
+    expect(parseRobotsTxt(txt, BOTS, undefined, '/page').allowedBots['GPTBot']).toBe(false);
+    expect(parseRobotsTxt(txt, BOTS, undefined, '/page/sub').allowedBots['GPTBot']).toBe(true);
+  });
+
+  it('treats an empty Disallow value as no restriction', () => {
+    const txt = `User-agent: *
+Disallow:`;
+    expect(parseRobotsTxt(txt, BOTS, undefined, '/anything').allowedBots['GPTBot']).toBe(true);
+  });
+
+  it('matches against the query string as well', () => {
+    const txt = `User-agent: *
+Disallow: /*?print=`;
+    expect(parseRobotsTxt(txt, BOTS, undefined, '/article?print=1').allowedBots['GPTBot']).toBe(false);
+    expect(parseRobotsTxt(txt, BOTS, undefined, '/article').allowedBots['GPTBot']).toBe(true);
+  });
+
+  it('keeps the bot-specific block winning over the wildcard per path', () => {
+    const txt = `User-agent: *
+Disallow: /blog/
+
+User-agent: GPTBot
+Allow: /`;
+    const result = parseRobotsTxt(txt, BOTS, undefined, '/blog/post');
+    expect(result.allowedBots['GPTBot']).toBe(true);
+    expect(result.allowedBots['ClaudeBot']).toBe(false);
+  });
+});
+
+describe('robotsPathFromUrl', () => {
+  it('returns path plus query', () => {
+    expect(robotsPathFromUrl('https://example.com/blog/post?a=1#frag')).toBe('/blog/post?a=1');
+  });
+
+  it('falls back to the root for garbage input', () => {
+    expect(robotsPathFromUrl('not a url')).toBe('/');
+  });
+});
+
+describe('robotsForPath', () => {
+  const txt = `User-agent: *
+Disallow: /blog/`;
+
+  it('re-evaluates a cached robots.txt for another URL', () => {
+    const cached = parseRobotsTxt(txt, BOTS, 'https://example.com/robots.txt', '/');
+    expect(cached.allowedBots['GPTBot']).toBe(true);
+
+    const forBlog = robotsForPath(cached, 'https://example.com/blog/post');
+    expect(forBlog.allowedBots['GPTBot']).toBe(false);
+    expect(forBlog.blockedBots).toContain('GPTBot');
+    expect(forBlog.url).toBe('https://example.com/robots.txt');
+  });
+
+  it('returns the input unchanged when the path already matches', () => {
+    const cached = parseRobotsTxt(txt, BOTS, undefined, '/blog/post');
+    expect(robotsForPath(cached, 'https://example.com/blog/post')).toBe(cached);
+  });
+
+  it('handles a missing robots.txt without re-parsing', () => {
+    const none = {
+      exists: false,
+      allowedBots: { GPTBot: true },
+      blockedBots: [],
+      totalChecked: 1,
+    };
+    const result = robotsForPath(none, 'https://example.com/blog/post');
+    expect(result.exists).toBe(false);
+    expect(result.allowedBots['GPTBot']).toBe(true);
+    expect(result.path).toBe('/blog/post');
+  });
+});
+
 describe('MachineReadabilityAnalyzer robots.txt scoring', () => {
   const analyzer = new MachineReadabilityAnalyzer();
 
@@ -146,5 +259,41 @@ describe('MachineReadabilityAnalyzer robots.txt scoring', () => {
     }));
     const detail = result.details.find((d) => d.criterionKey === 'criterion_robotsTxt');
     expect(detail?.value).toBe('value_allBotsBlocked');
+  });
+});
+
+describe('parseRobotsTxt with several groups for one bot', () => {
+  // Splitting rules for a bot across groups is common in hand-written files
+  const txt = `User-agent: *
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: GPTBot
+Disallow: /spa.html`;
+
+  it('merges every group of the same bot', () => {
+    expect(parseRobotsTxt(txt, BOTS, undefined, '/spa.html').allowedBots['GPTBot']).toBe(false);
+    expect(parseRobotsTxt(txt, BOTS, undefined, '/').allowedBots['GPTBot']).toBe(true);
+  });
+
+  it('leaves the other bots on the wildcard group', () => {
+    const result = parseRobotsTxt(txt, BOTS, undefined, '/spa.html');
+    expect(result.allowedBots['ClaudeBot']).toBe(true);
+    expect(result.blockedBots).toEqual(['GPTBot']);
+  });
+
+  it('does not fall back to the wildcard when the bot has its own group elsewhere', () => {
+    const split = `User-agent: *
+Disallow: /
+
+User-agent: GPTBot
+Crawl-delay: 5
+
+User-agent: GPTBot
+Allow: /`;
+    expect(parseRobotsTxt(split, BOTS, undefined, '/page').allowedBots['GPTBot']).toBe(true);
+    expect(parseRobotsTxt(split, BOTS, undefined, '/page').allowedBots['CCBot']).toBe(false);
   });
 });

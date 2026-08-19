@@ -194,6 +194,39 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     weightedScore += robotsScore * config.weights.robotsTxt;
     totalWeight += config.weights.robotsTxt;
 
+    // Check 6: content survives without JavaScript.
+    // Only scored when the comparison actually ran and says something about
+    // rendering — no data or a login wall leaves the weight out entirely, so
+    // batch results and history re-renders score exactly as before.
+    const crawlerView = pageData.crawlerView;
+    const jsRenderingIssue =
+      crawlerView?.status === 'partial' || crawlerView?.status === 'js-only';
+
+    if (crawlerView && crawlerView.status !== 'auth-wall') {
+      const crawlerScore = crawlerView.status === 'ok' ? 1 : crawlerView.coverage;
+      const crawlerValue =
+        crawlerView.status === 'ok'
+          ? 'value_crawlerOk'
+          : crawlerView.status === 'partial'
+            ? 'value_crawlerPartial'
+            : 'value_crawlerJsOnly';
+
+      details.push({
+        criterionKey: 'criterion_crawlerView',
+        found: crawlerView.status === 'ok',
+        value: crawlerValue,
+        weight: config.weights.crawlerView,
+        progress: {
+          current: Math.round(crawlerScore * 100),
+          target: 100,
+          unitKey: 'unit_percent',
+        },
+      });
+
+      weightedScore += crawlerScore * config.weights.crawlerView;
+      totalWeight += config.weights.crawlerView;
+    }
+
     const recommendations: string[] = [];
     if (!hasSchema) recommendations.push('no_schema');
     if (completeness.totalRequired > 0 && completeness.missingByType.length > 0) {
@@ -204,6 +237,7 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     if (!hasGoodLinking) recommendations.push('weak_internal_links');
     if (!hasLlmsTxt) recommendations.push('no_llms_txt');
     if (hasAnyBlock) recommendations.push('ai_bots_blocked');
+    if (jsRenderingIssue) recommendations.push('js_only_content');
 
     return this.createCategory(0, weightedScore, totalWeight, details, recommendations);
   }

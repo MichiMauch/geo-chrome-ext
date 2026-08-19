@@ -10,6 +10,7 @@ Generative Engine Optimization prepares your content for AI-powered search engin
 
 - **Instant Analysis** — One click on the toolbar icon opens the Chrome side panel and scores the active tab
 - **6 Categories, Score 0–30** — Content clarity, answerability, trust signals, machine readability, AI citation readiness, on-page SEO
+- **AI Crawler View** — Every analysis re-fetches the page without cookies and without JavaScript, the way GPTBot, ClaudeBot and PerplexityBot receive it, and shows the difference: text, headings and JSON-LD blocks side by side, plus the headings a crawler never sees
 - **In-Page Issue Highlighting** — "Show on page" buttons outline affected elements right on the page, with plain-language badges ("This H4 follows an H2 and should be an H3", "Missing alt text", "Paragraph too long (873 chars)")
 - **One-Click Fix Snippets** — Ready-to-paste JSON-LD schemas, semantic HTML, llms.txt templates, robots.txt directives, canonical tags
 - **Domain Dashboard** — All analyzed pages of a domain on one page: scores, trends, last analysis, sorted worst-first; entries removable per row
@@ -25,7 +26,7 @@ Generative Engine Optimization prepares your content for AI-powered search engin
 | Content Clarity | H1 presence & quality, heading hierarchy, scannability, readability (Flesch/LIX) |
 | Answerability | Definitions, lists, structured sections |
 | Trust & Sources | Author info, dates, external references |
-| Machine Readability | Schema.org presence **and completeness**, entities, semantic HTML, llms.txt, AI crawler access in robots.txt |
+| Machine Readability | Schema.org presence **and completeness**, entities, semantic HTML, llms.txt, AI crawler access in robots.txt (matched per URL path), content without JavaScript |
 | AI Citation Readiness | Citable facts, FAQ/Q&A sections, sourced claims, key info upfront |
 | On-Page SEO | Title & meta description quality, image alt coverage, indexability (`noindex`), mobile viewport, Open Graph/Twitter cards, canonical tag |
 
@@ -59,7 +60,7 @@ npm test             # vitest
 npm run package      # build + zip for the Chrome Web Store
 ```
 
-Local test pages with deliberately planted issues live in `testpage/` (serve with `python3 -m http.server 8765` from that folder): `index.html` triggers heading/alt/scanability findings, `extra.html` triggers H1-quality, readability, unsourced-claims and key-info findings.
+Local test pages with deliberately planted issues live in `testpage/` (serve with `python3 -m http.server 8765` from that folder): `index.html` triggers heading/alt/scanability findings, `extra.html` triggers H1-quality, readability, unsourced-claims and key-info findings, `spa.html` is an empty shell filled entirely by JavaScript and is disallowed for GPTBot only — it exercises the crawler-view check and the path-specific robots.txt evaluation.
 
 Issue tracking uses [beads](https://github.com/steveyegge/beads) (`bd ready`, `bd show <id>`); issues are versioned in `.beads/issues.jsonl`.
 

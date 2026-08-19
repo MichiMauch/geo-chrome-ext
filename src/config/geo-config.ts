@@ -96,6 +96,9 @@ export const GEO_CONFIG = {
       internalLinks: 1.0,
       llmsTxt: 1.5,
       robotsTxt: 1.5,
+      // Only counted when the crawler comparison ran (live analysis) — see
+      // MachineReadabilityAnalyzer check 6.
+      crawlerView: 2.0,
     },
     internalLinks: {
       minCount: 3, // contextual paths a page should offer crawlers/agents

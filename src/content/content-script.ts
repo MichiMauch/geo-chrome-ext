@@ -6,6 +6,7 @@ import type { Lang } from '../utils/i18n';
 import { computeHighlightTargets } from '../utils/highlight-targets';
 import { applyHighlights, clearHighlights, scrollToFirst } from '../utils/highlight';
 import { discoverSitemapPages } from '../utils/sitemap';
+import { analyzeCrawlerView } from '../utils/crawler-view';
 import { saveAnalysis } from '../utils/history';
 import { reportAnalysis } from '../utils/analytics';
 
@@ -163,11 +164,19 @@ chrome.runtime.onMessage.addListener(
             setLang(data['geo_lang'] as Lang);
           }
 
-          // Extract page data from DOM (async for llms.txt fetch)
-          const pageData = await extractPageData();
+          // Extract page data from DOM (async for llms.txt fetch). In
+          // parallel, re-fetch the page the way a JS-less AI crawler would see
+          // it — the comparison is what keeps client-rendered sites from
+          // scoring on content no bot ever receives.
+          const [pageData, crawlerView] = await Promise.all([
+            extractPageData(),
+            analyzeCrawlerView().catch(() => undefined),
+          ]);
+          pageData.crawlerView = crawlerView;
 
           // Run full analysis
           const result = runFullAnalysis(pageData);
+          result.crawlerView = crawlerView;
 
           // Selectors of the elements behind each recommendation, for the
           // "show on page" buttons in the panel. Collectors only run for

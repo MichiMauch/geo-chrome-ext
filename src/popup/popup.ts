@@ -1,4 +1,4 @@
-import type { GEOAnalysisResult, AnalyzeResponse, AnalysisCategory, HeadingData, TrendInfo } from '../types/analysis';
+import type { GEOAnalysisResult, AnalyzeResponse, AnalysisCategory, HeadingData, TrendInfo, CrawlerViewData } from '../types/analysis';
 import { getCategoryColor } from '../utils/scoring';
 import { loadHistory, saveAnalysis, clearHistory, getDomainOverview } from '../utils/history';
 import { generateDomainDashboardHtml } from '../utils/export-domain-html';
@@ -270,8 +270,11 @@ function renderResults(result: GEOAnalysisResult) {
     const category = result.categories[key];
     // The heading outline makes the abstract "skipped levels" finding concrete,
     // so it lives inside the Content-Clarity card where that check sits.
-    const extra =
-      key === 'contentClarity' ? renderHeadingOutline(result.headings) : '';
+    let extra = '';
+    if (key === 'contentClarity') extra = renderHeadingOutline(result.headings);
+    // The crawler comparison belongs to the check it feeds ("content without
+    // JavaScript"), which sits in Machine Readability.
+    if (key === 'machineReadability') extra = renderCrawlerView(result.crawlerView);
     categoriesEl.innerHTML += renderCategory(category, extra);
   });
 
@@ -526,6 +529,80 @@ function renderHeadingOutline(headings?: HeadingData[]): string {
       </summary>
       <div class="mt-1.5 space-y-0.5 text-xs">
         ${rows}
+      </div>
+    </details>`;
+}
+
+// Side-by-side comparison of the rendered page and the HTML an AI crawler
+// downloads. Returns '' when the check did not run (history re-renders, sitemap
+// batch, failed fetch) so the category card looks exactly as before.
+function renderCrawlerView(view?: CrawlerViewData): string {
+  if (!view) return '';
+
+  if (view.status === 'auth-wall') {
+    return `
+      <details class="mt-2 border-t border-gray-100 dark:border-gray-700 pt-2">
+        <summary class="cursor-pointer select-none text-xs text-gray-500 dark:text-gray-400">
+          🤖 ${escapeHtml(t('ui_crawlerView'))}
+        </summary>
+        <div class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+          ${escapeHtml(t('ui_crawlerViewAuthWall'))}
+        </div>
+      </details>`;
+  }
+
+  const percent = Math.round(view.coverage * 100);
+  const barColor =
+    view.status === 'ok' ? '#16a34a' : view.status === 'partial' ? '#f59e0b' : '#dc2626';
+
+  const rows: Array<[string, number, number]> = [
+    [t('ui_crawlerViewChars'), view.renderedChars, view.rawChars],
+    [t('ui_crawlerViewHeadings'), view.renderedHeadings, view.rawHeadings],
+    [t('ui_crawlerViewSchema'), view.renderedSchemaBlocks, view.rawSchemaBlocks],
+  ];
+
+  const rowsHtml = rows
+    .map(
+      ([label, rendered, raw]) => `<div class="flex items-baseline justify-between gap-2">
+        <span class="text-gray-500 dark:text-gray-400">${escapeHtml(label)}</span>
+        <span class="font-mono">
+          <span class="text-gray-600 dark:text-gray-300">${rendered.toLocaleString()}</span>
+          <span class="text-gray-400"> → </span>
+          <span style="color: ${raw < rendered ? barColor : '#16a34a'}">${raw.toLocaleString()}</span>
+        </span>
+      </div>`
+    )
+    .join('');
+
+  const missing =
+    view.missingHeadings.length > 0
+      ? `<div class="mt-1.5">
+          <div class="text-gray-500 dark:text-gray-400">${escapeHtml(t('ui_crawlerViewMissing'))}</div>
+          ${view.missingHeadings
+            .map(
+              (h) =>
+                `<div class="truncate text-gray-600 dark:text-gray-300">· ${escapeHtml(h)}</div>`
+            )
+            .join('')}
+        </div>`
+      : '';
+
+  return `
+    <details class="mt-2 border-t border-gray-100 dark:border-gray-700 pt-2">
+      <summary class="cursor-pointer select-none text-xs text-gray-500 dark:text-gray-400">
+        🤖 ${escapeHtml(t('ui_crawlerView'))} (${percent}%)
+      </summary>
+      <div class="mt-1.5 space-y-1 text-xs">
+        <div class="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div class="h-full rounded-full" style="width: ${percent}%; background-color: ${barColor}"></div>
+        </div>
+        <div class="flex justify-between text-[10px] text-gray-400">
+          <span>${escapeHtml(t('ui_crawlerViewBrowser'))}</span>
+          <span>${escapeHtml(t('ui_crawlerViewCrawler'))}</span>
+        </div>
+        ${rowsHtml}
+        ${missing}
+        <div class="text-[10px] text-gray-400 pt-1">${escapeHtml(t('ui_crawlerViewNote'))}</div>
       </div>
     </details>`;
 }

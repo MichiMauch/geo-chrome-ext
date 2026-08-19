@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Client-gerenderte Demo-Seite | GEO Analyzer Testpage</title>
+  <meta name="description" content="Testseite, deren Inhalt erst im Browser durch JavaScript entsteht — für die KI-Crawler-Ansicht.">
+  <link rel="canonical" href="http://localhost:8765/spa.html">
+</head>
+<body>
+  <!--
+    Absicht: Was der Server ausliefert, ist eine leere Hülle. Erst das Skript
+    unten baut Überschriften, Text und JSON-LD auf. Ein KI-Crawler ohne
+    JavaScript sieht davon nichts, ein Browser alles — genau die Differenz,
+    die die Prüfung "Inhalt ohne JavaScript" sichtbar macht.
+
+    Zusätzlich ist /spa.html in der robots.txt nur für GPTBot gesperrt. Damit
+    lässt sich die pfadgenaue robots-Auswertung prüfen: auf / sind alle Bots
+    erlaubt, hier ist einer blockiert.
+  -->
+  <div id="root"></div>
+
+  <script>
+    const article = {
+      title: 'Warum client-gerenderte Seiten in KI-Antworten fehlen',
+      sections: [
+        {
+          heading: 'Crawler führen kein JavaScript aus',
+          body: 'GPTBot, ClaudeBot und PerplexityBot laden das HTML, das der Server schickt, und werten es aus. Sie starten keine JavaScript-Engine und warten auf keine Hydration. Was erst im Browser entsteht, existiert für sie nicht. Eine Seite kann im Browser vollständig aussehen und für diese Bots trotzdem leer sein.'
+        },
+        {
+          heading: 'Der Unterschied fällt im Alltag nicht auf',
+          body: 'Im Browser sieht alles richtig aus, im Quelltext-Fenster ebenfalls, weil die Entwicklertools den aufgebauten DOM zeigen und nicht die Server-Antwort. Erst ein Abruf ohne JavaScript legt offen, wie wenig ankommt. Genau das macht diese Prüfung: Sie holt dieselbe URL ohne Cookies und ohne Skriptausführung und vergleicht beide Fassungen.'
+        },
+        {
+          heading: 'Was hilft',
+          body: 'Serverseitiges Rendering liefert den fertigen Inhalt aus. Ein statischer Export erzeugt HTML zur Build-Zeit. Prerendering schickt Bots eine vorgerenderte Fassung. Welcher Weg passt, hängt vom Framework ab; entscheidend ist, dass der Hauptinhalt schon in der ersten Server-Antwort steht.'
+        }
+      ]
+    };
+
+    const root = document.getElementById('root');
+
+    const h1 = document.createElement('h1');
+    h1.textContent = article.title;
+    root.appendChild(h1);
+
+    for (const section of article.sections) {
+      const h2 = document.createElement('h2');
+      h2.textContent = section.heading;
+      const p = document.createElement('p');
+      p.textContent = section.body;
+      root.appendChild(h2);
+      root.appendChild(p);
+    }
+
+    const schema = document.createElement('script');
+    schema.type = 'application/ld+json';
+    schema.textContent = JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: article.title,
+      author: { '@type': 'Person', name: 'Testautorin' },
+      datePublished: '2026-08-19'
+    });
+    document.head.appendChild(schema);
+  </script>
+</body>
+</html>

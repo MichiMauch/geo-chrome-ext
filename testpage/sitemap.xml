@@ -3,4 +3,5 @@
   <url><loc>http://localhost:8765/</loc></url>
   <url><loc>http://localhost:8765/extra.html</loc></url>
   <url><loc>http://localhost:8765/best-practice.html</loc></url>
+  <url><loc>http://localhost:8765/spa.html</loc></url>
 </urlset>

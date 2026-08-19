@@ -12,3 +12,8 @@ Allow: /
 
 User-agent: Google-Extended
 Allow: /
+
+# Pfadgenaue Regel: nur GPTBot ist auf /spa.html gesperrt, alle anderen
+# Bots und alle anderen Pfade bleiben frei.
+User-agent: GPTBot
+Disallow: /spa.html

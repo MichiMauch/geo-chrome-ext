@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MachineReadabilityAnalyzer } from '../machine-readability';
-import type { PageData, SchemaData } from '../../types/analysis';
+import type { PageData, SchemaData, CrawlerViewData } from '../../types/analysis';
 
 function makePage(overrides: Partial<PageData> = {}): PageData {
   return {
@@ -100,5 +100,80 @@ describe('MachineReadabilityAnalyzer — schema completeness', () => {
     const result = analyzer.analyze(makePage({ schema: schemas }));
     const detail = result.details.find((d) => d.criterionKey === 'criterion_schema_completeness');
     expect(detail).toBeUndefined();
+  });
+});
+
+describe('MachineReadabilityAnalyzer — crawler view', () => {
+  const analyzer = new MachineReadabilityAnalyzer();
+
+  const crawlerView = (overrides: Partial<CrawlerViewData> = {}): CrawlerViewData => ({
+    status: 'ok',
+    httpStatus: 200,
+    renderedChars: 5000,
+    rawChars: 5000,
+    coverage: 1,
+    renderedHeadings: 4,
+    rawHeadings: 4,
+    renderedHasH1: true,
+    rawHasH1: true,
+    renderedSchemaBlocks: 1,
+    rawSchemaBlocks: 1,
+    rawBytes: 20000,
+    missingHeadings: [],
+    ...overrides,
+  });
+
+  const detailOf = (page: PageData) =>
+    analyzer.analyze(page).details.find((d) => d.criterionKey === 'criterion_crawlerView');
+
+  it('adds no criterion and changes no score when the check did not run', () => {
+    const withoutCheck = analyzer.analyze(makePage());
+    expect(detailOf(makePage())).toBeUndefined();
+    expect(withoutCheck.recommendations).not.toContain('js_only_content');
+  });
+
+  it('rewards a server-rendered page and fires no recommendation', () => {
+    const baseline = analyzer.analyze(makePage()).score;
+    const withCheck = analyzer.analyze(makePage({ crawlerView: crawlerView() }));
+    // The criterion carries full marks here, so it can only help
+    expect(withCheck.score).toBeGreaterThan(baseline);
+    expect(withCheck.recommendations).not.toContain('js_only_content');
+
+    const detail = detailOf(makePage({ crawlerView: crawlerView() }));
+    expect(detail?.found).toBe(true);
+    expect(detail?.value).toBe('value_crawlerOk');
+  });
+
+  it('flags a client-rendered page and drops the score', () => {
+    const baseline = analyzer.analyze(makePage({ crawlerView: crawlerView() })).score;
+    const page = makePage({
+      crawlerView: crawlerView({ status: 'js-only', rawChars: 0, coverage: 0 }),
+    });
+    const result = analyzer.analyze(page);
+    expect(result.score).toBeLessThan(baseline);
+    expect(result.recommendations).toContain('js_only_content');
+
+    const detail = detailOf(page);
+    expect(detail?.found).toBe(false);
+    expect(detail?.value).toBe('value_crawlerJsOnly');
+    expect(detail?.progress).toEqual({ current: 0, target: 100, unitKey: 'unit_percent' });
+  });
+
+  it('scores a partly client-rendered page by its coverage', () => {
+    const page = makePage({ crawlerView: crawlerView({ status: 'partial', rawChars: 2000, coverage: 0.4 }) });
+    const result = analyzer.analyze(page);
+    expect(result.recommendations).toContain('js_only_content');
+    expect(detailOf(page)?.value).toBe('value_crawlerPartial');
+    expect(detailOf(page)?.progress?.current).toBe(40);
+  });
+
+  it('ignores a login wall entirely', () => {
+    // No weight added at all, so the score matches a run without the check
+    const baseline = analyzer.analyze(makePage()).score;
+    const page = makePage({ crawlerView: crawlerView({ status: 'auth-wall', coverage: 0 }) });
+    const result = analyzer.analyze(page);
+    expect(result.score).toBeCloseTo(baseline, 5);
+    expect(result.recommendations).not.toContain('js_only_content');
+    expect(detailOf(page)).toBeUndefined();
   });
 });

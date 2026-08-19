@@ -27,9 +27,14 @@ export async function extractPageData(
   pageUrl: string = window.location.href,
   domainData?: { llmsTxt: LlmsTxtData; robotsTxt: RobotsTxtData }
 ): Promise<PageData> {
+  // The batch reuses the domain's robots.txt, but the allow/disallow verdict is
+  // per URL path, so it gets re-evaluated for this page.
   const [llmsTxt, robotsTxt] = domainData
-    ? [domainData.llmsTxt, domainData.robotsTxt]
-    : await Promise.all([checkLlmsTxt(), checkRobotsTxt()]);
+    ? [domainData.llmsTxt, robotsForPath(domainData.robotsTxt, pageUrl)]
+    : await Promise.all([
+        checkLlmsTxt(),
+        checkRobotsTxt(undefined, originOf(pageUrl), robotsPathFromUrl(pageUrl)),
+      ]);
 
   return {
     url: pageUrl,
@@ -589,11 +594,16 @@ export async function checkLlmsTxt(origin: string = window.location.origin): Pro
   }
 }
 
-export async function checkRobotsTxt(bots?: readonly string[], origin: string = window.location.origin): Promise<RobotsTxtData> {
+export async function checkRobotsTxt(
+  bots?: readonly string[],
+  origin: string = window.location.origin,
+  path: string = robotsPathFromUrl(window.location.href)
+): Promise<RobotsTxtData> {
   const targetBots = bots ?? GEO_CONFIG.machineReadability.aiBots;
   const allAllowed = (exists: boolean, url?: string): RobotsTxtData => ({
     exists,
     url,
+    path,
     allowedBots: Object.fromEntries(targetBots.map((b) => [b, true])),
     blockedBots: [],
     totalChecked: targetBots.length,
@@ -611,33 +621,77 @@ export async function checkRobotsTxt(bots?: readonly string[], origin: string = 
     const looksLikeHtml = /^\s*<!DOCTYPE|^\s*<html|^\s*<head/i.test(content);
     if (looksLikeHtml || content.trim().length === 0) return allAllowed(false);
 
-    return parseRobotsTxt(content, targetBots, url);
+    return parseRobotsTxt(content, targetBots, url, path);
   } catch {
     return allAllowed(false);
   }
 }
 
+function originOf(url: string): string {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return window.location.origin;
+  }
+}
+
 /**
- * Parses robots.txt and returns which of the given bots are allowed at site root.
- * Rules: bot-specific block beats `*` fallback. `Disallow: /` without an overriding
- * root `Allow: /` means the bot is blocked.
+ * The part of a URL robots.txt rules are matched against: path plus query,
+ * per RFC 9309. Falls back to the site root for unparseable URLs.
+ */
+export function robotsPathFromUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    return (u.pathname || '/') + u.search;
+  } catch {
+    return '/';
+  }
+}
+
+/**
+ * Re-evaluates an already fetched robots.txt against another URL's path. The
+ * sitemap batch fetches robots.txt once per domain but analyzes many URLs, and
+ * a rule like `Disallow: /blog/` only applies to some of them.
+ */
+export function robotsForPath(robotsTxt: RobotsTxtData, pageUrl: string): RobotsTxtData {
+  const path = robotsPathFromUrl(pageUrl);
+  if (!robotsTxt.exists || !robotsTxt.content || robotsTxt.path === path) {
+    return robotsTxt.path === path ? robotsTxt : { ...robotsTxt, path };
+  }
+  return parseRobotsTxt(
+    robotsTxt.content,
+    Object.keys(robotsTxt.allowedBots),
+    robotsTxt.url,
+    path
+  );
+}
+
+/**
+ * Parses robots.txt and returns which of the given bots may fetch `path`.
+ * Rules: a bot-specific block beats the `*` fallback; within a block the
+ * longest matching rule wins (RFC 9309), Allow winning ties. `*` and `$` in
+ * rule paths are honored.
  */
 export function parseRobotsTxt(
   content: string,
   bots: readonly string[],
-  url?: string
+  url?: string,
+  path: string = '/'
 ): RobotsTxtData {
   const blocks = parseBlocks(content);
-  const wildcard = blocks.find((b) => b.agents.includes('*'));
 
   const allowedBots: Record<string, boolean> = {};
   const blockedBots: string[] = [];
 
   for (const bot of bots) {
     const lower = bot.toLowerCase();
-    const specific = blocks.find((b) => b.agents.includes(lower));
-    const block = specific ?? wildcard;
-    const allowed = block ? !isRootBlocked(block) : true;
+    // A robots.txt may split rules for one bot across several groups; RFC 9309
+    // treats them as one. Any bot-specific group at all suppresses the `*`
+    // fallback, even when the matching rule lives in another of its groups.
+    const specific = blocks.filter((b) => b.agents.includes(lower));
+    const relevant = specific.length > 0 ? specific : blocks.filter((b) => b.agents.includes('*'));
+    const rules = relevant.flatMap((b) => b.rules);
+    const allowed = !isPathBlocked(rules, path);
     allowedBots[bot] = allowed;
     if (!allowed) blockedBots.push(bot);
   }
@@ -645,15 +699,22 @@ export function parseRobotsTxt(
   return {
     exists: true,
     url,
+    path,
+    content,
     allowedBots,
     blockedBots,
     totalChecked: bots.length,
   };
 }
 
+interface RobotsRule {
+  type: 'allow' | 'disallow';
+  path: string;
+}
+
 interface RobotsBlock {
   agents: string[]; // lowercased user-agent names
-  rules: Array<{ type: 'allow' | 'disallow'; path: string }>;
+  rules: RobotsRule[];
 }
 
 function parseBlocks(content: string): RobotsBlock[] {
@@ -700,16 +761,40 @@ function parseBlocks(content: string): RobotsBlock[] {
   return blocks;
 }
 
-function isRootBlocked(block: RobotsBlock): boolean {
-  // A bot is blocked at the root iff there is a `Disallow: /` rule and no
-  // overriding `Allow: /` (or longer Allow prefix covering the root).
-  const hasDisallowRoot = block.rules.some(
-    (r) => r.type === 'disallow' && r.path === '/'
-  );
-  if (!hasDisallowRoot) return false;
+function isPathBlocked(rules: RobotsRule[], path: string): boolean {
+  // RFC 9309: the most specific (longest) matching rule decides; Allow wins a
+  // tie. No matching rule at all means the path is allowed.
+  let best: { type: 'allow' | 'disallow'; length: number } | null = null;
 
-  const hasAllowRoot = block.rules.some(
-    (r) => r.type === 'allow' && r.path === '/'
-  );
-  return !hasAllowRoot;
+  for (const rule of rules) {
+    // `Disallow:` with an empty value imposes no restriction.
+    if (rule.path === '') continue;
+    if (!robotsRuleMatches(rule.path, path)) continue;
+    const length = rule.path.length;
+    if (
+      !best ||
+      length > best.length ||
+      (length === best.length && rule.type === 'allow')
+    ) {
+      best = { type: rule.type, length };
+    }
+  }
+
+  return best?.type === 'disallow';
+}
+
+function robotsRuleMatches(pattern: string, path: string): boolean {
+  // `$` anchors the rule to the end of the path, `*` matches any sequence.
+  const anchored = pattern.endsWith('$');
+  const body = anchored ? pattern.slice(0, -1) : pattern;
+  const source = body
+    .split('*')
+    .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+    .join('.*');
+  try {
+    return new RegExp(`^${source}${anchored ? '$' : ''}`).test(path);
+  } catch {
+    // A pattern we cannot compile must not silently block the page.
+    return false;
+  }
 }

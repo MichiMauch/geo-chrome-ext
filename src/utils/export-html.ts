@@ -1,4 +1,4 @@
-import type { GEOAnalysisResult, AnalysisCategory, CategoryDetail } from '../types/analysis';
+import type { GEOAnalysisResult, AnalysisCategory, CategoryDetail, CrawlerViewData } from '../types/analysis';
 import { getCategoryColor } from './scoring';
 import { t, getDateLocale } from './i18n';
 import { getFixSnippet, getSnippetLanguageLabel } from './fix-snippets';
@@ -20,6 +20,10 @@ function formatDate(iso: string): string {
     return iso;
   }
 }
+
+// The crawler explanation needs numbers that don't fit into a CategoryDetail,
+// so the report stashes them here for the duration of one render.
+let reportCrawlerView: CrawlerViewData | undefined;
 
 function getExplanation(d: CategoryDetail): string {
   // Check skipped for the detected page type (e.g. author/date on a homepage)
@@ -122,6 +126,17 @@ function getExplanation(d: CategoryDetail): string {
     if (blocked === 0) return t('explain_robotstxt_ok');
     if (total > 0 && blocked === total) return t('explain_robotstxt_all_blocked');
     return t('explain_robotstxt_partial', { blocked, total });
+  }
+  // AI crawler view — content without JavaScript
+  if (criterion === t('criterion_crawlerView')) {
+    const numbers = {
+      raw: (reportCrawlerView?.rawChars ?? 0).toLocaleString(),
+      rendered: (reportCrawlerView?.renderedChars ?? 0).toLocaleString(),
+      coverage: current,
+    };
+    if (d.found) return t('explain_crawlerview_ok', numbers);
+    if (reportCrawlerView?.status === 'js-only') return t('explain_crawlerview_jsonly', numbers);
+    return t('explain_crawlerview_partial', numbers);
   }
   // Facts
   if (criterion === t('criterion_facts')) {
@@ -300,6 +315,7 @@ function renderRecommendationItemHtml(recKey: string, index: number): string {
 }
 
 export function generateHtmlReport(result: GEOAnalysisResult): string {
+  reportCrawlerView = result.crawlerView;
   const ratingColor = result.rating.color;
   const dateFormatted = formatDate(result.timestamp);
 
