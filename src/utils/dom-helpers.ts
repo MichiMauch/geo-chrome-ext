@@ -18,6 +18,7 @@ import type {
   CanonicalData,
 } from '../types/analysis';
 import { GEO_CONFIG } from '../config/geo-config';
+import { extractTextDates } from './text-dates';
 
 // Extracts everything the analyzers need. Defaults work on the live page;
 // the sitemap batch passes a DOMParser document + its URL instead, plus the
@@ -547,6 +548,10 @@ export function extractDates(doc: Document = document): DateData[] {
       }
     }
   }
+
+  // 4. Visible text dates ("Last updated: August 11, 2026") — no markup, but
+  // AI crawlers read them, so a page shouldn't lose the freshness point for it.
+  dates.push(...extractTextDates(doc));
 
   return dates;
 }

@@ -184,7 +184,7 @@ export interface AuthorData {
 export interface DateData {
   date: Date;
   formatted: string;
-  source: 'time-element' | 'meta' | 'schema';
+  source: 'time-element' | 'meta' | 'schema' | 'text';
 }
 
 export interface SemanticElements {

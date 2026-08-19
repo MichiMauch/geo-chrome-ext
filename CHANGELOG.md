@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.2.1] - 2026-08-19
+
+### Fixed
+
+- **Dates printed as plain text were not recognized:** The freshness check ("Date present") only read `<time datetime>`, three meta tags and schema.org `datePublished`/`dateModified`. Many sites — Drupal and WordPress themes in particular — print their update date as plain text in the footer, e.g. `<div class="footer-updated">Last updated: August 11, 2026</div>` on fisba.com. AI crawlers read that line without trouble, but the analyzer reported "no date found" and docked the points. A fourth extraction step now scans the DOM for visible dates: ISO (`2026-08-11`), English and German month names (`August 11, 2026`, `11. März 2026`, `Aug 3rd, 2025`) and numeric formats (`11.08.2026` day-first, `08/11/2026` month-first unless the first number rules that out).
+  - To keep years in body copy from counting as a publication date, a candidate is only accepted when the text carries a date label (`last updated`, `published on`, `zuletzt aktualisiert`, `Stand:` …) or the element or its parent has a date-ish class or id (`footer-updated`, `post-date`, `lastmod` …). Only leaf elements with at most 160 characters are considered, identical days are deduplicated, and at most five text dates are collected.
+  - Structured dates keep their priority: markup-based entries stay first in the list, so the value shown in the panel is unchanged wherever markup exists.
+
 ## [4.2.0] - 2026-08-19
 
 ### Added
