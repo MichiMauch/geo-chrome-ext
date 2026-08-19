@@ -1,6 +1,7 @@
 import { PageData, AnalysisCategory, CategoryDetail } from '../types/analysis';
 import { BaseAnalyzer } from './base';
 import { GEO_CONFIG } from '../config/geo-config';
+import { flattenSchemaRefs } from '../utils/dom-helpers';
 
 function isEmptyValue(v: unknown): boolean {
   if (v === undefined || v === null) return true;
@@ -296,7 +297,9 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     if (hasOrgSchema) score += 0.3;
 
     const hasPersonSchema = pageData.schema.some(
-      (s) => s['@type'] === 'Person' || (s.author && s.author['@type'] === 'Person')
+      (s) =>
+        s['@type'] === 'Person' ||
+        flattenSchemaRefs(s.author).some((a) => a['@type'] === 'Person')
     );
     if (hasPersonSchema) score += 0.2;
 

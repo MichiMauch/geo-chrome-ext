@@ -430,19 +430,75 @@ export function extractRdfa(doc: Document = document): SchemaData[] {
   return results;
 }
 
-export function extractAuthorInfo(doc: Document = document): AuthorData | null {
-  // 1. Try Schema.org
-  const schemas = extractSchemaData(doc);
+// Author and publisher come in every shape JSON-LD allows: a plain name, a
+// node, an array of either, or an @id reference into @graph (what Yoast and
+// the Drupal schema modules emit). Flattens a value to the nodes it holds.
+export function flattenSchemaRefs(value: unknown): Record<string, unknown>[] {
+  if (Array.isArray(value)) return value.flatMap(flattenSchemaRefs);
+  if (value && typeof value === 'object') return [value as Record<string, unknown>];
+  return [];
+}
+
+function indexSchemasById(schemas: SchemaData[]): Map<string, SchemaData> {
+  const byId = new Map<string, SchemaData>();
   for (const schema of schemas) {
-    if (schema.author) {
-      const authorName =
-        typeof schema.author === 'string'
-          ? schema.author
-          : schema.author.name;
-      if (authorName) {
-        return { name: authorName, source: 'schema' };
-      }
+    const id = schema['@id'];
+    if (typeof id === 'string' && id) byId.set(id, schema);
+  }
+  return byId;
+}
+
+// Resolves a name out of an author/publisher value, following @id references
+// into @graph. `seen` stops a reference cycle from recursing forever.
+function resolveSchemaName(
+  value: unknown,
+  byId: Map<string, SchemaData>,
+  seen: Set<string> = new Set()
+): string | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    // A bare string is normally the name itself, but it can also be an @id
+    const referenced = byId.get(trimmed);
+    if (referenced && !seen.has(trimmed)) {
+      seen.add(trimmed);
+      return resolveSchemaName(referenced, byId, seen);
     }
+    // An unresolvable URL or fragment is a broken reference, not a name
+    if (/^(https?:\/\/|#)/i.test(trimmed)) return null;
+    return trimmed;
+  }
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const name = resolveSchemaName(entry, byId, seen);
+      if (name) return name;
+    }
+    return null;
+  }
+
+  if (value && typeof value === 'object') {
+    const node = value as Record<string, unknown>;
+    if (typeof node.name === 'string' && node.name.trim()) return node.name.trim();
+    const id = node['@id'];
+    if (typeof id === 'string' && id && !seen.has(id)) {
+      seen.add(id);
+      const referenced = byId.get(id);
+      if (referenced) return resolveSchemaName(referenced, byId, seen);
+    }
+  }
+
+  return null;
+}
+
+export function extractAuthorInfo(doc: Document = document): AuthorData | null {
+  // 1. Try Schema.org — a credited author outranks everything else
+  const schemas = extractSchemaData(doc);
+  const byId = indexSchemasById(schemas);
+
+  for (const schema of schemas) {
+    const name = resolveSchemaName(schema.author, byId);
+    if (name) return { name, source: 'schema' };
   }
 
   // 2. Try meta tags
@@ -451,11 +507,19 @@ export function extractAuthorInfo(doc: Document = document): AuthorData | null {
     doc
       .querySelector('meta[property="article:author"]')
       ?.getAttribute('content');
-  if (metaAuthor) {
-    return { name: metaAuthor, source: 'meta' };
+  if (metaAuthor?.trim()) {
+    return { name: metaAuthor.trim(), source: 'meta' };
   }
 
-  // 3. Try DOM patterns
+  // 3. Schema.org publisher — an organization behind the content still makes
+  // it attributable, which is what the criterion asks for. Standalone
+  // Organization nodes don't count: nearly every site emits one.
+  for (const schema of schemas) {
+    const name = resolveSchemaName(schema.publisher, byId);
+    if (name) return { name, source: 'publisher' };
+  }
+
+  // 4. Try DOM patterns
   const authorSelectors = [
     '[class*="author"]',
     '[class*="byline"]',

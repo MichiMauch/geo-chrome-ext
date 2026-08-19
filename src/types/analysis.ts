@@ -170,7 +170,9 @@ export interface MetaData {
 export interface SchemaData {
   '@type': string;
   name?: string;
-  author?: { name?: string; '@type'?: string };
+  // Author shapes in the wild: a plain name, a node, an array of either, or an
+  // @id reference into @graph — resolveSchemaName() handles all of them.
+  author?: unknown;
   datePublished?: string;
   dateModified?: string;
   [key: string]: unknown;
@@ -178,7 +180,9 @@ export interface SchemaData {
 
 export interface AuthorData {
   name: string;
-  source: 'schema' | 'meta' | 'dom';
+  // 'publisher' means the name comes from a schema.org publisher/Organization
+  // rather than a person credited as the author.
+  source: 'schema' | 'meta' | 'publisher' | 'dom';
 }
 
 export interface DateData {

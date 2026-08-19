@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.3.1] - 2026-08-19
+
+### Fixed
+
+- **Sitemap batch analyzed the open tab's markup instead of each URL's:** `extractSchemaData`, `extractAuthorInfo`, `extractRobotsMeta`, `extractParagraphs` and `extractFaqQuestions` all accept the document to work on, but queried the global `document` inside. On a live analysis both are the same object, so nothing looked wrong. The sitemap and domain batch parses every URL with `DOMParser` while running in the content script of whatever page happens to be open — so each analyzed URL inherited that page's JSON-LD, author meta, robots meta, paragraphs and FAQ questions. Schema types, schema completeness, entities, author and indexability were therefore wrong for every batch result. A regression test fills the live document with one set of markup and asserts the extractors return the parsed document's data.
+- **Authors in JSON-LD were missed in three common shapes:** The author check only understood `author` as a plain string or as a node with a `name`. Now recognized as well:
+  - `"author": [{…}]` — an array, the usual way to credit more than one person. Previously the whole entry was skipped.
+  - `"author": {"@id": "…"}` — a reference to a `Person` node elsewhere in `@graph`, which is what Yoast SEO and the Drupal schema modules emit. References are resolved through `@graph` (bare-string `@id`s included), cycles are broken, and an unresolvable reference no longer ends up displayed as the author's name.
+  - `"publisher": {…}` — an organization behind the content now counts, which is what the criterion "Author/organization identifiable" has always claimed to check. It ranks below a credited author and below `meta[name="author"]`, and standalone `Organization` nodes are ignored — nearly every site emits one.
+
 ## [4.3.0] - 2026-08-19
 
 ### Added
