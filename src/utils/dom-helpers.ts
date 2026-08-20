@@ -593,20 +593,30 @@ export function extractDates(doc: Document = document): DateData[] {
     }
   }
 
-  // 3. Schema.org dates
+  // 3. Schema.org dates — both of them, dateModified first.
+  //
+  // This used to read `datePublished || dateModified`, so a page that was
+  // published in 2021 and updated today was scored on 2021 and counted as
+  // stale. For a freshness criterion the modification date is the relevant
+  // signal, and both belong in the list: the publication date still answers
+  // "when did this appear", it just must not hide the newer one.
   const schemas = extractSchemaData(doc);
+  const gesehen = new Set<number>();
   for (const schema of schemas) {
-    const dateStr = schema.datePublished || schema.dateModified;
-    if (dateStr && typeof dateStr === 'string') {
+    for (const key of ['dateModified', 'datePublished'] as const) {
+      const dateStr = schema[key];
+      if (!dateStr || typeof dateStr !== 'string') continue;
       try {
         const date = new Date(dateStr);
-        if (!isNaN(date.getTime())) {
-          dates.push({
-            date,
-            formatted: dateStr,
-            source: 'schema',
-          });
-        }
+        if (isNaN(date.getTime())) continue;
+        // Several schema blocks on one page usually repeat the same dates.
+        if (gesehen.has(date.getTime())) continue;
+        gesehen.add(date.getTime());
+        dates.push({
+          date,
+          formatted: dateStr,
+          source: 'schema',
+        });
       } catch {
         // Ignore
       }

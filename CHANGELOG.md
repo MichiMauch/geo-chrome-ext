@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.3.2] - 2026-08-20
+
+### Fixed
+
+- **`dateModified` was hidden by `datePublished`:** The Schema.org step of `extractDates` read `schema.datePublished || schema.dateModified`, so the publication date always won and the modification date was only ever consulted when no publication date existed. A page published in 2021 and updated today was therefore scored on 2021 and counted as older than a year — a half-filled dot on the "Date present" criterion instead of a full one. Both dates are now collected, `dateModified` first, and identical timestamps from several schema blocks on one page are deduplicated. Pages that only carry `datePublished` are unaffected. Found on fisba.com, which publishes both in its JSON-LD.
+- **The panel showed the first date found, not the newest:** The value next to "Date present" came from `dates[0]`. Since schema dates are collected before the visible text dates, a page could score a full freshness point from a current "Last updated" line in the footer while the panel displayed a publication date from years earlier. The newest of all found dates is now shown.
+- **`{date}` appeared verbatim for stale pages:** The translation for a date older than a year reads `{date} (older than 1 year)`, but nothing ever substituted the placeholder — the panel printed the braces. `CategoryDetail` now carries an optional `valueParams`, which the mapping layer passes to `t()`, so the date is filled in. All six interface languages were already worded for it.
+
 ## [4.3.1] - 2026-08-19
 
 ### Fixed

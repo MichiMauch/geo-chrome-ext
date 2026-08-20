@@ -42,13 +42,24 @@ export class TrustSourcesAnalyzer extends BaseAnalyzer {
     const hasDate = pageData.dates.length > 0;
     const hasRecentDate = hasDate && pageData.dates.some((d) => isWithinLastYear(d.date));
 
+    // The newest date decides what is shown, not the first one found. A page
+    // can carry a 2021 publication date and a current modification date; with
+    // dates[0] the panel then showed 2021 next to a full freshness point.
+    const neustesDatum = hasDate
+      ? pageData.dates.reduce((a, b) => (b.date > a.date ? b : a))
+      : null;
+
     let dateValue: string;
-    if (!hasDate) {
+    let dateParams: Record<string, string> | undefined;
+    if (!neustesDatum) {
       dateValue = 'value_noDateFound';
     } else if (hasRecentDate) {
-      dateValue = pageData.dates[0].formatted;
+      dateValue = neustesDatum.formatted;
     } else {
-      dateValue = 'value_olderThanYear'; // Mapping layer will handle interpolation
+      // The translation carries a {date} placeholder — without the parameter
+      // the panel showed it verbatim.
+      dateValue = 'value_olderThanYear';
+      dateParams = { date: neustesDatum.formatted };
     }
 
     if (skipAuthorDate) {
@@ -57,6 +68,7 @@ export class TrustSourcesAnalyzer extends BaseAnalyzer {
       criterionKey: 'criterion_date',
       found: hasDate,
       value: dateValue,
+      valueParams: dateParams,
       weight: config.weights.date,
       progress: {
         current: hasRecentDate ? 1 : (hasDate ? 0.5 : 0),

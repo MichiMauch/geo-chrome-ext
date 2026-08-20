@@ -29,5 +29,5 @@ function translateDetailValue(detail: CategoryDetail): string | number {
   }
 
   // Otherwise, treat it as a translation key
-  return t(detail.value);
+  return t(detail.value, detail.valueParams);
 }

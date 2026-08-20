@@ -1,6 +1,6 @@
 {
   "name": "geo-analyzer-extension",
-  "version": "4.3.1",
+  "version": "4.3.2",
   "description": "Chrome Extension for GEO analysis of web pages with score tracking, trend analysis and history",
   "type": "module",
   "scripts": {

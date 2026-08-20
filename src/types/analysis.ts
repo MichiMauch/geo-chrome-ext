@@ -11,6 +11,9 @@ export interface CategoryDetail {
   criterionKey: string; // Translation key
   found: boolean;
   value?: string | number;
+  // Placeholders for `value` when it is a translation key like
+  // "{date} (older than 1 year)". Ignored for values that are already text.
+  valueParams?: Record<string, string>;
   weight: number;
   // Progress info for partial completion (e.g., "2/3" or "67%")
   progress?: {
