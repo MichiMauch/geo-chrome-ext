@@ -15,6 +15,32 @@ chrome.storage.local.get('geo_report_html', (data) => {
       btn.addEventListener('click', () => window.print());
     }
 
+    // Criteria open one by one on click; this button opens or closes all
+    const criteria = () => Array.from(document.querySelectorAll<HTMLDetailsElement>('details.crit'));
+    const toggleAll = document.getElementById('toggle-all');
+    if (toggleAll) {
+      const sync = () => {
+        const allOpen = criteria().every((d) => d.open);
+        toggleAll.textContent = (allOpen ? toggleAll.dataset.collapse : toggleAll.dataset.expand) || '';
+      };
+      toggleAll.addEventListener('click', () => {
+        const open = !criteria().every((d) => d.open);
+        criteria().forEach((d) => (d.open = open));
+        sync();
+      });
+      criteria().forEach((d) => d.addEventListener('toggle', sync));
+    }
+
+    // A PDF needs everything on paper; restore the reader's view afterwards
+    let openBeforePrint: boolean[] = [];
+    window.addEventListener('beforeprint', () => {
+      openBeforePrint = criteria().map((d) => d.open);
+      criteria().forEach((d) => (d.open = true));
+    });
+    window.addEventListener('afterprint', () => {
+      criteria().forEach((d, i) => (d.open = openBeforePrint[i] ?? false));
+    });
+
     // Count-up score
     document.querySelectorAll('.count-up').forEach((el) => {
       const target = parseFloat(el.getAttribute('data-target') || '0');

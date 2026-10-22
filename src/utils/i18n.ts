@@ -9,6 +9,12 @@ export type Lang = 'en' | 'de' | 'fr' | 'es' | 'pt' | 'it';
 
 export const translations: Record<Lang, Record<string, string>> = {
   en: {
+    report_count_fail: "{n} not met",
+    report_count_partial: "{n} partly met",
+    report_count_ok: "{n} met",
+    report_details_title: "All criteria in detail",
+    report_expand_all: "Expand all",
+    report_collapse_all: "Collapse all",
     value_chars: "{count} characters",
     rec_no_faq_schema: "Add a FAQPage Schema.org block that lists the questions and answers already on the page.",
     report_found: "What we found on this page",
@@ -375,6 +381,12 @@ export const translations: Record<Lang, Record<string, string>> = {
   },
 
   de: {
+    report_count_fail: "{n} nicht erfüllt",
+    report_count_partial: "{n} teilweise",
+    report_count_ok: "{n} erfüllt",
+    report_details_title: "Alle Kriterien im Detail",
+    report_expand_all: "Alle aufklappen",
+    report_collapse_all: "Alle zuklappen",
     value_chars: "{count} Zeichen",
     rec_no_faq_schema: "Ergänzen Sie einen FAQPage-Block (Schema.org) mit den Fragen und Antworten, die schon auf der Seite stehen.",
     report_found: "Was wir auf dieser Seite gefunden haben",
@@ -726,6 +738,12 @@ export const translations: Record<Lang, Record<string, string>> = {
   },
 
   fr: {
+    report_count_fail: "{n} non rempli(s)",
+    report_count_partial: "{n} en partie",
+    report_count_ok: "{n} rempli(s)",
+    report_details_title: "Tous les critères en détail",
+    report_expand_all: "Tout déplier",
+    report_collapse_all: "Tout replier",
     value_chars: "{count} caractères",
     rec_no_faq_schema: "Ajoutez un bloc Schema.org FAQPage reprenant les questions et réponses déjà présentes sur la page.",
     report_found: "Ce que nous avons trouvé sur cette page",
@@ -1074,6 +1092,12 @@ export const translations: Record<Lang, Record<string, string>> = {
   },
 
   es: {
+    report_count_fail: "{n} no cumplido(s)",
+    report_count_partial: "{n} en parte",
+    report_count_ok: "{n} cumplido(s)",
+    report_details_title: "Todos los criterios en detalle",
+    report_expand_all: "Desplegar todo",
+    report_collapse_all: "Plegar todo",
     value_chars: "{count} caracteres",
     rec_no_faq_schema: "Añada un bloque Schema.org FAQPage con las preguntas y respuestas que ya están en la página.",
     report_found: "Lo que encontramos en esta página",
@@ -1422,6 +1446,12 @@ export const translations: Record<Lang, Record<string, string>> = {
   },
 
   pt: {
+    report_count_fail: "{n} não cumprido(s)",
+    report_count_partial: "{n} em parte",
+    report_count_ok: "{n} cumprido(s)",
+    report_details_title: "Todos os critérios em detalhe",
+    report_expand_all: "Expandir tudo",
+    report_collapse_all: "Recolher tudo",
     value_chars: "{count} caracteres",
     rec_no_faq_schema: "Adicione um bloco Schema.org FAQPage com as perguntas e respostas que já estão na página.",
     report_found: "O que encontrámos nesta página",
@@ -1770,6 +1800,12 @@ export const translations: Record<Lang, Record<string, string>> = {
   },
 
   it: {
+    report_count_fail: "{n} non soddisfatti",
+    report_count_partial: "{n} in parte",
+    report_count_ok: "{n} soddisfatti",
+    report_details_title: "Tutti i criteri in dettaglio",
+    report_expand_all: "Espandi tutto",
+    report_collapse_all: "Comprimi tutto",
     value_chars: "{count} caratteri",
     rec_no_faq_schema: "Aggiungete un blocco Schema.org FAQPage con le domande e le risposte già presenti nella pagina.",
     report_found: "Cosa abbiamo trovato su questa pagina",

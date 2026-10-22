@@ -16,7 +16,7 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_h1_too_long: 'H1 found: {text}. It has {length} characters, more than the {max} that still read as a heading.',
     ev_h1_ok: 'H1 found: {text}.',
     why_h1: 'Search engines and AI systems read the H1 as the topic of the page. It decides which question they think the page answers. Without a single, clear H1 they have to guess the topic from the rest of the text.',
-    fix_h1: 'Give the page exactly one H1 that names the topic in plain words, e.g. "Electricity supply in Switzerland: questions and answers". In most CMSs this is the page title or the "Heading 1" format in the editor. If the template shows the title without H1 markup, the web agency has to change the template. An example is in the recommendations below.',
+    fix_h1: 'Give the page exactly one H1 that names the topic in plain words, e.g. "Electricity supply in Switzerland: questions and answers". In most CMSs this is the page title or the "Heading 1" format in the editor. If the template shows the title without H1 markup, the web agency has to change the template. An example is in the recommendations above.',
     fix_h1_multiple: 'Keep one H1 for the main topic and turn the others into H2 subheadings. In the text editor the editorial team can switch the format to "Heading 2". If a logo, banner or teaser box is marked up as H1 in the template, the web agency has to change that.',
     fix_h1_length: 'Rewrite the H1 so it names the topic in one line of roughly 20 to 70 characters, e.g. "Heat pumps: costs, subsidies and installation". The editorial team can change it in the title field of the CMS.',
 
@@ -73,7 +73,7 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_h1_too_long: 'H1 gefunden: {text}. Sie hat {length} Zeichen, mehr als die {max}, die noch als Überschrift gelesen werden.',
     ev_h1_ok: 'H1 gefunden: {text}.',
     why_h1: 'Suchmaschinen und KI-Systeme lesen die H1 als Thema der Seite. Sie entscheidet, auf welche Frage die Seite ihrer Ansicht nach antwortet. Fehlt eine eindeutige H1, müssen sie das Thema aus dem übrigen Text erraten.',
-    fix_h1: 'Geben Sie der Seite genau eine H1, die das Thema in einfachen Worten nennt, z. B. «Stromversorgung der Schweiz: Fragen und Antworten». In den meisten CMS ist das der Seitentitel oder das Format «Überschrift 1» im Editor. Gibt das Template den Titel ohne H1-Auszeichnung aus, muss die Webagentur das Template anpassen. Ein Beispiel finden Sie unten bei den Empfehlungen.',
+    fix_h1: 'Geben Sie der Seite genau eine H1, die das Thema in einfachen Worten nennt, z. B. «Stromversorgung der Schweiz: Fragen und Antworten». In den meisten CMS ist das der Seitentitel oder das Format «Überschrift 1» im Editor. Gibt das Template den Titel ohne H1-Auszeichnung aus, muss die Webagentur das Template anpassen. Ein Beispiel finden Sie oben bei den Empfehlungen.',
     fix_h1_multiple: 'Behalten Sie eine H1 für das Hauptthema und machen Sie aus den anderen H2-Zwischenüberschriften. Im Texteditor kann die Redaktion das Format auf «Überschrift 2» umstellen. Ist ein Logo, Banner oder Teaser im Template als H1 ausgezeichnet, muss die Webagentur das ändern.',
     fix_h1_length: 'Formulieren Sie die H1 so, dass sie das Thema in einer Zeile mit etwa 20 bis 70 Zeichen nennt, z. B. «Wärmepumpen: Kosten, Förderung und Einbau». Die Redaktion kann sie im Titelfeld des CMS ändern.',
 
@@ -127,7 +127,7 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_h1_too_long: 'H1 trouvé : {text}. Il compte {length} caractères, plus que les {max} qui se lisent encore comme un titre.',
     ev_h1_ok: 'H1 trouvé : {text}.',
     why_h1: 'Les moteurs de recherche et les systèmes d’IA lisent le H1 comme le sujet de la page. Il détermine à quelle question la page est censée répondre. Sans H1 unique et clair, ils doivent deviner le sujet à partir du reste du texte.',
-    fix_h1: 'Donnez à la page exactement un H1 qui nomme le sujet en mots simples, p. ex. « Approvisionnement en électricité en Suisse : questions et réponses ». Dans la plupart des CMS, c’est le titre de la page ou le format « Titre 1 » de l’éditeur. Si le gabarit affiche le titre sans balise H1, l’agence web doit adapter le gabarit. Un exemple figure dans les recommandations ci-dessous.',
+    fix_h1: 'Donnez à la page exactement un H1 qui nomme le sujet en mots simples, p. ex. « Approvisionnement en électricité en Suisse : questions et réponses ». Dans la plupart des CMS, c’est le titre de la page ou le format « Titre 1 » de l’éditeur. Si le gabarit affiche le titre sans balise H1, l’agence web doit adapter le gabarit. Un exemple figure dans les recommandations ci-dessus.',
     fix_h1_multiple: 'Gardez un seul H1 pour le sujet principal et transformez les autres en sous-titres H2. Dans l’éditeur, la rédaction peut passer le format à « Titre 2 ». Si un logo, une bannière ou un encadré est balisé en H1 dans le gabarit, c’est à l’agence web de le corriger.',
     fix_h1_length: 'Reformulez le H1 pour qu’il nomme le sujet en une ligne d’environ 20 à 70 caractères, p. ex. « Pompes à chaleur : coûts, subventions et installation ». La rédaction peut le modifier dans le champ titre du CMS.',
 
@@ -181,7 +181,7 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_h1_too_long: 'H1 encontrado: {text}. Tiene {length} caracteres, más de los {max} que todavía se leen como un título.',
     ev_h1_ok: 'H1 encontrado: {text}.',
     why_h1: 'Los buscadores y los sistemas de IA leen el H1 como el tema de la página. De él depende a qué pregunta creen que responde la página. Sin un único H1 claro, tienen que adivinar el tema a partir del resto del texto.',
-    fix_h1: 'Dé a la página exactamente un H1 que nombre el tema con palabras sencillas, p. ej. «Suministro eléctrico en Suiza: preguntas y respuestas». En la mayoría de los CMS es el título de la página o el formato «Título 1» del editor. Si la plantilla muestra el título sin la etiqueta H1, la agencia web tiene que adaptar la plantilla. Encontrará un ejemplo en las recomendaciones de abajo.',
+    fix_h1: 'Dé a la página exactamente un H1 que nombre el tema con palabras sencillas, p. ej. «Suministro eléctrico en Suiza: preguntas y respuestas». En la mayoría de los CMS es el título de la página o el formato «Título 1» del editor. Si la plantilla muestra el título sin la etiqueta H1, la agencia web tiene que adaptar la plantilla. Encontrará un ejemplo en las recomendaciones de arriba.',
     fix_h1_multiple: 'Mantenga un solo H1 para el tema principal y convierta los demás en subtítulos H2. En el editor, el equipo de redacción puede cambiar el formato a «Título 2». Si un logotipo, un banner o un recuadro está marcado como H1 en la plantilla, debe cambiarlo la agencia web.',
     fix_h1_length: 'Reescriba el H1 para que nombre el tema en una línea de unos 20 a 70 caracteres, p. ej. «Bombas de calor: costes, ayudas e instalación». El equipo de redacción puede cambiarlo en el campo de título del CMS.',
 
@@ -235,7 +235,7 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_h1_too_long: 'H1 encontrado: {text}. Tem {length} caracteres, mais do que os {max} que ainda se leem como título.',
     ev_h1_ok: 'H1 encontrado: {text}.',
     why_h1: 'Os motores de busca e os sistemas de IA leem o H1 como o tema da página. É ele que decide a que pergunta acham que a página responde. Sem um único H1 claro, têm de adivinhar o tema a partir do resto do texto.',
-    fix_h1: 'Dê à página exatamente um H1 que nomeie o tema em palavras simples, p. ex. «Abastecimento de eletricidade na Suíça: perguntas e respostas». Na maioria dos CMS é o título da página ou o formato «Título 1» do editor. Se o modelo mostrar o título sem a marcação H1, a agência web tem de ajustar o modelo. Encontra um exemplo nas recomendações abaixo.',
+    fix_h1: 'Dê à página exatamente um H1 que nomeie o tema em palavras simples, p. ex. «Abastecimento de eletricidade na Suíça: perguntas e respostas». Na maioria dos CMS é o título da página ou o formato «Título 1» do editor. Se o modelo mostrar o título sem a marcação H1, a agência web tem de ajustar o modelo. Encontra um exemplo nas recomendações acima.',
     fix_h1_multiple: 'Mantenha um único H1 para o tema principal e transforme os outros em subtítulos H2. No editor, a equipa editorial pode mudar o formato para «Título 2». Se um logótipo, banner ou caixa de destaque estiver marcado como H1 no modelo, é a agência web que tem de o alterar.',
     fix_h1_length: 'Reescreva o H1 para que nomeie o tema numa linha de cerca de 20 a 70 caracteres, p. ex. «Bombas de calor: custos, apoios e instalação». A equipa editorial pode alterá-lo no campo de título do CMS.',
 
@@ -289,7 +289,7 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_h1_too_long: 'H1 trovato: {text}. Ha {length} caratteri, più dei {max} che si leggono ancora come un titolo.',
     ev_h1_ok: 'H1 trovato: {text}.',
     why_h1: 'I motori di ricerca e i sistemi di IA leggono l’H1 come argomento della pagina. Da esso dipende a quale domanda, secondo loro, risponde la pagina. Senza un unico H1 chiaro devono indovinare l’argomento dal resto del testo.',
-    fix_h1: 'Date alla pagina esattamente un H1 che nomini l’argomento con parole semplici, p. es. «Approvvigionamento elettrico in Svizzera: domande e risposte». Nella maggior parte dei CMS è il titolo della pagina o il formato «Titolo 1» dell’editor. Se il template mostra il titolo senza il markup H1, l’agenzia web deve adattare il template. Trovate un esempio nelle raccomandazioni qui sotto.',
+    fix_h1: 'Date alla pagina esattamente un H1 che nomini l’argomento con parole semplici, p. es. «Approvvigionamento elettrico in Svizzera: domande e risposte». Nella maggior parte dei CMS è il titolo della pagina o il formato «Titolo 1» dell’editor. Se il template mostra il titolo senza il markup H1, l’agenzia web deve adattare il template. Trovate un esempio nelle raccomandazioni qui sopra.',
     fix_h1_multiple: 'Tenete un solo H1 per l’argomento principale e trasformate gli altri in sottotitoli H2. Nell’editor la redazione può cambiare il formato in «Titolo 2». Se un logo, un banner o un riquadro è marcato come H1 nel template, deve correggerlo l’agenzia web.',
     fix_h1_length: 'Riformulate l’H1 in modo che nomini l’argomento in una riga di circa 20–70 caratteri, p. es. «Pompe di calore: costi, incentivi e installazione». La redazione può modificarlo nel campo titolo del CMS.',
 

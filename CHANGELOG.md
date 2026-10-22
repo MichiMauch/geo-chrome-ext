@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.7.0] - 2026-10-22
+
+### Changed
+
+- **A clearer report layout:** With the detailed explanations from 4.6 the report had grown to over 8,000 pixels, every criterion fully expanded in two narrow columns, with the recommendations at the very end. It is now built for scanning:
+  - **Overview at the top:** the score card shows all six categories with their score and a bar, each linking to its section.
+  - **Recommendations first:** what to do comes right after the score, before the details.
+  - **One line per criterion:** status, name, value and the one finding that sums it up. A click opens what was found, how to fix it (highlighted) and why it matters. The summary line is chosen per criterion, e.g. "Missing: FAQPage" rather than "Found: NewsArticle", or "LIX 63: very hard" rather than the formula note.
+  - **Problems first:** within each category, criteria that aren't met come before partial and passed ones. The header counts them, e.g. "2 not met · 1 partly met".
+  - **Full width:** categories span the whole page, so the explanations get a readable line length. An "Expand all" button opens everything at once.
+  - **Printing and PDF:** everything expands automatically, and page breaks fall between blocks instead of leaving half pages empty.
+  - On phones the overview uses two columns and the snippet buttons wrap below the recommendation text.
+
 ## [4.6.1] - 2026-10-22
 
 ### Fixed

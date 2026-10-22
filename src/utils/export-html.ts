@@ -225,84 +225,106 @@ const CATEGORY_ICONS: Record<string, string> = {
   onPageSeo: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>',
 };
 
+type CriterionStatus = 'fail' | 'partial' | 'ok';
+
+const STATUS_ICON: Record<CriterionStatus, string> = { fail: '✗', partial: '◐', ok: '✓' };
+
+function criterionStatus(d: CategoryDetail): CriterionStatus {
+  if (!d.progress) return d.found ? 'ok' : 'fail';
+  const pct = (d.progress.current / d.progress.target) * 100;
+  // A full bar that still fails (e.g. enough subheadings, too little text
+  // under them) is partial, not green
+  if (pct >= 100 && d.found) return 'ok';
+  return pct > 0 ? 'partial' : 'fail';
+}
+
+const STATUS_ORDER: Record<CriterionStatus, number> = { fail: 0, partial: 1, ok: 2 };
+
 function renderCategoryHtml(category: AnalysisCategory, iconKey: string, delay: number): string {
   const color = getCategoryColor(category.score);
   const percentage = (category.score / 5) * 100;
   const iconSvg = CATEGORY_ICONS[iconKey] || CATEGORY_ICONS.contentClarity;
 
-  const details = category.details.map((d) => {
-    let icon: string;
-    let iconColor: string;
-    let bgColor: string;
-
-    if (d.progress) {
-      const pct = (d.progress.current / d.progress.target) * 100;
-      // A full bar that still fails (e.g. enough subheadings, too little
-      // text under them) is partial, not green
-      if (pct >= 100 && d.found) { icon = '✓'; iconColor = '#10b981'; bgColor = 'rgba(16,185,129,0.06)'; }
-      else if (pct > 0) { icon = '◐'; iconColor = '#f59e0b'; bgColor = 'rgba(245,158,11,0.06)'; }
-      else { icon = '✗'; iconColor = '#ef4444'; bgColor = 'rgba(239,68,68,0.06)'; }
-    } else {
-      icon = d.found ? '✓' : '✗';
-      iconColor = d.found ? '#10b981' : '#ef4444';
-      bgColor = d.found ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)';
-    }
-
-    const progressText = d.progress && d.progress.target > 1
-      ? ` <span style="color:#94a3b8;font-weight:500">(${d.progress.current}/${d.progress.target})</span>`
-      : '';
-
-    const explanationHtml = renderReportExplanation(d);
-
-    return `<div style="background:${bgColor};border-radius:10px;padding:12px 14px;margin-bottom:8px">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="color:${iconColor};font-weight:700;font-size:14px;flex-shrink:0;width:14px">${icon}</span>
-        <span style="font-weight:500;font-size:13px;color:#0f172a">${escapeHtml(d.criterionKey)}${progressText}</span>
-        ${d.value ? `<span style="color:#94a3b8;margin-left:auto;font-size:12px;flex-shrink:0;font-weight:500">${escapeHtml(String(d.value))}</span>` : ''}
-      </div>
-      ${explanationHtml}
-    </div>`;
-  }).join('');
+  // What needs work comes first; the order within a status stays as analyzed
+  const rows = category.details
+    .map((d, i) => ({ d, i, status: criterionStatus(d) }))
+    .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.i - b.i);
+  const counts = { fail: 0, partial: 0, ok: 0 };
+  rows.forEach(({ status }) => counts[status]++);
 
   return `
-    <div class="card category-card" style="--delay:${delay}ms">
+    <section class="card category-card" id="cat-${iconKey}" style="--delay:${delay}ms">
       <div class="cat-header">
         <div class="cat-icon">
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">${iconSvg}</svg>
         </div>
-        <div class="cat-title">${escapeHtml(category.nameKey)}</div>
-        <div class="cat-score" style="color:${color}">${category.score.toFixed(1)}<span style="color:#94a3b8;font-weight:500">/5</span></div>
+        <div class="cat-title">
+          <h2>${escapeHtml(category.nameKey)}</h2>
+          <div class="cat-counts">${escapeHtml(
+            (['fail', 'partial', 'ok'] as const)
+              .filter((s) => counts[s] > 0)
+              .map((s) => t(`report_count_${s}`, { n: counts[s] }))
+              .join(' · ')
+          )}</div>
+        </div>
+        <div class="cat-score" style="color:${color}">${category.score.toFixed(1)}<span>/5</span></div>
       </div>
       <div class="progress-track"><div class="progress-bar" data-target="${percentage}" style="background:${color}"></div></div>
-      <div style="margin-top:16px">
-        ${details}
+      <div class="crit-list">
+        ${rows.map(({ d, status }) => renderCriterionHtml(d, status)).join('')}
       </div>
-    </div>`;
+    </section>`;
 }
 
-// What was found, why it matters, how to fix it. Analyses stored before the
-// report texts existed (no evidenceText) fall back to the one-line
-// explanation.
-function renderReportExplanation(d: CategoryDetail): string {
-  const box = (inner: string) =>
-    `<div style="font-size:12px;color:#475569;margin-top:8px;padding-left:22px;line-height:1.55">${inner}</div>`;
+// One line per criterion: status, name, value and the first finding as a
+// teaser. The full findings, why and fix open on click (<details>, no JS).
+// Analyses stored before the report texts existed (no evidenceText) show the
+// one-line explanation instead and don't expand.
+function renderCriterionHtml(d: CategoryDetail, status: CriterionStatus): string {
   const notApplicable = d.value === t('value_notApplicable');
+  const value = d.value ? `<span class="crit-value">${escapeHtml(String(d.value))}</span>` : '';
+  const head = (teaser: string) => `
+        <span class="crit-icon">${STATUS_ICON[status]}</span>
+        <span class="crit-main">
+          <span class="crit-name">${escapeHtml(d.criterionKey)}</span>
+          ${teaser ? `<span class="crit-teaser">${escapeHtml(teaser)}</span>` : ''}
+        </span>
+        ${value}`;
+
   if (notApplicable || !d.evidenceText?.length) {
-    const explanation = getExplanation(d);
-    return explanation ? box(escapeHtml(explanation)) : '';
+    return `<div class="crit crit-${status} crit-static"><div class="crit-head">${head(getExplanation(d))}</div></div>`;
   }
 
-  const label = (key: string) =>
-    `<div style="font-weight:600;color:#0f172a;margin-top:8px">${escapeHtml(t(key))}</div>`;
-  const evidence = `<ul style="margin:2px 0 0;padding-left:18px">${d.evidenceText
-    .map((line) => `<li>${escapeHtml(line)}</li>`)
-    .join('')}</ul>`;
-  return box(
-    label('report_found') +
-      evidence +
-      (d.whyText ? label('report_why') + `<div>${escapeHtml(d.whyText)}</div>` : '') +
-      (d.fixText ? label('report_fix') + `<div>${escapeHtml(d.fixText)}</div>` : '')
-  );
+  const findings = `<ul>${d.evidenceText.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>`;
+  const why = d.whyText
+    ? `<div class="crit-block"><h4>${escapeHtml(t('report_why'))}</h4><p>${escapeHtml(d.whyText)}</p></div>`
+    : '';
+  const fix = d.fixText
+    ? `<div class="crit-block crit-fix"><h4>${escapeHtml(t('report_fix'))}</h4><p>${escapeHtml(d.fixText)}</p></div>`
+    : '';
+  return `<details class="crit crit-${status}">
+      <summary class="crit-head">${head(d.teaserText ?? d.evidenceText[0])}<span class="crit-chevron" aria-hidden="true"></span></summary>
+      <div class="crit-body">
+        <div class="crit-block"><h4>${escapeHtml(t('report_found'))}</h4>${findings}</div>
+        ${fix}
+        ${why}
+      </div>
+    </details>`;
+}
+
+// Score per category at a glance, linking to the category below
+function renderOverviewHtml(result: GEOAnalysisResult, order: (keyof GEOAnalysisResult['categories'])[]): string {
+  return `<div class="overview">${order
+    .map((key) => {
+      const c = result.categories[key];
+      const color = getCategoryColor(c.score);
+      return `<a class="overview-item" href="#cat-${key}">
+        <span class="overview-name">${escapeHtml(c.nameKey)}</span>
+        <span class="overview-score" style="color:${color}">${c.score.toFixed(1)}<span>/5</span></span>
+        <span class="progress-track"><span class="progress-bar" data-target="${(c.score / 5) * 100}" style="background:${color};display:block"></span></span>
+      </a>`;
+    })
+    .join('')}</div>`;
 }
 
 function renderRecommendationItemHtml(recKey: string, index: number): string {
@@ -478,10 +500,72 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
     }
     .card-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 14px; letter-spacing: -0.01em; }
 
-    /* Categories grid */
-    .categories-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-    .category-card { padding: 20px; }
+    /* Overview: score per category inside the hero card */
+    .overview {
+      grid-column: 1 / -1;
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 20px;
+      margin-top: 8px; padding-top: 16px; border-top: 1px solid #eef2f6;
+    }
+    .overview-item {
+      display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: baseline;
+      text-decoration: none; color: inherit; padding: 6px 8px; border-radius: 8px;
+    }
+    .overview-item:hover { background: #f1f5f9; }
+    .overview-name { font-size: 12px; font-weight: 500; color: var(--muted); line-height: 1.3; }
+    .overview-score { font-size: 14px; font-weight: 700; }
+    .overview-score span { color: var(--subtle); font-weight: 500; font-size: 11px; }
+    .overview-item .progress-track { grid-column: 1 / -1; height: 4px; }
+
+    /* Section bar above the categories */
+    .details-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0 12px; }
+    .details-bar h2 { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+    .toggle-all {
+      padding: 6px 12px; font-size: 12px; font-weight: 600; font-family: inherit;
+      border-radius: 8px; border: 1px solid rgba(43,163,163,0.35);
+      background: #fff; color: var(--accent-deep); cursor: pointer;
+    }
+    .toggle-all:hover { background: rgba(51,204,204,0.08); }
+
+    /* Categories: one per row, so the explanations get a readable width */
+    .categories-list { display: grid; gap: 16px; margin-bottom: 24px; }
+    .category-card { padding: 20px; scroll-margin-top: 16px; }
     .cat-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .cat-title h2 { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+    .cat-counts { font-size: 12px; color: var(--muted); font-weight: 400; margin-top: 1px; }
+    .cat-score span { color: var(--subtle); font-weight: 500; }
+
+    /* Criteria: one compact line each, details on click */
+    .crit-list { margin-top: 14px; display: grid; gap: 6px; }
+    .crit { border-radius: 10px; border: 1px solid transparent; }
+    .crit-fail { background: rgba(239,68,68,0.05); }
+    .crit-partial { background: rgba(245,158,11,0.06); }
+    .crit-ok { background: #f8fafc; }
+    .crit[open] { border-color: var(--border); background: #fff; box-shadow: var(--shadow-md); }
+    .crit-head {
+      display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;
+      list-style: none; cursor: pointer;
+    }
+    .crit-static .crit-head { cursor: default; }
+    .crit-head::-webkit-details-marker { display: none; }
+    .crit-icon { font-weight: 700; font-size: 14px; width: 14px; flex-shrink: 0; line-height: 20px; }
+    .crit-fail .crit-icon { color: #ef4444; }
+    .crit-partial .crit-icon { color: #f59e0b; }
+    .crit-ok .crit-icon { color: #10b981; }
+    .crit-main { flex: 1; min-width: 0; display: grid; gap: 2px; }
+    .crit-name { font-size: 13px; font-weight: 600; color: var(--text); line-height: 20px; }
+    .crit-teaser { font-size: 12px; color: var(--muted); line-height: 1.45; }
+    .crit[open] .crit-teaser { display: none; }
+    .crit-value { font-size: 12px; font-weight: 500; color: var(--subtle); flex-shrink: 0; line-height: 20px; max-width: 40%; text-align: right; }
+    .crit-chevron {
+      width: 8px; height: 8px; flex-shrink: 0; margin: 6px 2px 0 4px;
+      border-right: 2px solid var(--subtle); border-bottom: 2px solid var(--subtle);
+      transform: rotate(45deg); transition: transform 0.15s ease;
+    }
+    .crit[open] .crit-chevron { transform: rotate(-135deg); margin-top: 9px; }
+    .crit-body { padding: 0 14px 14px 36px; display: grid; gap: 12px; font-size: 13px; color: #334155; line-height: 1.6; }
+    .crit-block h4 { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .crit-block ul { padding-left: 18px; display: grid; gap: 2px; }
+    .crit-fix { background: rgba(51,204,204,0.08); border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 12px; }
     .cat-icon {
       width: 34px; height: 34px;
       border-radius: 10px;
@@ -618,7 +702,14 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
     }
 
     @media (max-width: 640px) {
-      .categories-grid { grid-template-columns: 1fr; }
+      .overview { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 8px; }
+      .overview-item { padding: 6px 4px; }
+      .snippet-row-header { flex-wrap: wrap; }
+      .hero-score-card { padding: 20px 16px; }
+      .category-card { padding: 16px 12px; }
+      .crit-head { flex-wrap: wrap; }
+      .crit-value { max-width: none; text-align: left; order: 3; width: 100%; padding-left: 24px; }
+      .crit-body { padding-left: 14px; }
       .hero-score-card { grid-template-columns: 1fr; text-align: center; }
       .hero-score-main { text-align: center; }
       .hero-meta { text-align: center; }
@@ -631,6 +722,18 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
       .hero { background: #2BA3A3 !important; }
       .no-print { display: none; }
       .snippet-preview { display: none !important; }
+      /* Break between blocks, never inside one: a whole expanded criterion
+         per page left half pages empty */
+      .crit { break-inside: auto; background: none; border: 1px solid #e5e7eb; }
+      .crit-head { break-after: avoid; }
+      .crit-block, .crit-block li, .recs-list li { break-inside: avoid; }
+      /* Paper can't be clicked open: show every criterion in full. report.ts
+         also opens them on beforeprint for browsers without ::details-content */
+      details.crit::details-content { content-visibility: visible; display: block; }
+      .crit-teaser { display: none; }
+      .toggle-all, .overview-item:hover { background: none; }
+      .crit-chevron { display: none; }
+      .category-card { break-inside: auto; }
     }
   </style>
 </head>
@@ -652,16 +755,24 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
         <div class="hero-progress">
           <div class="hero-track"><div class="hero-bar" data-target="${(result.totalScore / result.maxTotalScore) * 100}" style="background:${ratingColor}"></div></div>
         </div>
+        ${renderOverviewHtml(result, categoryOrder)}
       </div>
     </div>
   </div>
 
   <div class="container">
-    <div class="categories-grid">
-      ${categoriesHtml}
+    ${recommendationsHtml}
+
+    <div class="details-bar">
+      <h2>${escapeHtml(t('report_details_title'))}</h2>
+      <button type="button" id="toggle-all" class="toggle-all no-print"
+        data-expand="${escapeHtml(t('report_expand_all'))}"
+        data-collapse="${escapeHtml(t('report_collapse_all'))}">${escapeHtml(t('report_expand_all'))}</button>
     </div>
 
-    ${recommendationsHtml}
+    <div class="categories-list">
+      ${categoriesHtml}
+    </div>
 
     <div class="print-wrap no-print">
       <button id="print-btn" class="print-btn">${escapeHtml(t('report_saveAsPdf'))}</button>

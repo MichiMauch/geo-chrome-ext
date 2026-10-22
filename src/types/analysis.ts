@@ -29,6 +29,9 @@ export interface CategoryDetail {
   // Filled by mapAnalysisResult from evidence / why_ / fix_ keys, in the UI
   // language at analysis time (like criterionKey and value).
   evidenceText?: string[];
+  // The one finding that best sums up the criterion, shown as the collapsed
+  // line in the report (e.g. what is missing rather than what was found).
+  teaserText?: string;
   whyText?: string;
   fixText?: string;
   // Progress info for partial completion (e.g., "2/3" or "67%")
