@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.7.1] - 2026-10-22
+
+### Changed
+
+- **"Export report" is now "Open detailed report", as a primary button:** The label promised an export, but the button opens the report in a new tab, and exporting only happens there via "Save as PDF". It also sat as a small text link among the site-wide tools, although the report is where findings, causes and fixes are explained. It is now a filled button above the domain overview and sitemap links, which stay secondary, with a document icon instead of the external-link arrow. Translated in all six languages.
+
+### Fixed
+
+- **The panel header said "4.0":** The version was hard-coded. It now comes from the manifest (major.minor).
+
 ## [4.7.0] - 2026-10-22
 
 ### Changed

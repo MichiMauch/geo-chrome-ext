@@ -82,6 +82,14 @@ const historyClearEl = document.getElementById('history-clear')!;
 const sparklineEl = document.getElementById('sparkline') as HTMLCanvasElement;
 
 const exportBtnEl = document.getElementById('export-btn')!;
+
+// Version from the manifest (major.minor), so the header can't go stale
+// again like the hard-coded "4.0" it replaced
+const appTitleEl = document.getElementById('app-title');
+if (appTitleEl) {
+  const [major, minor] = chrome.runtime.getManifest().version.split('.');
+  appTitleEl.textContent = `Paul AI GEO Analyzer ${major}.${minor}`;
+}
 const domainOverviewBtnEl = document.getElementById('domain-overview-btn')!;
 const domainOverviewLabelEl = document.getElementById('domain-overview-label')!;
 
