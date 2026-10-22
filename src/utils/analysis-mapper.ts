@@ -28,6 +28,17 @@ function translateDetailValue(detail: CategoryDetail): string | number {
     return detail.value;
   }
 
-  // Otherwise, treat it as a translation key
-  return t(detail.value, detail.valueParams);
+  // Otherwise, treat it as a translation key. Value templates such as
+  // "{current}/{target} lists" mostly restate the progress bar, so progress
+  // fills {current}/{target} for every analyzer; explicit valueParams (types,
+  // dates, missing tags) come on top and win.
+  return t(detail.value, valueParamsOf(detail));
+}
+
+export function valueParamsOf(detail: CategoryDetail): Record<string, string | number> | undefined {
+  const fromProgress = detail.progress
+    ? { current: detail.progress.current, target: detail.progress.target }
+    : undefined;
+  if (!fromProgress && !detail.valueParams) return undefined;
+  return { ...fromProgress, ...detail.valueParams };
 }

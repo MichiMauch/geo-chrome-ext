@@ -177,3 +177,40 @@ describe('extractAuthorInfo — source precedence', () => {
     expect(extractAuthorInfo(doc)).toBeNull();
   });
 });
+
+describe('extractAuthorInfo — DOM fallback', () => {
+  const body = (html: string) =>
+    new DOMParser().parseFromString(`<!doctype html><html><body>${html}</body></html>`, 'text/html');
+
+  it.each(['Über den Autor', 'About the author', 'Autor', 'Author', 'Autorin:'])(
+    'does not report the section label "%s" as a name',
+    (label) => {
+      expect(extractAuthorInfo(body(`<h3 class="author-title">${label}</h3>`))).toBeNull();
+    }
+  );
+
+  it('skips the label and takes the actual byline', () => {
+    const doc = body(
+      '<h3 class="author-heading">Über den Autor</h3><span class="author-name">Jane Doe</span>'
+    );
+    expect(extractAuthorInfo(doc)).toEqual({ name: 'Jane Doe', source: 'dom' });
+  });
+
+  it('ignores author links in the site navigation', () => {
+    const doc = body('<nav><a rel="author" href="/team">Unser Team</a></nav>');
+    expect(extractAuthorInfo(doc)).toBeNull();
+  });
+
+  it('prefers a name-shaped byline over a publisher organization', () => {
+    // A visible "von Jane Doe" credits a person; the publisher only says which
+    // organization runs the site. Looser DOM guesses still lose to the
+    // publisher (see "prefers a publisher organization over a DOM byline guess").
+    const doc = new DOMParser().parseFromString(
+      `<!doctype html><html><head>
+        <script type="application/ld+json">{"@type":"WebPage","publisher":{"@type":"Organization","name":"Example AG"}}</script>
+      </head><body><article><span class="byline">von Hans-Peter von Arx</span></article></body></html>`,
+      'text/html'
+    );
+    expect(extractAuthorInfo(doc)).toEqual({ name: 'Hans-Peter von Arx', source: 'dom' });
+  });
+});

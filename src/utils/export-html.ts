@@ -89,9 +89,12 @@ function getExplanation(d: CategoryDetail): string {
   }
   // Schema
   if (criterion === t('criterion_schema')) {
-    if (current === 0) return t('explain_schema_missing');
-    if (!d.found || current < target) return t('explain_schema_partial', { current, target, value });
-    return t('explain_schema_ok', { value });
+    // The type list itself, not the already formatted "2/2 types (…)" value;
+    // reports stored before valueParams existed fall back to the value.
+    const types = d.valueParams?.types || value;
+    if (current === 0 && !d.valueParams?.types) return t('explain_schema_missing');
+    if (!d.found || current < target) return t('explain_schema_partial', { current, target, value: types });
+    return t('explain_schema_ok', { value: types });
   }
   // Schema completeness (required fields per type)
   if (criterion === t('criterion_schema_completeness')) {
@@ -149,6 +152,7 @@ function getExplanation(d: CategoryDetail): string {
   }
   // FAQ
   if (criterion === t('criterion_faq')) {
+    if (d.valueParams?.hidden) return t('explain_faq_answers_hidden', d.valueParams);
     if (!d.found) return t('explain_faq_missing');
     return t('explain_faq_ok');
   }
@@ -187,7 +191,9 @@ function getExplanation(d: CategoryDetail): string {
   }
   // On-Page SEO: Social cards
   if (criterion === t('criterion_social_cards')) {
-    if (!d.found) return t('explain_social_cards_bad', { current, target });
+    if (!d.found) {
+      return t('explain_social_cards_bad', { current, target, missing: d.valueParams?.missing || '—' });
+    }
     return t('explain_social_cards_ok');
   }
   // On-Page SEO: Mobile viewport

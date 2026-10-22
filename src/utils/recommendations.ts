@@ -32,6 +32,7 @@ const RECOMMENDATION_KEYS: Record<string, { i18nKey: string; priority: number }>
   // AI Citation
   'no_facts': { i18nKey: 'rec_no_facts', priority: 7 },
   'no_faq': { i18nKey: 'rec_no_faq', priority: 6 },
+  'faq_answers_hidden': { i18nKey: 'rec_faq_answers_hidden', priority: 8 },
   'no_sourced_claims': { i18nKey: 'rec_no_sourced_claims', priority: 6 },
   'no_key_info_upfront': { i18nKey: 'rec_no_key_info_upfront', priority: 5 },
   // On-Page SEO

@@ -180,7 +180,49 @@ describe('OnPageSeoAnalyzer', () => {
       );
       const d = r.details.find((x) => x.criterionKey === 'criterion_social_cards')!;
       expect(d.found).toBe(true);
+      expect(d.value).toBe('6/6');
       expect(r.recommendations).not.toContain('social_cards_missing');
+    });
+
+    const social = (overrides: Partial<PageData>) =>
+      analyzer.analyze(makePage(overrides)).details.find((x) => x.criterionKey === 'criterion_social_cards')!;
+    const fullOg = { title: 'T', description: 'D', image: 'https://ex.com/hero.jpg', url: 'https://ex.com/a', type: 'article' };
+
+    it('does not count og:title as a twitter:card fallback', () => {
+      const d = social({ openGraph: fullOg });
+      expect(d.progress).toMatchObject({ current: 5, target: 6 });
+      expect(d.value).toBe('value_socialCardsMissing');
+      expect(d.valueParams?.missing).toBe('twitter:card');
+    });
+
+    it('fails with og:title alone — no more 4/4 without any twitter tag', () => {
+      const d = social({ openGraph: { title: 'T', description: null, image: null, url: null, type: null } });
+      expect(d.found).toBe(false);
+      expect(d.progress?.current).toBe(1);
+    });
+
+    it('flags og:type=website on an article page', () => {
+      const d = social({
+        schema: [{ '@type': 'NewsArticle' }],
+        openGraph: { ...fullOg, type: 'website' },
+        twitterCard: { card: 'summary', title: null, description: null, image: null },
+      });
+      expect(d.progress?.current).toBe(5);
+      expect(d.valueParams?.missing).toBe('og:type=article');
+    });
+
+    it('accepts og:type=website on a non-article page', () => {
+      const d = social({
+        openGraph: { ...fullOg, type: 'website' },
+        twitterCard: { card: 'summary', title: null, description: null, image: null },
+      });
+      expect(d.progress?.current).toBe(6);
+    });
+
+    it('does not count a logo or placeholder as og:image', () => {
+      const d = social({ openGraph: { ...fullOg, image: 'https://ex.com/assets/site-logo.png' } });
+      expect(d.valueParams?.missing).toContain('og:image (logo/default)');
+      expect(social({ openGraph: { ...fullOg, image: 'https://ex.com/img/catalogo-2024.jpg' } }).valueParams?.missing).not.toContain('og:image');
     });
   });
 

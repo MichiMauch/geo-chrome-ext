@@ -33,9 +33,14 @@ export async function extractPageData(
   const [llmsTxt, robotsTxt] = domainData
     ? [domainData.llmsTxt, robotsForPath(domainData.robotsTxt, pageUrl)]
     : await Promise.all([
-        checkLlmsTxt(),
+        // The analyzed page's origin, not the window's: the sitemap batch
+        // runs on one page and analyzes others.
+        checkLlmsTxt(originOf(pageUrl)),
         checkRobotsTxt(undefined, originOf(pageUrl), robotsPathFromUrl(pageUrl)),
       ]);
+
+  const schema = extractSchemaData(doc);
+  const faq = scanFaq(doc);
 
   return {
     url: pageUrl,
@@ -44,13 +49,15 @@ export async function extractPageData(
     lists: extractLists(doc),
     links: extractLinks(doc, pageUrl),
     meta: extractMetaData(doc),
-    schema: extractSchemaData(doc),
+    schema,
+    lang: extractLang(doc, schema),
     author: extractAuthorInfo(doc),
     dates: extractDates(doc),
     semanticElements: extractSemanticElements(doc),
     llmsTxt,
     robotsTxt,
-    faqQuestions: extractFaqQuestions(doc),
+    faqQuestions: faq.questions,
+    faqAnswersHidden: faq.hidden,
     images: extractImages(doc),
     openGraph: extractOpenGraph(doc),
     twitterCard: extractTwitterCard(doc),
@@ -58,6 +65,38 @@ export async function extractPageData(
     viewport: extractViewport(doc),
     canonical: extractCanonical(doc, pageUrl),
   };
+}
+
+// Primary language subtag of the content: <html lang="de-CH"> → 'de', else
+// the first schema inLanguage (a code string or a Language node), else
+// undefined.
+export function extractLang(
+  doc: Document = document,
+  schema: SchemaData[] = extractSchemaData(doc)
+): string | undefined {
+  const primary = (value: unknown): string | undefined => {
+    if (typeof value !== 'string') return undefined;
+    const sub = value.trim().split(/[-_]/)[0].toLowerCase();
+    return /^[a-z]{2,3}$/.test(sub) ? sub : undefined;
+  };
+  const htmlLang = primary(doc.documentElement?.getAttribute('lang'));
+  if (htmlLang) return htmlLang;
+  for (const node of schema) {
+    for (const value of flattenLang((node as Record<string, unknown>).inLanguage)) {
+      const lang = primary(value);
+      if (lang) return lang;
+    }
+  }
+  return undefined;
+}
+
+function flattenLang(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value.flatMap(flattenLang);
+  if (value && typeof value === 'object') {
+    const node = value as Record<string, unknown>;
+    return [node.alternateName, node.name];
+  }
+  return [value];
 }
 
 export function extractCanonical(doc: Document = document, baseUrl: string = window.location.href): CanonicalData {
@@ -161,70 +200,334 @@ export function extractRobotsMeta(doc: Document = document): RobotsMetaData {
   };
 }
 
-export function extractHeadings(doc: Document = document): HeadingData[] {
-  const headings: HeadingData[] = [];
-  doc.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((h) => {
-    const text = h.textContent?.trim() || '';
-    if (text.length > 0) {
-      headings.push({
-        level: parseInt(h.tagName[1]),
-        text,
-      });
+// ---------------------------------------------------------------------------
+// Content scope
+//
+// Headings, paragraphs and lists used to be collected from the whole
+// document, so navigation lists, footer columns, share boxes and teaser grids
+// counted as page content (economiesuisse.ch: "3/3 lists", all of them menus).
+// The scope picks the content root and decides which elements are site chrome.
+//
+// Content root: the single top-level <article>; with several articles the one
+// holding the page H1 (otherwise it is a listing → <main>); else <main>; else
+// <body>. If the H1 sits outside that root (`<main><h1/><article/></main>`)
+// the root widens to the nearest ancestor that contains it.
+//
+// Chrome — excluded everywhere, even inside the root:
+//  - nav, aside and [role=navigation|banner|contentinfo|complementary]
+//  - header/footer when they are page-level, i.e. not inside an article,
+//    aside, main, nav or section (HTML-AAM: only those map to banner /
+//    contentinfo; an <article><header> holds the title and byline)
+//  - blocks whose class/id token is newsletter, share, sharing, social,
+//    related, cookie(s), consent, gdpr, breadcrumb(s) or teilen, or whose
+//    aria-label mentions share/teilen/newsletter/cookie. Tokens are matched
+//    whole (split on space, - and _), so `shared-layout` or `unrelated` don't
+//    trip it. html/body/main/article and anything holding the H1 never count.
+//  - utility-class sites (Tailwind) carry no such names, so a block that
+//    *starts* with a boilerplate heading ("Artikel teilen", "Newsletter
+//    abonnieren", "Passende Artikel", "Related articles", …) is chrome too:
+//    the heading plus its ancestors up to the highest one that still begins
+//    with that heading and holds no other heading of the same or a higher
+//    rank.
+// Headings and paragraphs inside a link (teaser and author cards) are left
+// out by extractHeadings/extractParagraphs themselves.
+// ---------------------------------------------------------------------------
+
+const LANDMARK_CHROME =
+  'nav, aside, [role="navigation"], [role="banner"], [role="contentinfo"], [role="complementary"]';
+const SECTIONING = 'article, aside, main, nav, section';
+
+const BOILERPLATE_TOKEN =
+  /^(newsletter|share|sharing|social|related|cookie|cookies|consent|gdpr|breadcrumb|breadcrumbs|teilen)$/i;
+const BOILERPLATE_ARIA = /share|teilen|newsletter|cookie/i;
+
+const BOILERPLATE_HEADINGS: RegExp[] = [
+  /^((artikel|beitrag|seite|page|article|post) )?(teilen|share)( (this|on|via))?( (artikel|article|post|page|seite))?:?$/i,
+  /^diese(n|s)? (artikel|beitrag|seite) teilen:?$/i,
+  /^(partager|condividi)( .*)?$/i,
+  /^newsletter( (abonnieren|bestellen|anmelden|abonnement))?$/i,
+  /^(zum |für den )?newsletter (anmelden|abonnieren|eintragen)$/i,
+  /^(subscribe|sign up)( to| for)?( (our|the))? newsletter$/i,
+  /^(passende|ähnliche|verwandte|weitere|empfohlene) (artikel|beiträge|inhalte|themen|news)$/i,
+  /^(related|similar|recommended|more) (articles|posts|content|stories|reading)$/i,
+  /^(das könnte sie (auch )?interessieren|you (may|might) also like)$/i,
+];
+
+const normalizeText = (text: string | null | undefined): string =>
+  (text || '').trim().replace(/\s+/g, ' ');
+
+export interface ContentScope {
+  root: Element;
+  // The page H1 (first one outside chrome landmarks), if any
+  h1: Element | null;
+  isExcluded(el: Element): boolean;
+}
+
+function isPageLevelHeaderFooter(el: Element): boolean {
+  const tag = el.tagName;
+  if (tag !== 'HEADER' && tag !== 'FOOTER') return false;
+  return !el.parentElement?.closest(SECTIONING);
+}
+
+function isLandmarkChrome(el: Element): boolean {
+  for (let cur: Element | null = el; cur; cur = cur.parentElement) {
+    if (cur.matches(LANDMARK_CHROME) || isPageLevelHeaderFooter(cur)) return true;
+  }
+  return false;
+}
+
+function hasBoilerplateName(el: Element): boolean {
+  const tokens = `${el.getAttribute('class') || ''} ${el.id || ''}`.split(/[\s_-]+/);
+  if (tokens.some((t) => BOILERPLATE_TOKEN.test(t))) return true;
+  const aria = el.getAttribute('aria-label');
+  return !!aria && BOILERPLATE_ARIA.test(aria);
+}
+
+const NEVER_BOILERPLATE = new Set(['HTML', 'BODY', 'MAIN', 'ARTICLE']);
+
+function boilerplateHeadingBlocks(root: Element): Set<Element> {
+  const blocks = new Set<Element>();
+  root.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((h) => {
+    const text = normalizeText(h.textContent);
+    if (!BOILERPLATE_HEADINGS.some((re) => re.test(text))) return;
+    const level = parseInt(h.tagName[1], 10);
+    const rankSelector = Array.from({ length: level }, (_, i) => `h${i + 1}`).join(',');
+    let block: Element = h;
+    for (let parent = h.parentElement; parent && parent !== root; parent = parent.parentElement) {
+      if (NEVER_BOILERPLATE.has(parent.tagName)) break;
+      const otherHeading = Array.from(parent.querySelectorAll(rankSelector)).some((o) => o !== h);
+      if (otherHeading) break;
+      // The block must begin with the label, otherwise content before it
+      // (a whole article without subheadings) would be swallowed.
+      if (!normalizeText(parent.textContent).startsWith(text)) break;
+      block = parent;
     }
+    blocks.add(block);
   });
-  return headings;
+  return blocks;
+}
+
+export function getContentScope(doc: Document = document): ContentScope {
+  const body = doc.body ?? doc.documentElement;
+  const h1 =
+    Array.from(doc.querySelectorAll('h1')).find(
+      (h) => normalizeText(h.textContent) && !isLandmarkChrome(h)
+    ) ?? null;
+
+  const articles = Array.from(doc.querySelectorAll('article')).filter(
+    (a) => !a.parentElement?.closest('article') && !isLandmarkChrome(a)
+  );
+  let root: Element | null = null;
+  if (articles.length === 1) root = articles[0];
+  else if (articles.length > 1) root = articles.find((a) => h1 && a.contains(h1)) ?? null;
+  if (!root) {
+    root = Array.from(doc.querySelectorAll('main')).find((m) => !isLandmarkChrome(m)) ?? body;
+  }
+  if (h1 && !root.contains(h1)) {
+    let wider: Element = root;
+    while (wider !== body && wider.parentElement && !wider.contains(h1)) wider = wider.parentElement;
+    root = wider;
+  }
+
+  const headingBlocks = boilerplateHeadingBlocks(root);
+  const cache = new Map<Element, boolean>();
+  const excludedSelf = (el: Element): boolean => {
+    if (el.matches(LANDMARK_CHROME) || isPageLevelHeaderFooter(el)) return true;
+    if (headingBlocks.has(el)) return true;
+    if (NEVER_BOILERPLATE.has(el.tagName)) return false;
+    if (h1 && el.contains(h1)) return false;
+    return hasBoilerplateName(el);
+  };
+  const isExcluded = (el: Element): boolean => {
+    const path: Element[] = [];
+    let verdict = false;
+    for (let cur: Element | null = el; cur; cur = cur.parentElement) {
+      const known = cache.get(cur);
+      if (known !== undefined) {
+        verdict = known;
+        break;
+      }
+      path.push(cur);
+      if (excludedSelf(cur)) {
+        verdict = true;
+        break;
+      }
+    }
+    // Everything walked below the deciding ancestor shares its verdict
+    path.forEach((p) => cache.set(p, verdict));
+    return verdict;
+  };
+
+  return { root, h1, isExcluded };
+}
+
+// The heading elements of the content area, in document order. Shared with
+// the highlight collectors so markers point at exactly the headings scored.
+export function contentHeadingElements(doc: Document = document): Element[] {
+  const scope = getContentScope(doc);
+  // Headings inside a link are teaser-card titles ("Passende Artikel" grids,
+  // sidebar promos), not the page's own outline.
+  const elements = Array.from(scope.root.querySelectorAll('h1, h2, h3, h4, h5, h6')).filter(
+    (h) => !scope.isExcluded(h) && !h.closest('a[href]') && normalizeText(h.textContent)
+  );
+  // A page title placed in the site <header> (outside the content root) is
+  // still the page's H1 when the content itself has none.
+  if (!elements.some((h) => h.tagName === 'H1')) {
+    const bannerH1 = Array.from(doc.querySelectorAll('header h1, [role="banner"] h1')).find(
+      (h) => normalizeText(h.textContent) && !h.closest('nav, footer, [role="navigation"]')
+    );
+    if (bannerH1) elements.unshift(bannerH1);
+  }
+  return elements;
+}
+
+export function extractHeadings(doc: Document = document): HeadingData[] {
+  return contentHeadingElements(doc).map((h) => ({
+    level: parseInt(h.tagName[1]),
+    text: h.textContent?.trim() || '',
+  }));
+}
+
+// FAQ / accordion answer containers which often use div/dd. Queried
+// globally (not only inside the content root) because FAQ blocks are often
+// rendered outside of <article>/<main>; chrome is still excluded.
+const FAQ_ANSWER_SELECTORS = [
+  '[itemprop="text"]',
+  '[itemprop="acceptedAnswer"]',
+  'dd',
+  '[class*="faq-answer" i]',
+  '[class*="accordion-content" i]',
+  '[class*="accordion-body" i]',
+  'details > :not(summary)',
+  // ARIA / Radix / shadcn accordion panels
+  '[role="region"][aria-labelledby]',
+  '[data-state] [role="region"]',
+];
+
+// The body-text blocks of the content area with their normalized text. Shared
+// with the highlight collectors so markers point at exactly the paragraphs
+// scored.
+export function contentParagraphElements(
+  doc: Document = document
+): { el: Element; text: string }[] {
+  const scope = getContentScope(doc);
+  const result: { el: Element; text: string }[] = [];
+
+  // A paragraph repeating the H1 is the title rendered as <h1><p>…</p></h1>
+  // (CMS rich-text headings), not body text.
+  const h1Texts = new Set(
+    Array.from(doc.querySelectorAll('h1')).map((h) => normalizeText(h.textContent))
+  );
+  const seen = new Set<string>();
+  const pushIfGood = (el: Element) => {
+    const t = normalizeText(el.textContent);
+    if (t.length > 30 && !seen.has(t) && !h1Texts.has(t)) {
+      seen.add(t);
+      result.push({ el, text: t });
+    }
+  };
+
+  // <p> inside a heading is rich-text markup of the heading; <p> inside a
+  // link is teaser/author-card copy — neither is body text.
+  scope.root.querySelectorAll('p').forEach((p) => {
+    if (p.closest('h1, h2, h3, h4, h5, h6, a[href]') || scope.isExcluded(p)) return;
+    pushIfGood(p);
+  });
+
+  doc.querySelectorAll(FAQ_ANSWER_SELECTORS.join(',')).forEach((el) => {
+    if (scope.isExcluded(el)) return;
+    // Its <p> children were already taken one by one above.
+    if (scope.root.contains(el) && el.querySelector('p')) return;
+    pushIfGood(el);
+  });
+
+  return result;
 }
 
 export function extractParagraphs(doc: Document = document): string[] {
-  const paragraphs: string[] = [];
-  const mainContent =
-    doc.querySelector('article') ||
-    doc.querySelector('main') ||
-    doc.body;
-
-  const seen = new Set<string>();
-  const pushIfGood = (text: string) => {
-    const t = text.trim().replace(/\s+/g, ' ');
-    if (t.length > 30 && !seen.has(t)) {
-      seen.add(t);
-      paragraphs.push(t);
-    }
-  };
-
-  mainContent.querySelectorAll('p').forEach((p) => {
-    pushIfGood(p.textContent || '');
-  });
-
-  // Also include FAQ / accordion answer containers which often use div/dd.
-  // Query globally (not scoped to mainContent) because FAQ blocks are often
-  // rendered outside of <article>/<main>.
-  const answerSelectors = [
-    '[itemprop="text"]',
-    '[itemprop="acceptedAnswer"]',
-    'dd',
-    '[class*="faq-answer" i]',
-    '[class*="accordion-content" i]',
-    '[class*="accordion-body" i]',
-    'details > :not(summary)',
-  ];
-  doc
-    .querySelectorAll(answerSelectors.join(','))
-    .forEach((el) => pushIfGood(el.textContent || ''));
-
-  return paragraphs;
+  return contentParagraphElements(doc).map(({ text }) => text);
 }
 
-export function extractFaqQuestions(doc: Document = document): string[] {
+// ---------------------------------------------------------------------------
+// FAQ questions
+// ---------------------------------------------------------------------------
+
+// Accordion triggers: ARIA disclosure buttons inside a heading (WAI-ARIA
+// accordion pattern, Radix/shadcn render `h3 > button[aria-expanded]`) or
+// inside an open/closed accordion item. Dropdown/menu triggers carry
+// aria-haspopup and are skipped.
+function accordionTriggers(doc: Document, scope: ContentScope): Element[] {
+  return Array.from(
+    doc.querySelectorAll('button[aria-expanded], [role="button"][aria-expanded]')
+  ).filter(
+    (b) =>
+      !b.hasAttribute('aria-haspopup') &&
+      !scope.isExcluded(b) &&
+      (b.closest('h1, h2, h3, h4, h5, h6') !== null || accordionItemOf(b) !== null)
+  );
+}
+
+// The nearest open/closed [data-state] wrapper whose first disclosure
+// trigger is `el` (or sits inside it) — a Radix/shadcn AccordionItem. A
+// page-level wrapper that merely carries data-state doesn't qualify because
+// its first trigger is somebody else's.
+function accordionItemOf(el: Element): Element | null {
+  for (let cur = el.parentElement; cur; cur = cur.parentElement) {
+    if (cur.matches('h1, h2, h3, h4, h5, h6, button')) continue;
+    const state = cur.getAttribute('data-state');
+    if (state === 'open' || state === 'closed') {
+      const first = cur.querySelector('[aria-expanded]');
+      return first && (first === el || el.contains(first)) ? cur : null;
+    }
+  }
+  return null;
+}
+
+// The panel a trigger opens: aria-controls, else a region labelled by the
+// trigger, else the region inside the same accordion item. null = missing.
+function answerPanelOf(trigger: Element, doc: Document): Element | null {
+  const controls = trigger.getAttribute('aria-controls');
+  if (controls) {
+    for (const id of controls.split(/\s+/)) {
+      const el = id ? doc.getElementById(id) : null;
+      if (el) return el;
+    }
+  }
+  const id = trigger.id;
+  if (id) {
+    const labelled = Array.from(doc.querySelectorAll('[aria-labelledby]')).find((el) =>
+      (el.getAttribute('aria-labelledby') || '').split(/\s+/).includes(id)
+    );
+    if (labelled) return labelled;
+  }
+  const item = accordionItemOf(trigger);
+  return item?.querySelector('[role="region"]') ?? null;
+}
+
+interface FaqScan {
+  questions: string[];
+  hidden: number;
+}
+
+function scanFaq(doc: Document): FaqScan {
+  const scope = getContentScope(doc);
   const questions = new Set<string>();
-  const add = (text: string | null | undefined) => {
-    const t = (text || '').trim().replace(/\s+/g, ' ');
-    if (t.length >= 5 && t.length <= 300) questions.add(t);
+  const add = (text: string | null | undefined): boolean => {
+    const t = normalizeText(text);
+    if (t.length >= 5 && t.length <= 300) {
+      questions.add(t);
+      return true;
+    }
+    return false;
   };
+  const visible = (el: Element) => !scope.isExcluded(el);
+  let hidden = 0;
 
   // Microdata: schema.org Question
   doc
     .querySelectorAll('[itemscope][itemtype*="schema.org/Question" i]')
     .forEach((q) => {
+      if (!visible(q)) return;
       const nameEl = q.querySelector('[itemprop="name"]');
       add(nameEl?.textContent || q.textContent);
     });
@@ -233,15 +536,43 @@ export function extractFaqQuestions(doc: Document = document): string[] {
   doc
     .querySelectorAll('[itemscope][itemtype*="FAQPage" i]')
     .forEach((faq) => {
-      faq.querySelectorAll('[itemprop="name"]').forEach((n) =>
-        add(n.textContent)
-      );
+      if (!visible(faq)) return;
+      faq.querySelectorAll('[itemprop="name"]').forEach((n) => add(n.textContent));
     });
 
   // <details><summary> accordions
   doc.querySelectorAll('details > summary').forEach((s) => {
+    if (!visible(s)) return;
     const t = s.textContent?.trim() || '';
-    if (t.endsWith('?')) add(t);
+    if (!t.endsWith('?') || !add(t)) return;
+    const body = Array.from(s.parentElement?.childNodes ?? [])
+      .filter((n) => n !== s)
+      .map((n) => n.textContent || '')
+      .join('');
+    if (!body.trim()) hidden++;
+  });
+
+  // ARIA / Radix / shadcn accordions
+  const counted = new Set<Element>();
+  accordionTriggers(doc, scope).forEach((trigger) => {
+    const t = normalizeText(trigger.textContent);
+    if (!t.endsWith('?') || !add(t)) return;
+    counted.add(accordionItemOf(trigger) ?? trigger);
+    const panel = answerPanelOf(trigger, doc);
+    if (!panel || !normalizeText(panel.textContent)) hidden++;
+  });
+
+  // Headings h2–h4 inside an accordion item (the question may not end in '?')
+  doc.querySelectorAll('[data-state] h2, [data-state] h3, [data-state] h4').forEach((h) => {
+    if (!visible(h) || h.closest('[role="region"]')) return;
+    const item = accordionItemOf(h);
+    if (!item) return;
+    const t = normalizeText(h.textContent);
+    if (!add(t) || counted.has(item)) return;
+    counted.add(item);
+    const trigger = item.querySelector('[aria-expanded]');
+    const panel = trigger ? answerPanelOf(trigger, doc) : item.querySelector('[role="region"]');
+    if (!panel || !normalizeText(panel.textContent)) hidden++;
   });
 
   // Common FAQ class patterns
@@ -253,15 +584,28 @@ export function extractFaqQuestions(doc: Document = document): string[] {
     '[class*="accordion-header" i]',
   ];
   doc.querySelectorAll(classSelectors.join(',')).forEach((el) => {
-    add(el.textContent);
+    if (visible(el)) add(el.textContent);
   });
 
-  return [...questions];
+  return { questions: [...questions], hidden };
+}
+
+export function extractFaqQuestions(doc: Document = document): string[] {
+  return scanFaq(doc).questions;
+}
+
+// Accordion/FAQ questions whose answer is not in the DOM: closed Radix items
+// render an empty `hidden` region and only mount the text on click, a
+// <details> without body text. A crawler sees the question but no answer.
+export function countHiddenFaqAnswers(doc: Document = document): number {
+  return scanFaq(doc).hidden;
 }
 
 export function extractLists(doc: Document = document): ListData[] {
+  const scope = getContentScope(doc);
   const lists: ListData[] = [];
-  doc.querySelectorAll('ul, ol').forEach((list) => {
+  scope.root.querySelectorAll('ul, ol').forEach((list) => {
+    if (scope.isExcluded(list)) return;
     const items = Array.from(list.querySelectorAll(':scope > li'))
       .slice(0, 10)
       .map((li) => li.textContent?.trim() || '')
@@ -278,26 +622,79 @@ export function extractLists(doc: Document = document): ListData[] {
   return lists;
 }
 
+// ---------------------------------------------------------------------------
+// Links
+// ---------------------------------------------------------------------------
+
+// Second-level labels under which ccTLDs sell domains (example.co.uk,
+// example.com.au). Approximation of the public suffix list: enough to keep
+// shop.example.co.uk and example.co.uk together without shipping the PSL.
+const COMMON_SLDS = new Set(['co', 'com', 'org', 'net', 'ac', 'gov', 'edu', 'or', 'ne', 'go', 'gv']);
+
+// Registrable domain (≈ eTLD+1): last two labels, three when the second-level
+// label is a known SLD in front of a two-letter ccTLD. IPs and single-label
+// hosts are returned unchanged.
+export function registrableDomain(hostname: string): string {
+  const host = hostname.toLowerCase().replace(/\.$/, '');
+  if (/^[\d.]+$/.test(host) || host.includes(':')) return host;
+  const labels = host.split('.');
+  if (labels.length <= 2) return host;
+  const tld = labels[labels.length - 1];
+  const sld = labels[labels.length - 2];
+  const take = tld.length === 2 && COMMON_SLDS.has(sld) ? 3 : 2;
+  return labels.slice(-take).join('.');
+}
+
+// Share-intent endpoints: "post this page to X" buttons, not references.
+const SHARE_URL =
+  /(facebook\.com\/(sharer|share\.php|dialog\/share)|(twitter|x)\.com\/(intent|share)|linkedin\.com\/(sharing|shareArticle|cws\/share)|xing\.com\/(spi\/shares|social\/share)|pinterest\.[a-z.]+\/pin\/create|reddit\.com\/submit|wa\.me\/\?|api\.whatsapp\.com\/send|whatsapp:\/\/send|t\.me\/share|telegram\.me\/share|bsky\.app\/intent)/i;
+const SHARE_WIDGET = /share|sharing|teilen|social/i;
+
+function inShareWidget(el: Element): boolean {
+  for (let cur: Element | null = el; cur; cur = cur.parentElement) {
+    if (cur.tagName === 'BODY' || cur.tagName === 'HTML' || cur.tagName === 'MAIN') return false;
+    const names = `${cur.getAttribute('class') || ''} ${cur.id || ''}`;
+    // Matched as whole words of the class/id so `shared-layout` stays content
+    if (names.split(/[\s_-]+/).some((t) => /^(share|sharing|teilen|social|socials)$/i.test(t))) {
+      return true;
+    }
+    const aria = cur.getAttribute('aria-label');
+    if (aria && SHARE_WIDGET.test(aria) && cur !== el) return true;
+  }
+  return false;
+}
+
 export function extractLinks(doc: Document = document, baseUrl: string = window.location.href): LinkData[] {
   const links: LinkData[] = [];
   const base = new URL(baseUrl);
-  const currentHost = base.hostname;
+  const siteDomain = registrableDomain(base.hostname);
+  const scope = getContentScope(doc);
 
   doc.querySelectorAll('a[href]').forEach((a) => {
-    const href = a.getAttribute('href') || '';
-    const text = a.textContent?.trim() || '';
+    const href = (a.getAttribute('href') || '').trim();
+    if (!href || href.startsWith('#')) return;
 
-    if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
-      let isExternal = false;
-      try {
-        const url = new URL(href, base.href);
-        isExternal = url.hostname !== currentHost;
-      } catch {
-        // Relative URL, not external
-      }
-
-      links.push({ href, text, isExternal });
+    let url: URL;
+    try {
+      url = new URL(href, base.href);
+    } catch {
+      return;
     }
+    // tel:, mailto:, javascript:, data:, … are not links a crawler follows
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+    const text = a.textContent?.trim() || '';
+    const isExternal = registrableDomain(url.hostname) !== siteDomain;
+    const isNavigational =
+      scope.isExcluded(a) ||
+      inShareWidget(a) ||
+      SHARE_URL.test(url.href) ||
+      // Cloudflare email obfuscation and other /cdn-cgi/ endpoints
+      (!isExternal && url.pathname.startsWith('/cdn-cgi/'));
+
+    // Resolved URL, so protocol-relative and <base>-relative links parse
+    // the same way everywhere downstream (source filter, dedup).
+    links.push({ href: url.href, text, isExternal, isNavigational });
   });
 
   return links;
@@ -329,58 +726,102 @@ export function extractMetaData(doc: Document = document): MetaData {
 }
 
 export function extractSchemaData(doc: Document = document): SchemaData[] {
-  const schemas: SchemaData[] = [];
+  const raw: Record<string, unknown>[] = [];
+
+  // Top-level nodes of a JSON-LD value: arrays and @graph containers are
+  // unwrapped at any depth (`[{"@context":…,"@graph":[…]}]` is common).
+  const collect = (data: unknown): void => {
+    if (Array.isArray(data)) {
+      data.forEach(collect);
+      return;
+    }
+    if (!data || typeof data !== 'object') return;
+    const node = data as Record<string, unknown>;
+    const graph = node['@graph'];
+    if (graph !== undefined && graph !== null) {
+      collect(graph);
+      // A container is only a node of its own when it carries a type
+      if (node['@type'] === undefined) return;
+    }
+    raw.push(node);
+  };
 
   doc
     .querySelectorAll('script[type="application/ld+json"]')
     .forEach((script) => {
       try {
-        const content = script.textContent || '';
-        const data = JSON.parse(content);
-
-        if (Array.isArray(data)) {
-          schemas.push(...data);
-        } else if (data['@graph']) {
-          schemas.push(...data['@graph']);
-        } else {
-          schemas.push(data);
-        }
+        collect(JSON.parse(script.textContent || ''));
       } catch {
         // Ignore parse errors
       }
     });
 
+  const schemas = raw.map(normalizeSchemaNode);
   schemas.push(...extractMicrodata(doc));
   schemas.push(...extractRdfa(doc));
 
-  return schemas;
+  // The same node emitted twice (two plugins, SSR + hydration) counts once
+  const seen = new Set<string>();
+  return schemas.filter((s) => {
+    let key: string;
+    try {
+      key = JSON.stringify(s);
+    } catch {
+      return true;
+    }
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
-function typeFromUrl(url: string | null): string | null {
-  if (!url) return null;
-  // schema.org/FAQPage -> FAQPage
-  const m = url.match(/schema\.org\/([A-Za-z]+)/);
-  return m ? m[1] : null;
+function normalizeSchemaType(type: string): string {
+  return type
+    .trim()
+    .replace(/^https?:\/\/(www\.)?schema\.org\//i, '')
+    .replace(/^schema:/i, '');
 }
 
+// '@type' is always the first type as a plain string ('' when there is
+// none) and '@types' holds them all, schema.org prefixes stripped.
+function normalizeSchemaNode(node: Record<string, unknown>): SchemaData {
+  const rawType = node['@type'];
+  const types = (Array.isArray(rawType) ? rawType : [rawType])
+    .filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
+    .map(normalizeSchemaType)
+    .filter((t) => t.length > 0);
+  node['@type'] = types[0] ?? '';
+  node['@types'] = types;
+  return node as SchemaData;
+}
+
+function typesFromItemtype(itemtype: string | null): string[] {
+  if (!itemtype) return [];
+  // itemtype may list several URLs: "https://schema.org/Article https://schema.org/NewsArticle"
+  return itemtype
+    .split(/\s+/)
+    .map((url) => url.match(/schema\.org\/([A-Za-z]+)/)?.[1])
+    .filter((t): t is string => !!t);
+}
+
+// One node per itemscope: a top-level scope yields its full item (name,
+// author, dates, nested items as values), a nested scope a type-only node so
+// type checks (Question inside FAQPage, Person as author) still see it. The
+// top-level scope used to be emitted twice — once type-only, once full.
 export function extractMicrodata(doc: Document = document): SchemaData[] {
   const results: SchemaData[] = [];
-  const seen = new Set<Element>();
   doc.querySelectorAll('[itemscope][itemtype]').forEach((el) => {
-    const type = typeFromUrl(el.getAttribute('itemtype'));
-    if (!type || seen.has(el)) return;
-    seen.add(el);
-    results.push({ '@type': type });
-    // Additionally, for top-level scopes, build a richer item (name, author, etc.)
-    if (!el.parentElement?.closest('[itemscope][itemtype]')) {
-      results.push(parseMicrodataItem(el));
-    }
+    const types = typesFromItemtype(el.getAttribute('itemtype'));
+    if (types.length === 0) return;
+    const isTopLevel = !el.parentElement?.closest('[itemscope][itemtype]');
+    const node = isTopLevel ? parseMicrodataItem(el) : { '@type': types[0] };
+    results.push(normalizeSchemaNode({ ...node, '@type': types }));
   });
   return results;
 }
 
 function parseMicrodataItem(el: Element): SchemaData {
-  const type = typeFromUrl(el.getAttribute('itemtype')) || 'Thing';
+  const type = typesFromItemtype(el.getAttribute('itemtype'))[0] || 'Thing';
   const item: SchemaData = { '@type': type };
   const props = el.querySelectorAll('[itemprop]');
   props.forEach((p) => {
@@ -420,12 +861,14 @@ function parseMicrodataItem(el: Element): SchemaData {
 export function extractRdfa(doc: Document = document): SchemaData[] {
   const results: SchemaData[] = [];
   doc.querySelectorAll('[typeof]').forEach((el) => {
-    const raw = el.getAttribute('typeof') || '';
-    // Resolve type; may look like "schema:FAQPage" or just "FAQPage"
-    const last = raw.split(/[\s:/]/).pop();
-    if (!last) return;
     if (el.parentElement?.closest('[typeof]')) return;
-    results.push({ '@type': last });
+    // typeof may hold several types, each like "schema:FAQPage" or a full URL
+    const types = (el.getAttribute('typeof') || '')
+      .split(/\s+/)
+      .map((t) => t.split(/[:/#]/).pop() || '')
+      .filter(Boolean);
+    if (types.length === 0) return;
+    results.push(normalizeSchemaNode({ '@type': types }));
   });
   return results;
 }
@@ -491,6 +934,45 @@ function resolveSchemaName(
   return null;
 }
 
+// Section labels that author selectors pick up instead of a name
+const GENERIC_AUTHOR_LABEL =
+  /^(über (den|die) (autor|autorin|autoren|autorinnen)|zum autor|zur autorin|about the authors?|the authors?|autor(in|en|innen)?|authors?|verfasser(in)?|redaktion|von|by|written by|geschrieben von|à propos de l'auteur|auteur)\s*:?$/i;
+const AUTHOR_PREFIX =
+  /^(über (den|die) (autor|autorin)|about the author|geschrieben von|written by|von|by|autor(in)?:|author:|verfasser(in)?:)\s*:?\s*/i;
+const NAME_PARTICLES = new Set(['von', 'van', 'der', 'den', 'de', 'la', 'le', 'di', 'du', 'da', 'del', 'dos', 'zu', 'ten', 'ter', 'und', 'and', '&']);
+
+// "Jane Doe", "Hans-Peter von Arx": 2–5 words, each capitalized or a name
+// particle. "Read more from our authors" is not.
+function looksLikePersonName(text: string): boolean {
+  if (/[\d?!|@:;/]/.test(text)) return false;
+  const words = text.split(/\s+/);
+  if (words.length < 2 || words.length > 5) return false;
+  return words.every((w) => NAME_PARTICLES.has(w.toLowerCase()) || /^\p{Lu}/u.test(w));
+}
+
+// Author candidates from DOM bylines, cleaned, in selector priority order.
+// Site navigation and the page footer don't credit anyone.
+function domAuthorCandidates(doc: Document): string[] {
+  const authorSelectors = [
+    '[rel="author"]',
+    '[itemprop="author"]',
+    '[class*="byline"]',
+    '[class*="author"]',
+  ];
+  const candidates: string[] = [];
+  for (const selector of authorSelectors) {
+    doc.querySelectorAll(selector).forEach((element) => {
+      if (isLandmarkChrome(element) && !element.closest('aside, [role="complementary"]')) return;
+      const text = normalizeText(element.textContent);
+      if (text.length <= 2 || text.length >= 100) return;
+      if (GENERIC_AUTHOR_LABEL.test(text)) return;
+      const cleaned = text.replace(AUTHOR_PREFIX, '').trim();
+      if (cleaned.length > 2 && !GENERIC_AUTHOR_LABEL.test(cleaned)) candidates.push(cleaned);
+    });
+  }
+  return candidates;
+}
+
 export function extractAuthorInfo(doc: Document = document): AuthorData | null {
   // 1. Try Schema.org — a credited author outranks everything else
   const schemas = extractSchemaData(doc);
@@ -511,7 +993,15 @@ export function extractAuthorInfo(doc: Document = document): AuthorData | null {
     return { name: metaAuthor.trim(), source: 'meta' };
   }
 
-  // 3. Schema.org publisher — an organization behind the content still makes
+  // 3. A visible byline naming a person ("von Jane Doe") credits the content
+  // more specifically than the publishing organization does, so it comes
+  // before the publisher. Only name-shaped text qualifies here; looser DOM
+  // guesses ("Read more from our authors") stay behind the publisher.
+  const domCandidates = domAuthorCandidates(doc);
+  const personByline = domCandidates.find(looksLikePersonName);
+  if (personByline) return { name: personByline, source: 'dom' };
+
+  // 4. Schema.org publisher — an organization behind the content still makes
   // it attributable, which is what the criterion asks for. Standalone
   // Organization nodes don't count: nearly every site emits one.
   for (const schema of schemas) {
@@ -519,27 +1009,8 @@ export function extractAuthorInfo(doc: Document = document): AuthorData | null {
     if (name) return { name, source: 'publisher' };
   }
 
-  // 4. Try DOM patterns
-  const authorSelectors = [
-    '[class*="author"]',
-    '[class*="byline"]',
-    '[rel="author"]',
-    '[itemprop="author"]',
-  ];
-
-  for (const selector of authorSelectors) {
-    const element = doc.querySelector(selector);
-    const text = element?.textContent?.trim();
-    if (text && text.length > 2 && text.length < 100) {
-      // Clean up common prefixes
-      const cleaned = text
-        .replace(/^(von|by|author:|geschrieben von)\s*/i, '')
-        .trim();
-      if (cleaned.length > 2) {
-        return { name: cleaned, source: 'dom' };
-      }
-    }
-  }
+  // 5. Any other DOM byline guess
+  if (domCandidates.length > 0) return { name: domCandidates[0], source: 'dom' };
 
   return null;
 }
@@ -805,21 +1276,18 @@ interface RobotsBlock {
   rules: RobotsRule[];
 }
 
+// RFC 9309 groups: one or more User-agent lines followed by their rules. A
+// group ends only at the next User-agent line that comes after a rule —
+// blank lines don't end it (`User-agent: GPTBot`, blank line, `Disallow: /`
+// is still one group), and Sitemap / Crawl-delay / unknown lines are ignored.
 function parseBlocks(content: string): RobotsBlock[] {
   const blocks: RobotsBlock[] = [];
   let current: RobotsBlock | null = null;
-  let lastWasAgent = false;
+  let groupHasRules = false;
 
   for (const rawLine of content.split(/\r?\n/)) {
     const line = rawLine.replace(/#.*$/, '').trim();
-    if (!line) {
-      if (current) {
-        blocks.push(current);
-        current = null;
-      }
-      lastWasAgent = false;
-      continue;
-    }
+    if (!line) continue;
 
     const colon = line.indexOf(':');
     if (colon < 0) continue;
@@ -829,19 +1297,17 @@ function parseBlocks(content: string): RobotsBlock[] {
 
     if (field === 'user-agent') {
       // Consecutive user-agent lines group into one block
-      if (!current || !lastWasAgent) {
+      if (!current || groupHasRules) {
         if (current) blocks.push(current);
         current = { agents: [], rules: [] };
+        groupHasRules = false;
       }
       current.agents.push(value.toLowerCase());
-      lastWasAgent = true;
     } else if (field === 'disallow' || field === 'allow') {
       if (current) {
         current.rules.push({ type: field, path: value });
+        groupHasRules = true;
       }
-      lastWasAgent = false;
-    } else {
-      lastWasAgent = false;
     }
   }
   if (current) blocks.push(current);

@@ -38,6 +38,15 @@ describe('detectPageType', () => {
     expect(detectPageType(makePage({ schema: [{ '@type': 'BlogPosting' }] }))).toBe('article');
   });
 
+  it('detects article from a multi-typed node', () => {
+    expect(
+      detectPageType(makePage({ schema: [{ '@type': 'NewsArticle', '@types': ['NewsArticle', 'FAQPage'] }] }))
+    ).toBe('article');
+    // Legacy stored data where @type itself is an array
+    const legacy = { '@type': ['WebPage', 'BlogPosting'] } as unknown as PageData['schema'][number];
+    expect(detectPageType(makePage({ schema: [legacy] }))).toBe('article');
+  });
+
   it('detects article via og:type', () => {
     expect(
       detectPageType(

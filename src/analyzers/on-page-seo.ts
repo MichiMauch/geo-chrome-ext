@@ -1,6 +1,12 @@
 import { PageData, AnalysisCategory, CategoryDetail } from '../types/analysis';
 import { BaseAnalyzer } from './base';
 import { GEO_CONFIG } from '../config/geo-config';
+import { hasSchemaType } from '../utils/schema-types';
+import { ARTICLE_SCHEMA_TYPES } from '../utils/page-type';
+
+// og:image file names that point at a site-wide default rather than an image
+// for this page (logo, placeholder). Only the last path segment is checked.
+const GENERIC_OG_IMAGE = /(^|[-_.])(logo|default|placeholder|fallback)([-_.]|$)/i;
 
 export class OnPageSeoAnalyzer extends BaseAnalyzer {
   protected readonly categoryKey = 'cat_onPageSeo';
@@ -122,7 +128,11 @@ export class OnPageSeoAnalyzer extends BaseAnalyzer {
     details.push({
       criterionKey: 'criterion_social_cards',
       found: socialGood,
-      value: `${socialResult.foundCount}/${socialResult.totalCount}`,
+      value:
+        socialResult.missing.length === 0
+          ? `${socialResult.foundCount}/${socialResult.totalCount}`
+          : 'value_socialCardsMissing',
+      valueParams: { missing: socialResult.missing.join(', ') },
       weight: config.weights.socialCards,
       progress: {
         current: socialResult.foundCount,
@@ -235,21 +245,54 @@ export class OnPageSeoAnalyzer extends BaseAnalyzer {
     return { score: withAlt / images.length, withAlt, totalImages: images.length };
   }
 
+  // Six tags a shared link needs to render a proper preview. twitter:card is
+  // its own check: X falls back to og:title/description/image, but without
+  // twitter:card it only shows the small summary card. og:type must say
+  // "article" on an article page (Schema.org Article-family type) — "website"
+  // there is a common CMS default that misclassifies the page. An og:image
+  // that is the site logo or a placeholder does not count.
   private scoreSocialCards(pageData: PageData): {
     score: number;
     foundCount: number;
     totalCount: number;
+    missing: string[];
   } {
-    // Score the most important fields. Twitter card can fall back to OG.
     const og = pageData.openGraph;
     const tw = pageData.twitterCard;
-    const checks: boolean[] = [
-      !!og.title,
-      !!og.description,
-      !!og.image,
-      !!(tw.card || og.title), // a twitter:card or a fallback OG is acceptable
+    const isArticle = pageData.schema.some((s) => hasSchemaType(s, ARTICLE_SCHEMA_TYPES));
+    const ogType = (og.type || pageData.meta.ogType || '').trim().toLowerCase();
+
+    const checks: { tag: string; ok: boolean }[] = [
+      { tag: 'og:title', ok: !!og.title?.trim() },
+      { tag: 'og:description', ok: !!og.description?.trim() },
+      {
+        tag: og.image?.trim() ? 'og:image (logo/default)' : 'og:image',
+        ok: !!og.image?.trim() && !this.isGenericImage(og.image),
+      },
+      { tag: 'og:url', ok: !!og.url?.trim() },
+      {
+        tag: isArticle && ogType ? 'og:type=article' : 'og:type',
+        ok: isArticle ? ogType === 'article' : ogType.length > 0,
+      },
+      { tag: 'twitter:card', ok: !!tw.card?.trim() },
     ];
-    const foundCount = checks.filter(Boolean).length;
-    return { score: foundCount / checks.length, foundCount, totalCount: checks.length };
+    const foundCount = checks.filter((c) => c.ok).length;
+    return {
+      score: foundCount / checks.length,
+      foundCount,
+      totalCount: checks.length,
+      missing: checks.filter((c) => !c.ok).map((c) => c.tag),
+    };
+  }
+
+  private isGenericImage(src: string): boolean {
+    let path = src;
+    try {
+      path = new URL(src, 'https://x.invalid').pathname;
+    } catch {
+      // keep the raw value
+    }
+    const file = path.split('/').pop() ?? '';
+    return GENERIC_OG_IMAGE.test(file.replace(/\.[a-z0-9]+$/i, ''));
   }
 }

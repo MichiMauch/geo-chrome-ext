@@ -1,9 +1,10 @@
 import type { GEOAnalysisResult } from '../types/analysis';
 import { normalizeUrl } from './history';
 
-// v9 prefix: crawler-view sub-check added to Machine Readability.
-// Old caches are ignored automatically.
-const CACHE_PREFIX = 'geo_cache_v9:';
+// v10 prefix: criteria reworked after the live-page audit (content scoping,
+// source links, schema counting, new value params). Old caches are ignored
+// automatically.
+const CACHE_PREFIX = 'geo_cache_v10:';
 
 interface CachedAnalysis {
   hash: string;

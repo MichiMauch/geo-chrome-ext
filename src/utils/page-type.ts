@@ -1,16 +1,20 @@
 import type { PageData, PageType } from '../types/analysis';
+import { schemaTypesOf } from './schema-types';
 
 // Conservative page-type detection. Explicit author signals (Schema.org,
 // og:type) beat URL heuristics; anything uncertain stays 'other' so the
 // scoring behaves exactly as before detection existed. Only confident
 // homepage/product/article detections may relax check expectations.
 
-const ARTICLE_SCHEMA_TYPES = ['Article', 'NewsArticle', 'BlogPosting'];
+// Article and the subtypes publishers actually emit.
+export const ARTICLE_SCHEMA_TYPES = [
+  'Article', 'NewsArticle', 'BlogPosting', 'TechArticle', 'ScholarlyArticle', 'Report',
+  'ReportageNewsArticle', 'AnalysisNewsArticle', 'OpinionNewsArticle', 'LiveBlogPosting',
+];
 
 export function detectPageType(pageData: PageData): PageType {
-  const schemaTypes = new Set(
-    pageData.schema.map((s) => String(s['@type'] ?? ''))
-  );
+  // Every type of every node — a node typed ["NewsArticle", "FAQPage"] is an article
+  const schemaTypes = new Set(pageData.schema.flatMap(schemaTypesOf));
 
   if (schemaTypes.has('Product')) return 'product';
   if (ARTICLE_SCHEMA_TYPES.some((t) => schemaTypes.has(t))) return 'article';

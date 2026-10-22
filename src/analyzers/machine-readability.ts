@@ -1,7 +1,24 @@
-import { PageData, AnalysisCategory, CategoryDetail } from '../types/analysis';
+import { PageData, PageType, AnalysisCategory, CategoryDetail, SchemaData } from '../types/analysis';
 import { BaseAnalyzer } from './base';
 import { GEO_CONFIG } from '../config/geo-config';
-import { flattenSchemaRefs } from '../utils/dom-helpers';
+import { schemaTypesOf } from '../utils/schema-types';
+import { ARTICLE_SCHEMA_TYPES, detectPageType } from '../utils/page-type';
+
+// Types the schema check counts. Each distinct type counts once, however many
+// nodes carry it.
+const RELEVANT_SCHEMA_TYPES = new Set<string>([
+  ...ARTICLE_SCHEMA_TYPES,
+  'FAQPage', 'HowTo', 'Product',
+  'Organization', 'NewsMediaOrganization', 'Corporation', 'LocalBusiness',
+  'Person', 'WebPage', 'CollectionPage', 'AboutPage', 'ContactPage', 'BreadcrumbList',
+]);
+
+const ORGANIZATION_TYPES = new Set<string>([
+  'Organization', 'NewsMediaOrganization', 'Corporation', 'LocalBusiness',
+  'NGO', 'EducationalOrganization', 'GovernmentOrganization',
+]);
+
+type SchemaNode = Record<string, unknown>;
 
 function isEmptyValue(v: unknown): boolean {
   if (v === undefined || v === null) return true;
@@ -11,36 +28,127 @@ function isEmptyValue(v: unknown): boolean {
   return false;
 }
 
+function nodeTypes(node: SchemaNode): string[] {
+  return schemaTypesOf(node as SchemaData);
+}
+
+function isOrganizationNode(node: SchemaNode): boolean {
+  return nodeTypes(node).some((t) => ORGANIZATION_TYPES.has(t));
+}
+
+function nodeName(node: SchemaNode): string | null {
+  return typeof node.name === 'string' && node.name.trim() ? node.name.trim() : null;
+}
+
+function indexById(schemas: SchemaData[]): Map<string, SchemaNode> {
+  const byId = new Map<string, SchemaNode>();
+  for (const schema of schemas) {
+    const id = schema['@id'];
+    if (typeof id === 'string' && id) byId.set(id, schema);
+  }
+  return byId;
+}
+
+// The nodes behind an author/publisher-style value: inline nodes, arrays of
+// them, and @id references into @graph (as a bare string or {"@id": …}).
+// A reference node is replaced by the node it points at.
+function resolveNodes(value: unknown, byId: Map<string, SchemaNode>, seen = new Set<string>()): SchemaNode[] {
+  if (Array.isArray(value)) return value.flatMap((v) => resolveNodes(v, byId, seen));
+  if (typeof value === 'string') {
+    const referenced = byId.get(value.trim());
+    if (!referenced || seen.has(value.trim())) return [];
+    seen.add(value.trim());
+    return resolveNodes(referenced, byId, seen);
+  }
+  if (value && typeof value === 'object') {
+    const node = value as SchemaNode;
+    const id = node['@id'];
+    if (!nodeName(node) && typeof id === 'string' && byId.has(id) && byId.get(id) !== node && !seen.has(id)) {
+      seen.add(id);
+      return resolveNodes(byId.get(id), byId, seen);
+    }
+    return [node];
+  }
+  return [];
+}
+
+// A plain string author/publisher is the name itself unless it is a URL or
+// fragment (a broken @id reference).
+function plainName(value: unknown, byId: Map<string, SchemaNode>): string | null {
+  const values = Array.isArray(value) ? value : [value];
+  for (const v of values) {
+    if (typeof v !== 'string') continue;
+    const trimmed = v.trim();
+    if (trimmed && !byId.has(trimmed) && !/^(https?:\/\/|#)/i.test(trimmed)) return trimmed;
+  }
+  return null;
+}
+
+// True when the value credits someone by name — {"@type":"Person"} alone
+// names nobody and must not satisfy a required author field.
+function hasNamedEntity(value: unknown, byId: Map<string, SchemaNode>): boolean {
+  return plainName(value, byId) !== null || resolveNodes(value, byId).some((n) => nodeName(n) !== null);
+}
+
+// Link targets compared without hash, trailing slash or host case. Returns
+// null for targets that are no content path: non-http(s), Cloudflare's
+// /cdn-cgi/ endpoints (email protection etc.) and links back to the page
+// itself (jump links).
+function normalizeLinkTarget(href: string, pageUrl: string): string | null {
+  try {
+    const u = new URL(href, pageUrl);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    if (u.pathname.startsWith('/cdn-cgi/')) return null;
+    const key = (url: URL) =>
+      `${url.host.toLowerCase()}${url.pathname.replace(/\/+$/, '') || '/'}${url.search}`;
+    let self: string | null = null;
+    try {
+      self = key(new URL(pageUrl));
+    } catch {
+      // unparseable page URL — nothing counts as a self-link
+    }
+    const target = key(u);
+    return target === self ? null : target;
+  } catch {
+    return null;
+  }
+}
+
 export class MachineReadabilityAnalyzer extends BaseAnalyzer {
   protected readonly categoryKey = 'cat_machineReadability';
 
-  analyze(pageData: PageData): AnalysisCategory {
+  analyze(pageData: PageData, pageType: PageType = detectPageType(pageData)): AnalysisCategory {
     const details: CategoryDetail[] = [];
     let weightedScore = 0;
     let totalWeight = 0;
     const config = GEO_CONFIG.machineReadability;
 
-    // Check 1: Schema.org Structured Data
-    const relevantSchemaTypes = [
-      'Article', 'NewsArticle', 'BlogPosting', 'FAQPage', 'HowTo', 'Product',
-      'Organization', 'Person', 'WebPage', 'BreadcrumbList',
-    ];
-
-    const foundSchemas = pageData.schema.filter((s) =>
-      relevantSchemaTypes.includes(s['@type'])
-    );
-
-    const hasSchema = foundSchemas.length > 0;
-    const schemasNeeded = 2;
-    const schemaScore = Math.min(1, foundSchemas.length / schemasNeeded);
+    // Check 1: Schema.org Structured Data — distinct relevant types, so two
+    // NewsArticle nodes (or one multi-typed node) can't fake breadth.
+    const schemaCheck = this.evaluateSchemaTypes(pageData, pageType);
+    const hasSchema = schemaCheck.foundTypes.length > 0;
+    const schemasNeeded = schemaCheck.target;
+    const schemaScore = schemaCheck.current / schemasNeeded;
 
     details.push({
       criterionKey: 'criterion_schema',
       found: hasSchema,
-      value: hasSchema ? 'value_schemaTypes' : 'value_noneFound',
+      value: !hasSchema
+        ? 'value_noneFound'
+        : schemaCheck.missing.length > 0
+          ? 'value_schemaTypesMissing'
+          : 'value_schemaTypes',
+      ...(hasSchema
+        ? {
+            valueParams: {
+              types: schemaCheck.foundTypes.join(', '),
+              missing: schemaCheck.missing.join(', '),
+            },
+          }
+        : {}),
       weight: config.weights.schemaOrg,
       progress: {
-        current: Math.min(foundSchemas.length, schemasNeeded),
+        current: schemaCheck.current,
         target: schemasNeeded,
         unitKey: 'unit_schemaTypes',
       },
@@ -122,9 +230,14 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
 
     // Check 3b: Interne Verlinkung — Kontext-Pfade für Crawler und Agents.
     // Zwei Aspekte, je zur Hälfte gewichtet: genug interne Links und ein
-    // hoher Anteil beschreibender Ankertexte (kein "hier klicken").
-    const linking = this.evaluateInternalLinks(pageData.links);
-    const hasGoodLinking = linking.score > 0.6;
+    // hoher Anteil beschreibender Ankertexte (kein "hier klicken"). Gezählt
+    // werden nur kontextuelle Links (ohne Header/Nav/Footer), je Ziel einmal.
+    const linking = this.evaluateInternalLinks(pageData.links, pageData.url);
+    // Passing needs both halves: a single descriptive link scores 67% but
+    // offers no real topic path.
+    const hasGoodLinking =
+      linking.internalCount >= config.internalLinks.minCount &&
+      linking.descriptiveRatio >= config.internalLinks.descriptiveRatioMin;
 
     details.push({
       criterionKey: 'criterion_internalLinks',
@@ -245,7 +358,8 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     }
 
     const recommendations: string[] = [];
-    if (!hasSchema) recommendations.push('no_schema');
+    // Also when the type the page type calls for (Article, FAQPage) is missing
+    if (!hasSchema || schemaCheck.missing.length > 0) recommendations.push('no_schema');
     if (completeness.totalRequired > 0 && completeness.missingByType.length > 0) {
       recommendations.push('schema_incomplete');
     }
@@ -259,72 +373,138 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     return this.createCategory(0, weightedScore, totalWeight, details, recommendations);
   }
 
-  private evaluateInternalLinks(links: PageData['links']): {
+  // Distinct relevant types plus the page-type rule (see
+  // GEO_CONFIG.machineReadability.schemaTypes): an article page needs an
+  // Article-family type, a page with a visible FAQ needs FAQPage. A missing
+  // expected type keeps the check one short of its target.
+  private evaluateSchemaTypes(
+    pageData: PageData,
+    pageType: PageType
+  ): { foundTypes: string[]; missing: string[]; current: number; target: number } {
+    const config = GEO_CONFIG.machineReadability.schemaTypes;
+    const foundTypes = [
+      ...new Set(pageData.schema.flatMap(schemaTypesOf).filter((t) => RELEVANT_SCHEMA_TYPES.has(t))),
+    ];
+
+    const missing: string[] = [];
+    if (pageType === 'article' && !foundTypes.some((t) => ARTICLE_SCHEMA_TYPES.includes(t))) {
+      missing.push('Article');
+    }
+    if ((pageData.faqQuestions?.length ?? 0) >= config.faqMinQuestions && !foundTypes.includes('FAQPage')) {
+      missing.push('FAQPage');
+    }
+
+    let current = Math.min(foundTypes.length, config.target);
+    if (missing.length > 0) current = Math.min(current, config.target - 1);
+    return { foundTypes, missing, current, target: config.target };
+  }
+
+  private evaluateInternalLinks(links: PageData['links'], pageUrl: string): {
     score: number;
     internalCount: number;
     descriptiveRatio: number;
   } {
     const config = GEO_CONFIG.machineReadability.internalLinks;
-    const internal = links.filter((l) => !l.isExternal);
 
-    if (internal.length === 0) {
+    // Contextual links only: header/nav/footer menus repeat on every page and
+    // say nothing about this page's topic. Each target counts once; it is
+    // descriptive when any of its anchors is.
+    const targets = new Map<string, boolean>();
+    for (const link of links) {
+      if (link.isExternal || link.isNavigational) continue;
+      const target = normalizeLinkTarget(link.href, pageUrl);
+      if (!target) continue;
+      targets.set(target, (targets.get(target) ?? false) || this.isDescriptiveAnchor(link.text));
+    }
+
+    const internalCount = targets.size;
+    if (internalCount === 0) {
       return { score: 0, internalCount: 0, descriptiveRatio: 0 };
     }
 
-    const descriptive = internal.filter((l) => {
-      const text = l.text.trim();
-      if (text.length <= 2) return false; // icons, arrows, bare symbols
-      return !config.genericAnchorPatterns.some((p) => p.test(text));
-    });
-    const descriptiveRatio = descriptive.length / internal.length;
+    const descriptiveCount = [...targets.values()].filter(Boolean).length;
+    const descriptiveRatio = descriptiveCount / internalCount;
 
-    const countScore = Math.min(1, internal.length / config.minCount);
+    const countScore = Math.min(1, internalCount / config.minCount);
     const descriptiveScore = Math.min(1, descriptiveRatio / config.descriptiveRatioMin);
 
     return {
       score: countScore * 0.5 + descriptiveScore * 0.5,
-      internalCount: internal.length,
+      internalCount,
       descriptiveRatio,
     };
   }
 
+  private isDescriptiveAnchor(rawText: string): boolean {
+    const text = rawText.trim();
+    if (text.length <= 2) return false; // icons, arrows, bare symbols
+    return !GEO_CONFIG.machineReadability.internalLinks.genericAnchorPatterns.some((p) => p.test(text));
+  }
+
+  // "Clear entities": signals that let a machine tie the page to known things
+  // in a knowledge graph — not how often nouns appear in the text. Each
+  // signal counts once (an author from schema and from the byline is one
+  // signal); weights in GEO_CONFIG.machineReadability.scoring.entitySignals.
   private evaluateEntities(pageData: PageData): number {
-    let score = 0;
+    const w = GEO_CONFIG.machineReadability.scoring.entitySignals;
+    const schemas = pageData.schema;
+    const byId = indexById(schemas);
 
-    const hasOrgSchema = pageData.schema.some(
-      (s) => s['@type'] === 'Organization' || s.publisher
-    );
-    if (hasOrgSchema) score += 0.3;
-
-    const hasPersonSchema = pageData.schema.some(
-      (s) =>
-        s['@type'] === 'Person' ||
-        flattenSchemaRefs(s.author).some((a) => a['@type'] === 'Person')
-    );
-    if (hasPersonSchema) score += 0.2;
-
-    const productPatterns = [
-      /\b(Produkt|Service|Dienstleistung|Lösung|Software|Tool|App)\b/i,
-      /\b(product|service|solution|software|tool|application)\b/i,
+    // Organizations: standalone nodes, publishers, and organizations credited as author
+    const credited = schemas.flatMap((s) => resolveNodes(s.author, byId));
+    const orgNodes = [
+      ...schemas.filter(isOrganizationNode),
+      ...schemas.flatMap((s) => resolveNodes(s.publisher, byId)),
+      ...credited.filter(isOrganizationNode),
     ];
+    const personNodes = [
+      ...schemas.filter((s) => schemaTypesOf(s).includes('Person')),
+      ...credited.filter((n) => !isOrganizationNode(n)),
+    ];
+    const namedOrgs = orgNodes.filter((n) => nodeName(n) !== null);
+    const namedPersons = personNodes.filter((n) => nodeName(n) !== null);
 
-    const allText = this.getFullText(pageData);
-    for (const pattern of productPatterns) {
-      if (pattern.test(allText)) {
-        score += 0.15;
-        break;
-      }
-    }
+    const orgNamed =
+      namedOrgs.length > 0 ||
+      schemas.some((s) => plainName(s.publisher, byId) !== null) ||
+      pageData.author?.source === 'publisher';
+    const orgVerifiable = namedOrgs.some((n) => !isEmptyValue(n.logo) || !isEmptyValue(n.sameAs));
 
-    if (pageData.meta.description && pageData.meta.description.length > 50) {
-      score += 0.2;
-    }
+    const personNamed =
+      namedPersons.length > 0 ||
+      schemas.some((s) => plainName(s.author, byId) !== null) ||
+      (pageData.author !== null && pageData.author.source !== 'publisher');
+    const personVerifiable = namedPersons.some((n) => !isEmptyValue(n.sameAs) || !isEmptyValue(n.url));
 
-    if (pageData.author) {
-      score += 0.15;
-    }
+    const topic = schemas.some((s) => !isEmptyValue(s.about) || !isEmptyValue(s.mentions));
+
+    let score = 0;
+    if (orgNamed) score += w.organizationNamed;
+    if (orgVerifiable) score += w.organizationVerifiable;
+    if (personNamed) score += w.personNamed;
+    if (personVerifiable) score += w.personVerifiable;
+    if (this.hasLinkedGraph(schemas, byId)) score += w.linkedGraph;
+    if (topic) score += w.topic;
 
     return Math.min(1, score);
+  }
+
+  // Nodes that point at each other via @id (Article → author → Organization)
+  // form one graph instead of loose fragments.
+  private hasLinkedGraph(schemas: SchemaData[], byId: Map<string, SchemaNode>): boolean {
+    if (byId.size === 0) return false;
+    const refersElsewhere = (value: unknown, ownId: unknown): boolean => {
+      if (Array.isArray(value)) return value.some((v) => refersElsewhere(v, ownId));
+      if (typeof value === 'string') return value !== ownId && byId.has(value);
+      if (value && typeof value === 'object') {
+        const id = (value as SchemaNode)['@id'];
+        return typeof id === 'string' && id !== ownId && byId.has(id);
+      }
+      return false;
+    };
+    return schemas.some((s) =>
+      Object.entries(s).some(([key, value]) => !key.startsWith('@') && refersElsewhere(value, s['@id']))
+    );
   }
 
   private evaluateSchemaCompleteness(
@@ -335,35 +515,56 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     missingByType: { type: string; missing: string[] }[];
   } {
     const required = GEO_CONFIG.machineReadability.schemaRequiredFields;
+    const byId = indexById(schemas);
     let foundRequired = 0;
     let totalRequired = 0;
     const missingByType: { type: string; missing: string[] }[] = [];
+    const seen = new Set<string>();
 
     for (const schema of schemas) {
-      const type = schema['@type'];
-      if (typeof type !== 'string') continue;
-      const requiredFields = required[type];
-      if (!requiredFields) continue;
+      // Identical nodes (the same block emitted twice) are validated once
+      let fingerprint: string | null = null;
+      try {
+        fingerprint = JSON.stringify(schema);
+      } catch {
+        // not serializable — validate it anyway
+      }
+      if (fingerprint !== null) {
+        if (seen.has(fingerprint)) continue;
+        seen.add(fingerprint);
+      }
 
-      // A schema is "shallow" if it carries only the @type key (extracted from
-      // microdata/RDFa where we can't read properties). Skip those — we can't
-      // validate them fairly.
-      const keys = Object.keys(schema).filter((k) => k !== '@type');
+      // A multi-typed node (["NewsArticle", "FAQPage"]) needs the fields of
+      // every type it claims. Article subtypes fall back to Article.
+      const checkedTypes = schemaTypesOf(schema).filter(
+        (t) => required[t] || ARTICLE_SCHEMA_TYPES.includes(t)
+      );
+      if (checkedTypes.length === 0) continue;
+      const requiredFields = [
+        ...new Set(checkedTypes.flatMap((t) => required[t] ?? required.Article)),
+      ];
+
+      // A schema is "shallow" if it carries only @-keys (@type from
+      // microdata/RDFa where we can't read properties, or a bare @id
+      // reference). Skip those — we can't validate them fairly.
+      const keys = Object.keys(schema).filter((k) => !k.startsWith('@'));
       if (keys.length === 0) continue;
 
       const missing: string[] = [];
       for (const field of requiredFields) {
         const value = (schema as Record<string, unknown>)[field];
-        if (isEmptyValue(value)) {
-          missing.push(field);
-        } else {
+        // An author must name someone; {"@type": "Person"} alone does not
+        const present = field === 'author' ? hasNamedEntity(value, byId) : !isEmptyValue(value);
+        if (present) {
           foundRequired++;
+        } else {
+          missing.push(field);
         }
         totalRequired++;
       }
 
       if (missing.length > 0) {
-        missingByType.push({ type, missing });
+        missingByType.push({ type: checkedTypes.join('/'), missing });
       }
     }
 
@@ -373,14 +574,17 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
   private evaluateSemanticHTML(
     semanticElements: PageData['semanticElements']
   ): number {
-    let score = 0;
-    const weights = GEO_CONFIG.machineReadability.scoring.semanticElements;
+    const { semanticElements: weights, semanticBonus } = GEO_CONFIG.machineReadability.scoring;
+    const present = (key: string) =>
+      semanticElements[('has' + key.charAt(0).toUpperCase() + key.slice(1)) as keyof typeof semanticElements];
 
+    let score = 0;
     for (const [key, weight] of Object.entries(weights)) {
-      const domKey = ('has' + key.charAt(0).toUpperCase() + key.slice(1)) as keyof typeof semanticElements;
-      if (semanticElements[domKey]) {
-        score += weight;
-      }
+      if (present(key)) score += weight;
+    }
+    // Optional landmarks top up, never required
+    for (const [key, weight] of Object.entries(semanticBonus)) {
+      if (present(key)) score += weight;
     }
 
     return Math.min(1, score);

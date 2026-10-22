@@ -90,6 +90,13 @@ export interface PageData {
   llmsTxt: LlmsTxtData;
   robotsTxt: RobotsTxtData;
   faqQuestions?: string[];
+  // Accordion/FAQ questions whose answer container is empty or missing in the
+  // DOM (e.g. closed Radix accordions that only mount on click) — text a
+  // crawler never sees.
+  faqAnswersHidden?: number;
+  // Primary language subtag of the page content (from <html lang> or
+  // schema inLanguage), lowercased, e.g. 'de'. Undefined when unknown.
+  lang?: string;
   images: ImageData[];
   openGraph: OpenGraphData;
   twitterCard: TwitterCardData;
@@ -155,10 +162,16 @@ export interface ListData {
   items: string[];
 }
 
+// Only http(s) links; tel:/mailto:/javascript: never make it into the list.
 export interface LinkData {
   href: string;
   text: string;
+  // Different registrable domain (subdomains of the page's own site count as
+  // internal).
   isExternal: boolean;
+  // Sits in site chrome (header, nav, footer, aside, share widgets) rather
+  // than in the content area.
+  isNavigational?: boolean;
 }
 
 export interface MetaData {
@@ -171,7 +184,11 @@ export interface MetaData {
 }
 
 export interface SchemaData {
+  // Primary type, always a plain string ('' when the node has none).
   '@type': string;
+  // Every type of the node with the schema.org prefix stripped — use
+  // schemaTypesOf() rather than reading '@type' when matching.
+  '@types'?: string[];
   name?: string;
   // Author shapes in the wild: a plain name, a node, an array of either, or an
   // @id reference into @graph — resolveSchemaName() handles all of them.

@@ -1,5 +1,45 @@
 # Changelog
 
+## [4.4.0] - 2026-10-22
+
+An audit of every criterion against a real page (the economiesuisse.ch FAQ on Switzerland's power supply, a German Next.js site) showed that the unit tests all passed while many results were wrong or right for the wrong reason. This release fixes what the audit found. Scores change on most pages, usually downwards where site chrome used to be counted as content.
+
+### Changed
+
+- **Only the content area is analyzed:** Headings, paragraphs and lists used to be collected from the whole document, so menus, footers, share boxes, "Related articles" teasers and newsletter sign-ups counted as content. Two navigation lists and a footer list were enough for "Lists 3/3". The extractors now pick a content root (`article`, else `main`, else `body`), skip `nav`, `aside`, page-level `header`/`footer`, ARIA landmarks and blocks named or headed like share/newsletter/related/cookie/breadcrumb, and ignore teaser cards (headings and paragraphs inside links) and paragraphs that only repeat the H1. Highlights use the same element set, so markers point at exactly what was scored.
+- **Readability follows the page language, not the UI language:** A German page analyzed with an English browser was measured with the English Flesch formula and showed "-10 Flesch"; with a German browser the same page showed "69 LIX". The formula is now chosen from `<html lang>` or schema `inLanguage`, falling back to a stopword guess and only then to the UI language. Each paragraph end counts as a sentence end (fragments without punctuation used to merge into one huge sentence), Flesch is clamped to 0–100, and the LIX scale was recalibrated for German, where compounds push typical non-fiction to 50–60: full points up to 40, zero from 65.
+- **Source links are real sources:** "External sources" and "Claims with sources" counted `tel:` and `mailto:` links, the site's own subdomains, social profiles (x.com, TikTok, YouTube …) and LinkedIn share buttons. On the audited page 25 "external" links contained zero sources, yet the check passed. Links are now limited to http(s), compared by registrable domain, flagged when they sit in site chrome or share widgets, and social/messenger/tracker hosts are excluded by hostname. Both criteria share one filter (`source-links.ts`) and show the true count.
+- **Facts, citations and definitions understand German:** "Prozent", "30 %", TWh/GW/kWh, CHF/Fr./€, Mio./Mrd., `1'200` and "gemäss/gemäß/laut/zufolge" are recognized as facts, a bare year ("Copyright 2024", "Energiestrategie 2050") no longer is. Citations like "(Bundesamt für Energie, 2024)" and "(Schärli, 2023)" are matched. A definition needs a real definition pattern ("X ist ein …", "Unter X versteht man …", "X bezeichnet …") instead of any "ist" anywhere. All patterns use Unicode-aware word boundaries.
+- **FAQ scoring counts answered questions:** Accordion questions are detected in the WAI-ARIA/Radix/shadcn pattern (`h3 > button[aria-expanded]`), which found none of the 52 questions on the audited page before. A FAQ with five or more answered questions reaches full points without FAQPage schema, which remains a bonus.
+- **Machine readability:**
+  - Schema types are counted as distinct types. Two identical `NewsArticle` nodes no longer make 2/2, and a single Microdata item no longer counts twice. `@type` arrays, `schema.org/` prefixes and `@graph` inside a JSON-LD array are handled. The panel names the missing type (e.g. FAQPage on a FAQ page, an Article type on an article).
+  - Schema completeness requires the author to have a name.
+  - "Clear entities" now scores real entity signals: an organization with name, logo or sameAs, a named person with sameAs or url, `@id` links and about/mentions. It no longer double-counts the author or credits the meta description and a product-word regex.
+  - Semantic HTML weights sum to 100% (they topped out at 90%). `nav` counts, `aside` is a bonus.
+  - Internal linking counts distinct contextual links only, no navigation, footer or Cloudflare `/cdn-cgi/` links.
+  - The AI crawler list adds OAI-SearchBot, ChatGPT-User, Claude-SearchBot, Claude-User, Perplexity-User, Applebot-Extended and meta-externalagent.
+- **Social cards check six real tags:** og:title, og:description, og:image, og:url, twitter:card and og:type, which must be `article` on articles. Previously `og:title` alone satisfied the Twitter card check, so pages without any Twitter tag scored 4/4. A logo or placeholder og:image does not count.
+- **Heading hierarchy and scannability:** The hierarchy bonus no longer offsets penalties (20 H3s before the H1 scored 100%), a page without H1 can no longer pass, and the penalty keys got names that match what they penalize. Scannability ignores paragraphs under 80 characters and caps the headings-per-block ratio, so short junk paragraphs no longer read as "well scannable". Partial credit for H1 and structured sections is proportional to the criterion weight.
+
+### Added
+
+- **Hidden FAQ answers are reported:** When accordion questions have no answer in the DOM, e.g. closed Radix accordions that only mount on click, so the text exists only in the JavaScript payload, the FAQ criterion says "52 of 52 answers missing from the HTML" and the new recommendation `faq_answers_hidden` explains that crawlers only see the questions. Previously this showed up only indirectly as low fact and answer scores.
+- `PageData.lang` and `PageData.faqAnswersHidden`, plus `LinkData.isNavigational` and `SchemaData['@types']`. `LinkData.href` is now the resolved URL, so protocol-relative links (`//example.org/…`) count as sources like any other.
+- The new texts are translated into all six interface languages.
+
+### Fixed
+
+- **Raw placeholders in values:** `{current}/{target} types ({types})`, `{current}/{target} lists`, `{current}/{target} subheadings` and `{count} H1` appeared verbatim in the panel and the HTML export. The mapper now fills `{current}`/`{target}` from each criterion's progress, and the remaining values carry explicit parameters.
+- **robots.txt:** A blank line between `User-agent` and its rules ended the group, so a blocked bot read as allowed. Groups now end only at the next `User-agent` after a rule, per RFC 9309.
+- **llms.txt** was requested from the open tab's origin rather than the analyzed URL's.
+- **Cached results:** The cache prefix moves to `geo_cache_v10`, so pages analyzed before this version are re-scored with the new rules instead of showing old results.
+- **Author:** Labels such as "Über den Autor" or "About the author" are no longer taken as the author's name, and a visible person byline now beats the publisher organization.
+
+### Tests
+
+- New suites for AiCitation, Answerability and TrustSources, which had no tests before, and for content scoping (a synthetic Radix accordion fixture modeled on the audited page), links, schema normalization, robots.txt groups and the value mapper, plus a parity test that every language has exactly the English translation keys. 243 tests became 444.
+- `testpage/best-practice.html` now carries real facts, contextual internal links and publisher logo/about data, so it still demonstrates the ideal case under the stricter rules: 28.1/30, with only the deliberately wrong canonical failing.
+
 ## [4.3.2] - 2026-08-20
 
 ### Fixed

@@ -390,6 +390,8 @@ export function getFixSnippet(key: string): FixSnippetResult | null {
       return { type: 'no-snippet', note: t('snippet_none_js_only_content') };
     case 'low_scanability':
       return { type: 'no-snippet', note: t('snippet_none_low_scanability') };
+    case 'faq_answers_hidden':
+      return { type: 'no-snippet', note: t('snippet_none_faq_answers_hidden') };
     default:
       return null;
   }

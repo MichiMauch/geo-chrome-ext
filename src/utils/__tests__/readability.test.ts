@@ -4,7 +4,9 @@ import {
   computeLix,
   computeReadabilityScore,
   countSyllables,
+  detectTextLang,
   readabilityBand,
+  resolveContentLang,
 } from '../readability';
 
 describe('readability', () => {
@@ -22,6 +24,15 @@ describe('readability', () => {
     it('strips trailing silent e in English', () => {
       expect(countSyllables('place', 'en')).toBe(1);
       expect(countSyllables('table', 'en')).toBe(2); // -le keeps a syllable
+    });
+
+    it('splits German vowel groups after a diphthong', () => {
+      expect(countSyllables('neue', 'de')).toBe(2);
+      expect(countSyllables('Feuer', 'de')).toBe(2);
+      expect(countSyllables('Mauer', 'de')).toBe(2);
+      expect(countSyllables('Haus', 'de')).toBe(1);
+      expect(countSyllables('Seele', 'de')).toBe(2);
+      expect(countSyllables('Versorgung', 'de')).toBe(3);
     });
   });
 
@@ -44,6 +55,13 @@ describe('readability', () => {
     it('returns null for empty input', () => {
       expect(computeFleschReadingEase('', 'en')).toBeNull();
     });
+
+    it('clamps the raw value to 0–100', () => {
+      const hard =
+        'The phenomenological investigation of consciousness necessitates a comprehensive understanding of intentionality and the constitutive operations performed by transcendental subjectivity throughout temporally extended experiential horizons.';
+      expect(computeFleschReadingEase(hard, 'en')).toBe(0);
+      expect(computeFleschReadingEase('Go. Run. Sit. Eat.', 'en')).toBeLessThanOrEqual(100);
+    });
   });
 
   describe('computeLix', () => {
@@ -63,7 +81,78 @@ describe('readability', () => {
     });
   });
 
+  describe('paragraph boundaries', () => {
+    it('treats each paragraph end as a sentence end', () => {
+      // FAQ fragments without a final period used to merge into one giant
+      // sentence when the paragraphs were joined with ' '.
+      const fragments = [
+        'Strompreise steigen im nächsten Jahr',
+        'Netzkosten machen einen grossen Teil aus',
+        'Der Bund prüft neue Massnahmen',
+        'Haushalte können selbst sparen',
+      ];
+      const perParagraph = computeLix(fragments)!;
+      const merged = computeLix(fragments.join(' '))!;
+      expect(perParagraph).toBeLessThan(merged);
+      // 20 words in 4 sentences instead of 1: words/sentence drops 20 → 5
+      expect(merged - perParagraph).toBeCloseTo(20 - 5, 5);
+    });
+  });
+
+  describe('language resolution', () => {
+    const de = ['Die Stromversorgung in der Schweiz ist sicher und wird auch in Zukunft von den Netzbetreibern gewährleistet.'];
+    const en = ['The power supply is safe and will be guaranteed by the grid operators in the future, as they have said.'];
+
+    it('prefers the declared page language over text and UI', () => {
+      expect(resolveContentLang('de', en, 'en')).toBe('de');
+      expect(resolveContentLang('de-CH', en, 'en')).toBe('de');
+      expect(resolveContentLang('EN_us', de, 'de')).toBe('en');
+    });
+
+    it('falls back to the stopword guess, then to the UI language', () => {
+      expect(resolveContentLang(undefined, de, 'en')).toBe('de');
+      expect(resolveContentLang('', en, 'de')).toBe('en');
+      expect(resolveContentLang('nl', de, 'en')).toBe('de');
+      expect(resolveContentLang(undefined, ['Hallo Welt'], 'fr')).toBe('fr');
+    });
+
+    it('detectTextLang needs a clear majority', () => {
+      expect(detectTextLang(de[0])).toBe('de');
+      expect(detectTextLang(en[0])).toBe('en');
+      expect(detectTextLang('Smart Meter Rollout')).toBeNull();
+    });
+  });
+
   describe('computeReadabilityScore', () => {
+    it('maps LIX linearly: ≤40 full points, ≥65 zero', () => {
+      // 5 short words per sentence, none long → LIX 5
+      const easy = computeReadabilityScore(['Der Tag ist gut. Das Brot ist warm. Die Sonne ist hell heute.'], 'de')!;
+      expect(easy.score).toBe(1);
+
+      // 1 sentence of 10 words, 6 of them long → LIX 10 + 60 = 70 → clamped 0
+      const hard = computeReadabilityScore(
+        ['Die Stromversorgung braucht zusätzliche Kraftwerke und mehr Speicherkapazitäten im Winterhalbjahr.'],
+        'de'
+      )!;
+      expect(hard.raw).toBeCloseTo(10 + 60, 5);
+      expect(hard.score).toBe(0);
+    });
+
+    it('lets a typical German Sachtext around LIX 50 pass', () => {
+      // LIX 50 → (65-50)/25 = 0.6 ≥ readabilityScoreMin 0.5
+      const result = computeReadabilityScore(
+        [
+          'Die Stromversorgung in der Schweiz ist heute sicher. Im Winter importiert das Land jedoch einen Teil seines Stroms aus dem Ausland.',
+          'Deshalb braucht es zusätzliche Kraftwerke und mehr Speicher. Der Bund prüft verschiedene Massnahmen, um eine Mangellage zu verhindern.',
+        ],
+        'de'
+      )!;
+      expect(result.formula).toBe('lix');
+      expect(result.raw).toBeGreaterThan(40);
+      expect(result.raw).toBeLessThan(55);
+      expect(result.score).toBeGreaterThanOrEqual(0.5);
+    });
+
     it('returns null for very short text', () => {
       expect(computeReadabilityScore(['Hi.'], 'en')).toBeNull();
     });

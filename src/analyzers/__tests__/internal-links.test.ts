@@ -2,8 +2,16 @@ import { describe, it, expect } from 'vitest';
 import { MachineReadabilityAnalyzer } from '../machine-readability';
 import type { PageData, LinkData } from '../../types/analysis';
 
-function link(text: string, isExternal = false): LinkData {
-  return { href: isExternal ? 'https://other.com/x' : '/internal/x', text, isExternal };
+let linkCounter = 0;
+// Each call targets its own page unless an href is given
+function link(text: string, isExternal = false, extra: Partial<LinkData> = {}): LinkData {
+  linkCounter++;
+  return {
+    href: isExternal ? `https://other.com/x${linkCounter}` : `https://example.com/internal/${linkCounter}`,
+    text,
+    isExternal,
+    ...extra,
+  };
 }
 
 function makePage(links: LinkData[]): PageData {
@@ -82,5 +90,51 @@ describe('internal linking check', () => {
     );
     // 4/5 descriptive = 80% ≥ threshold, count ≥ 3 → pass
     expect(recommendations).not.toContain('weak_internal_links');
+  });
+
+  it('ignores header/nav/footer links — only contextual links count', () => {
+    const { detail } = linkingDetail(
+      makePage([
+        link('Guide to GEO basics'),
+        link('Products', false, { isNavigational: true }),
+        link('About us', false, { isNavigational: true }),
+        link('Contact', false, { isNavigational: true }),
+      ])
+    );
+    expect(detail.value).toBe('1 (100%)');
+    expect(detail.found).toBe(false);
+  });
+
+  it('counts each target once (trailing slash and #hash normalized)', () => {
+    const { detail } = linkingDetail(
+      makePage([
+        link('Schema.org reference', false, { href: 'https://example.com/schema' }),
+        link('Schema.org reference', false, { href: 'https://example.com/schema/' }),
+        link('Schema section', false, { href: 'https://example.com/schema#types' }),
+        link('Guide to GEO basics', false, { href: 'https://example.com/guide' }),
+      ])
+    );
+    expect(detail.value).toBe('2 (100%)');
+  });
+
+  it('a target is descriptive when any of its anchors is', () => {
+    const { detail } = linkingDetail(
+      makePage([
+        link('mehr', false, { href: 'https://example.com/guide' }),
+        link('Guide to GEO basics', false, { href: 'https://example.com/guide' }),
+      ])
+    );
+    expect(detail.value).toBe('1 (100%)');
+  });
+
+  it('drops Cloudflare /cdn-cgi/ links and jump links to the page itself', () => {
+    const { detail } = linkingDetail(
+      makePage([
+        link('info@example.com', false, { href: 'https://example.com/cdn-cgi/l/email-protection#abc' }),
+        link('Jump to the methodology section', false, { href: 'https://example.com/some-page#method' }),
+        link('Guide to GEO basics'),
+      ])
+    );
+    expect(detail.value).toBe('1 (100%)');
   });
 });

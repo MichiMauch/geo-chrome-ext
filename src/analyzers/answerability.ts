@@ -60,8 +60,15 @@ export class AnswerabilityAnalyzer extends BaseAnalyzer {
     totalWeight += config.weights.lists;
 
     // Check 3: Strukturierte Abschnitte
+    // Score = share of the target subheadings reached (same ratio as the
+    // progress bar), halved when there is too little body text under them.
     const subheadingCount = pageData.headings.filter((h) => h.level >= 2).length;
-    const hasStructuredSections = subheadingCount >= config.thresholds.sectionMinCount && pageData.paragraphs.length >= 3;
+    const hasEnoughParagraphs = pageData.paragraphs.length >= config.thresholds.sectionMinParagraphs;
+    const hasStructuredSections = subheadingCount >= config.thresholds.sectionMinCount && hasEnoughParagraphs;
+    const sectionCoverage = Math.min(1, subheadingCount / config.thresholds.sectionMinCount);
+    const sectionScore = hasEnoughParagraphs
+      ? sectionCoverage
+      : sectionCoverage * config.thresholds.sectionThinContentFactor;
 
     details.push({
       criterionKey: 'criterion_sections',
@@ -75,11 +82,7 @@ export class AnswerabilityAnalyzer extends BaseAnalyzer {
       },
     });
 
-    if (hasStructuredSections) {
-      weightedScore += config.weights.sections;
-    } else if (subheadingCount >= 1) {
-      weightedScore += 0.5;
-    }
+    weightedScore += sectionScore * config.weights.sections;
     totalWeight += config.weights.sections;
 
     const recommendations: string[] = [];
@@ -98,18 +101,17 @@ export class AnswerabilityAnalyzer extends BaseAnalyzer {
     let structuredCount = 0;
 
     paragraphs.forEach((p) => {
-      for (const pattern of definitionPatterns) {
-        if (pattern.test(p)) {
-          definitionCount++;
-          break;
-        }
-      }
-      for (const pattern of structuredPatterns) {
-        if (pattern.test(p)) {
-          structuredCount++;
-          break;
-        }
-      }
+      // Definition patterns are anchored at the sentence start, so test each
+      // sentence on its own. Questions ("Was ist ein Smart Meter?") ask for
+      // a definition rather than give one.
+      const hasDefinition = splitSentences(p).some(
+        (sentence) =>
+          !sentence.endsWith('?') &&
+          definitionPatterns.some((pattern) => pattern.test(sentence))
+      );
+      if (hasDefinition) definitionCount++;
+
+      if (structuredPatterns.some((pattern) => pattern.test(p))) structuredCount++;
     });
 
     const defScore = Math.min(1, definitionCount / GEO_CONFIG.answerability.thresholds.definitionMinCount);
@@ -117,4 +119,13 @@ export class AnswerabilityAnalyzer extends BaseAnalyzer {
 
     return defScore * 0.7 + structScore * 0.3;
   }
+}
+
+// Splits after ., !, ? or … followed by whitespace. Abbreviations ("z. B.")
+// over-split, which only ever yields extra non-matching fragments.
+function splitSentences(text: string): string[] {
+  return text
+    .split(/(?<=[.!?…])\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 }

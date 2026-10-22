@@ -2,6 +2,7 @@ import { PageData, AnalysisCategory, CategoryDetail, PageType } from '../types/a
 import { BaseAnalyzer } from './base';
 import { GEO_CONFIG } from '../config/geo-config';
 import { isWithinLastYear } from '../utils/dom-helpers';
+import { getSourceLinks } from '../utils/source-links';
 
 export class TrustSourcesAnalyzer extends BaseAnalyzer {
   protected readonly categoryKey = 'cat_trustSources';
@@ -87,28 +88,21 @@ export class TrustSourcesAnalyzer extends BaseAnalyzer {
     }
 
     // Check 3: Externe Quellen/Referenzen
-    const externalLinks = pageData.links.filter((l) => l.isExternal);
-    const qualityExternalLinks = externalLinks.filter((l) => {
-      const href = l.href.toLowerCase();
-      return (
-        !href.includes('facebook.com') &&
-        !href.includes('twitter.com') &&
-        !href.includes('instagram.com') &&
-        !href.includes('linkedin.com/share') &&
-        !href.includes('google.com/analytics')
-      );
-    });
-
-    const linksNeeded = 2;
-    const hasQualityLinks = qualityExternalLinks.length >= linksNeeded;
+    // Shared filter with AiCitation: only external content links with text,
+    // no social/share widgets, no header/nav/footer links.
+    const sourceLinks = getSourceLinks(pageData.links);
+    const linksNeeded = config.thresholds.sourceLinksTarget;
+    const hasQualityLinks = sourceLinks.length >= linksNeeded;
 
     details.push({
       criterionKey: 'criterion_sources',
       found: hasQualityLinks,
-      value: 'value_externalLinks',
+      // The real count — progress caps at the target, the value doesn't.
+      value: 'value_sourceLinks',
+      valueParams: { count: String(sourceLinks.length), target: String(linksNeeded) },
       weight: config.weights.externalSources,
       progress: {
-        current: Math.min(qualityExternalLinks.length, linksNeeded),
+        current: Math.min(sourceLinks.length, linksNeeded),
         target: linksNeeded,
         unitKey: 'unit_links',
       },
@@ -116,7 +110,7 @@ export class TrustSourcesAnalyzer extends BaseAnalyzer {
 
     if (hasQualityLinks) {
       weightedScore += config.weights.externalSources;
-    } else if (qualityExternalLinks.length > 0) {
+    } else if (sourceLinks.length > 0) {
       weightedScore += config.thresholds.sourcePartialCredit;
     }
     totalWeight += config.weights.externalSources;

@@ -1,8 +1,10 @@
 import type { HighlightTarget } from '../types/analysis';
 import { cssPath } from './selector';
 import { GEO_CONFIG } from '../config/geo-config';
-import { computeReadabilityScore, readabilityBand } from './readability';
+import { computeReadabilityScore, readabilityBand, resolveContentLang } from './readability';
 import { getLang, t } from './i18n';
+import { contentHeadingElements, contentParagraphElements, extractLang, registrableDomain } from './dom-helpers';
+import { isSourceLink } from './source-links';
 
 // Maps recommendation keys to the page elements they refer to, as CSS
 // selectors plus a localized per-element label (rendered as a badge next to
@@ -41,23 +43,11 @@ export function computeHighlightTargets(
   return targets;
 }
 
-// Mirrors extractParagraphs() (dom-helpers.ts) scoping and filters:
-// article/main/body scope, >30 chars after whitespace collapse, dedup.
-// Shared base for all paragraph-level collectors.
+// Same element set as extractParagraphs() (dom-helpers.ts): content-area
+// scope, chrome/boilerplate excluded, >30 chars, dedup. Shared base for all
+// paragraph-level collectors.
 function countableParagraphs(doc: Document): { el: Element; text: string }[] {
-  const mainContent =
-    doc.querySelector('article') || doc.querySelector('main') || doc.body;
-  if (!mainContent) return [];
-
-  const seen = new Set<string>();
-  const result: { el: Element; text: string }[] = [];
-  mainContent.querySelectorAll('p').forEach((p) => {
-    const text = (p.textContent || '').trim().replace(/\s+/g, ' ');
-    if (text.length <= 30 || seen.has(text)) return;
-    seen.add(text);
-    result.push({ el: p, text });
-  });
-  return result;
+  return contentParagraphElements(doc);
 }
 
 // Mirrors extractImages() (dom-helpers.ts): only imgs with src/data-src
@@ -75,9 +65,7 @@ function collectImagesWithoutAlt(doc: Document): HighlightTarget[] {
 // ContentClarityAnalyzer.evaluateHeadingHierarchy for the issues: headings
 // that skip a level vs. the previous heading, plus every H1 after the first.
 function collectHierarchyBreaks(doc: Document): HighlightTarget[] {
-  const headings = Array.from(
-    doc.querySelectorAll('h1, h2, h3, h4, h5, h6')
-  ).filter((h) => (h.textContent || '').trim().length > 0);
+  const headings = contentHeadingElements(doc);
 
   const result: HighlightTarget[] = [];
   const flagged = new Set<Element>();
@@ -130,9 +118,7 @@ function collectLongParagraphs(doc: Document): HighlightTarget[] {
 // with zero H1s yields no targets — there is nothing to mark.
 function collectH1Issues(doc: Document): HighlightTarget[] {
   const { h1MinLength, h1MaxLength } = GEO_CONFIG.contentClarity.thresholds;
-  const h1s = Array.from(doc.querySelectorAll('h1')).filter(
-    (h) => (h.textContent || '').trim().length > 0
-  );
+  const h1s = contentHeadingElements(doc).filter((h) => h.tagName === 'H1');
 
   const result: HighlightTarget[] = [];
   h1s.forEach((h1, index) => {
@@ -159,14 +145,22 @@ function collectH1Issues(doc: Document): HighlightTarget[] {
 }
 
 // Mirrors ContentClarityAnalyzer check 4: same formula choice (Flesch/LIX via
-// computeReadabilityScore + UI language) and the same readabilityScoreMin
-// threshold, applied per paragraph to find the ones dragging the page down.
+// computeReadabilityScore + resolveContentLang, i.e. the page language from
+// extractLang() as for PageData.lang, else a stopword guess, else the UI
+// language) and the same readabilityScoreMin threshold, applied per paragraph
+// to find the ones dragging the page down. The language is resolved once for the whole page so
+// every paragraph is measured with the same formula.
 function collectHardParagraphs(doc: Document): HighlightTarget[] {
   const minScore = GEO_CONFIG.contentClarity.thresholds.readabilityScoreMin;
-  const lang = getLang();
+  const paragraphs = countableParagraphs(doc);
+  const lang = resolveContentLang(
+    extractLang(doc),
+    paragraphs.map(({ text }) => text),
+    getLang()
+  );
 
   const result: HighlightTarget[] = [];
-  countableParagraphs(doc).forEach(({ el, text }) => {
+  paragraphs.forEach(({ el, text }) => {
     const readability = computeReadabilityScore([text], lang);
     if (readability === null || readability.score >= minScore) return;
     const value = `${Math.round(readability.raw)} ${readability.formula === 'lix' ? 'LIX' : 'Flesch'}`;
@@ -191,15 +185,19 @@ function collectHardParagraphs(doc: Document): HighlightTarget[] {
 function collectUnsourcedClaims(doc: Document): HighlightTarget[] {
   const factPatterns = GEO_CONFIG.aiCitation.patterns.facts;
   const citationPatterns = GEO_CONFIG.aiCitation.patterns.citations;
-  const host = doc.location?.hostname ?? '';
+  const site = registrableDomain(doc.location?.hostname ?? '');
 
-  const hasExternalLink = (el: Element): boolean =>
+  // Same rule as the analyzer: isSourceLink() on the link as extractLinks()
+  // sees it. The paragraph is already content, so it is never navigational.
+  const hasSourceLink = (el: Element): boolean =>
     Array.from(el.querySelectorAll('a[href]')).some((a) => {
-      const href = a.getAttribute('href') || '';
-      if (!href || href.startsWith('#') || href.startsWith('javascript:')) return false;
       try {
-        // Mirrors extractLinks(): external = different hostname.
-        return new URL(href, doc.baseURI).hostname !== host;
+        const url = new URL(a.getAttribute('href') || '', doc.baseURI);
+        return isSourceLink({
+          href: url.href,
+          text: (a.textContent || '').trim(),
+          isExternal: registrableDomain(url.hostname) !== site,
+        });
       } catch {
         return false;
       }
@@ -210,7 +208,7 @@ function collectUnsourcedClaims(doc: Document): HighlightTarget[] {
       ({ el, text }) =>
         factPatterns.some((p) => p.test(text)) &&
         !citationPatterns.some((p) => p.test(text)) &&
-        !hasExternalLink(el)
+        !hasSourceLink(el)
     )
     .map(({ el }) => ({
       selector: cssPath(el),

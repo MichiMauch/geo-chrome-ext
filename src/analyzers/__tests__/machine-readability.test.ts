@@ -235,3 +235,184 @@ describe('MachineReadabilityAnalyzer — llms.txt / llms-full.txt', () => {
     expect(score({ exists: true, fullExists: true })).toBe(score({ exists: true, fullExists: false }));
   });
 });
+
+describe('MachineReadabilityAnalyzer — schema type count', () => {
+  const analyzer = new MachineReadabilityAnalyzer();
+  const schemaDetail = (page: PageData) => {
+    const result = analyzer.analyze(page);
+    return { detail: result.details.find((d) => d.criterionKey === 'criterion_schema')!, result };
+  };
+
+  it('counts two identical types once', () => {
+    const { detail } = schemaDetail(
+      makePage({ schema: [{ '@type': 'NewsArticle' }, { '@type': 'NewsArticle', headline: 'H' }] })
+    );
+    expect(detail.progress).toMatchObject({ current: 1, target: 2 });
+    expect(detail.value).toBe('value_schemaTypes');
+    expect(detail.valueParams?.types).toBe('NewsArticle');
+  });
+
+  it('counts distinct types and every type of a multi-typed node', () => {
+    const { detail } = schemaDetail(
+      makePage({
+        schema: [
+          { '@type': 'NewsArticle', '@types': ['NewsArticle', 'FAQPage'] },
+          { '@type': 'BreadcrumbList' },
+        ],
+      })
+    );
+    expect(detail.progress?.current).toBe(2);
+    expect(detail.valueParams?.types).toBe('NewsArticle, FAQPage, BreadcrumbList');
+  });
+
+  it('copes with a raw @type array from older stored data', () => {
+    const legacy = { '@type': ['BlogPosting', 'WebPage'] } as unknown as SchemaData;
+    const { detail } = schemaDetail(makePage({ schema: [legacy] }));
+    expect(detail.progress?.current).toBe(2);
+  });
+
+  it('keeps an og:type=article page without Article schema below target', () => {
+    const { detail, result } = schemaDetail(
+      makePage({
+        url: 'https://example.com/news/story',
+        openGraph: { title: null, description: null, image: null, url: null, type: 'article' },
+        schema: [{ '@type': 'Organization' }, { '@type': 'WebPage' }, { '@type': 'BreadcrumbList' }],
+      })
+    );
+    expect(detail.progress).toMatchObject({ current: 1, target: 2 });
+    expect(detail.value).toBe('value_schemaTypesMissing');
+    expect(detail.valueParams?.missing).toBe('Article');
+    expect(result.recommendations).toContain('no_schema');
+  });
+
+  it('expects FAQPage when the page shows a FAQ', () => {
+    const page = (schema: SchemaData[]) =>
+      makePage({ schema, faqQuestions: ['Was ist GEO?', 'Wie funktioniert es?', 'Was kostet es?'] });
+    expect(schemaDetail(page([{ '@type': 'WebPage' }, { '@type': 'Organization' }])).detail.progress?.current).toBe(1);
+    expect(schemaDetail(page([{ '@type': 'WebPage' }, { '@type': 'FAQPage' }])).detail.progress?.current).toBe(2);
+  });
+});
+
+describe('MachineReadabilityAnalyzer — completeness edge cases', () => {
+  const analyzer = new MachineReadabilityAnalyzer();
+  const completeness = (schema: SchemaData[]) =>
+    analyzer
+      .analyze(makePage({ schema }))
+      .details.find((d) => d.criterionKey === 'criterion_schema_completeness');
+
+  it('does not accept a nameless Person as author', () => {
+    const d = completeness([
+      { '@type': 'NewsArticle', headline: 'H', datePublished: '2026-01-01', author: { '@type': 'Person' } },
+    ]);
+    expect(d!.found).toBe(false);
+    expect(String(d!.value)).toContain('author');
+  });
+
+  it('follows an @id author reference into @graph', () => {
+    const d = completeness([
+      { '@type': 'NewsArticle', headline: 'H', datePublished: '2026-01-01', author: { '@id': '#jane' } },
+      { '@type': 'Person', '@id': '#jane', name: 'Jane Doe' },
+    ]);
+    expect(d!.found).toBe(true);
+    expect(d!.progress).toMatchObject({ current: 4, target: 4 }); // 3 article + Person name
+  });
+
+  it('accepts an author array with at least one name', () => {
+    const d = completeness([
+      { '@type': 'Article', headline: 'H', datePublished: '2026-01-01', author: [{ '@type': 'Person' }, 'Jane Doe'] },
+    ]);
+    expect(d!.found).toBe(true);
+  });
+
+  it('validates every type of a multi-typed node', () => {
+    const d = completeness([
+      { '@type': 'NewsArticle', '@types': ['NewsArticle', 'FAQPage'], headline: 'H', author: 'Jane', datePublished: '2026-01-01' },
+    ]);
+    expect(d!.progress).toMatchObject({ current: 3, target: 4 });
+    expect(String(d!.value)).toContain('NewsArticle/FAQPage: mainEntity');
+  });
+
+  it('validates identical duplicate nodes once', () => {
+    const node: SchemaData = { '@type': 'Article', headline: 'H' };
+    const d = completeness([node, { ...node }]);
+    expect(d!.progress?.target).toBe(3);
+  });
+
+  it('checks Article subtypes against the Article fields', () => {
+    const d = completeness([{ '@type': 'TechArticle', headline: 'H' }]);
+    expect(d!.progress).toMatchObject({ current: 1, target: 3 });
+  });
+});
+
+describe('MachineReadabilityAnalyzer — entities', () => {
+  const analyzer = new MachineReadabilityAnalyzer();
+  const entityPercent = (page: PageData) =>
+    analyzer.analyze(page).details.find((d) => d.criterionKey === 'criterion_entities')!.progress!.current;
+
+  it('scores zero for a page with only a meta description and product words', () => {
+    expect(
+      entityPercent(
+        makePage({
+          paragraphs: ['Unsere Software ist die beste Lösung und App für Ihr Produkt.'],
+          meta: { title: '', description: 'x'.repeat(120), author: '', publishDate: null, modifiedDate: null, ogType: null },
+        })
+      )
+    ).toBe(0);
+  });
+
+  it('counts an author once, whether from schema or byline', () => {
+    const schemaOnly = makePage({ schema: [{ '@type': 'Article', author: { '@type': 'Person', name: 'Jane' } }] });
+    const both = makePage({
+      schema: [{ '@type': 'Article', author: { '@type': 'Person', name: 'Jane' } }],
+      author: { name: 'Jane', source: 'schema' },
+    });
+    const bylineOnly = makePage({ author: { name: 'Jane', source: 'dom' } });
+    expect(entityPercent(schemaOnly)).toBe(20);
+    expect(entityPercent(both)).toBe(20);
+    expect(entityPercent(bylineOnly)).toBe(20);
+  });
+
+  it('does not count a nameless Person', () => {
+    expect(entityPercent(makePage({ schema: [{ '@type': 'Article', author: { '@type': 'Person' } }] }))).toBe(0);
+  });
+
+  it('rewards a fully described, linked entity graph with 100%', () => {
+    const page = makePage({
+      schema: [
+        {
+          '@type': 'NewsArticle',
+          '@id': '#article',
+          author: { '@id': '#jane' },
+          publisher: { '@id': '#org' },
+          about: { '@type': 'Thing', name: 'Energy policy' },
+        },
+        { '@type': 'Person', '@id': '#jane', name: 'Jane Doe', sameAs: ['https://www.linkedin.com/in/jane'] },
+        { '@type': 'NewsMediaOrganization', '@id': '#org', name: 'Acme News', logo: 'https://acme.example/logo.png' },
+      ],
+    });
+    expect(entityPercent(page)).toBe(100);
+  });
+
+  it('a named publisher without logo/sameAs earns only the base signal', () => {
+    const page = makePage({ schema: [{ '@type': 'Article', publisher: { '@type': 'Organization', name: 'Acme' } }] });
+    expect(entityPercent(page)).toBe(25);
+  });
+});
+
+describe('MachineReadabilityAnalyzer — semantic HTML', () => {
+  const analyzer = new MachineReadabilityAnalyzer();
+  const semanticPercent = (semanticElements: PageData['semanticElements']) =>
+    analyzer.analyze(makePage({ semanticElements })).details.find((d) => d.criterionKey === 'criterion_semanticHtml')!
+      .progress!.current;
+  const all = { hasArticle: true, hasMain: true, hasNav: true, hasAside: false, hasHeader: true, hasFooter: true, hasSection: true };
+
+  it('reaches 100% with all landmarks and no <aside>', () => {
+    expect(semanticPercent(all)).toBe(100);
+  });
+
+  it('treats <aside> as a bonus that can not exceed 100%', () => {
+    expect(semanticPercent({ ...all, hasAside: true })).toBe(100);
+    expect(semanticPercent({ ...all, hasFooter: false })).toBe(90);
+    expect(semanticPercent({ ...all, hasFooter: false, hasAside: true })).toBe(95);
+  });
+});
