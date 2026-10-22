@@ -273,9 +273,10 @@ describe('AiCitation — FAQ', () => {
     expect(JSON.stringify(ev)).toContain('definition_ok');
   });
 
-  it('wertet FAQPage-Schema als Bonus, auch in einem @type-Array', () => {
+  it('wertet FAQPage-Schema nur mit sichtbaren Fragen als Bonus, auch in einem @type-Array', () => {
     const schemaOnly = makePage({ schema: [{ '@type': 'NewsArticle', '@types': ['NewsArticle', 'FAQPage'] }] });
-    expect(detail(schemaOnly, 'criterion_faq')?.value).toBe('40%');
+    // Without visible questions the markup describes nothing: no bonus
+    expect(detail(schemaOnly, 'criterion_faq')?.value).toBe('0%');
 
     const withQuestions = makePage({
       schema: [{ '@type': 'FAQPage' }],

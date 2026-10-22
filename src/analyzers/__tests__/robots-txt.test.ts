@@ -223,11 +223,11 @@ describe('MachineReadabilityAnalyzer robots.txt scoring', () => {
     canonical: { href: null },
   });
 
-  it('recommends ai_bots_blocked when any bot is blocked', () => {
+  it('recommends ai_bots_blocked when a search bot is blocked', () => {
     const result = analyzer.analyze(mockPage({
       exists: true,
-      allowedBots: { GPTBot: false, ClaudeBot: true, PerplexityBot: true, 'Google-Extended': true, CCBot: true },
-      blockedBots: ['GPTBot'],
+      allowedBots: { PerplexityBot: false, ClaudeBot: true, GPTBot: true, 'Google-Extended': true, CCBot: true },
+      blockedBots: ['PerplexityBot'],
       totalChecked: 5,
     }));
     expect(result.recommendations).toContain('ai_bots_blocked');
@@ -235,6 +235,51 @@ describe('MachineReadabilityAnalyzer robots.txt scoring', () => {
     expect(detail?.found).toBe(false);
     expect(detail?.progress?.current).toBe(4);
     expect(detail?.progress?.target).toBe(5);
+  });
+
+  it('passes a training-only block with a small deduction and no recommendation', () => {
+    const blocked = analyzer.analyze(mockPage({
+      exists: true,
+      allowedBots: { GPTBot: false, CCBot: false, 'OAI-SearchBot': true, 'ChatGPT-User': true },
+      blockedBots: ['GPTBot', 'CCBot'],
+      totalChecked: 4,
+    }));
+    const open = analyzer.analyze(mockPage({
+      exists: true,
+      allowedBots: { GPTBot: true, CCBot: true, 'OAI-SearchBot': true, 'ChatGPT-User': true },
+      blockedBots: [],
+      totalChecked: 4,
+    }));
+    expect(blocked.recommendations).not.toContain('ai_bots_blocked');
+    expect(blocked.details.find((d) => d.criterionKey === 'criterion_robotsTxt')?.found).toBe(true);
+    expect(blocked.score).toBeLessThan(open.score);
+  });
+
+  it('weighs a blocked search bot heavier than a blocked training bot', () => {
+    const bots = { GPTBot: true, 'OAI-SearchBot': true, ClaudeBot: true, 'Claude-SearchBot': true };
+    const training = analyzer.analyze(mockPage({
+      exists: true, allowedBots: { ...bots, GPTBot: false }, blockedBots: ['GPTBot'], totalChecked: 4,
+    }));
+    const search = analyzer.analyze(mockPage({
+      exists: true, allowedBots: { ...bots, 'OAI-SearchBot': false }, blockedBots: ['OAI-SearchBot'], totalChecked: 4,
+    }));
+    expect(search.score).toBeLessThan(training.score);
+  });
+
+  it('treats an unreachable robots.txt as fully blocked', () => {
+    const result = analyzer.analyze(mockPage({
+      exists: false,
+      unreachable: true,
+      httpStatus: 503,
+      allowedBots: { GPTBot: false, 'OAI-SearchBot': false },
+      blockedBots: ['GPTBot', 'OAI-SearchBot'],
+      totalChecked: 2,
+    }));
+    const detail = result.details.find((d) => d.criterionKey === 'criterion_robotsTxt');
+    expect(detail?.found).toBe(false);
+    expect(detail?.value).toBe('value_allBotsBlocked');
+    expect(detail?.evidence?.[0]?.key).toBe('ev_robotsTxt_unreachable');
+    expect(result.recommendations).toContain('ai_bots_blocked');
   });
 
   it('does not recommend ai_bots_blocked when all bots allowed', () => {

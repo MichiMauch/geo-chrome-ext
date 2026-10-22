@@ -176,7 +176,8 @@ export const GEO_CONFIG = {
       entities: 1.5,
       semanticHtml: 1.0,
       internalLinks: 1.0,
-      llmsTxt: 1.5,
+      // Low: a 2024 proposal, no major AI provider confirms reading it.
+      llmsTxt: 0.5,
       robotsTxt: 1.5,
       // Only counted when the crawler comparison ran (live analysis) — see
       // MachineReadabilityAnalyzer check 6.
@@ -211,6 +212,15 @@ export const GEO_CONFIG = {
       // Meta AI, Common Crawl (feeds many LLM training sets)
       'meta-externalagent', 'CCBot',
     ] as const,
+    // Weight per crawler purpose in the robots.txt score. Blocking a search
+    // or on-request bot removes the page from AI answers; blocking a training
+    // crawler only keeps it out of future models — a legitimate choice that
+    // costs a little but still passes.
+    botPurposeWeights: {
+      search: 3,
+      user: 2,
+      training: 1,
+    },
     // Schema type check: distinct relevant types a page should carry. Page-type
     // rules add one expected type on top — an article page without an
     // Article-family type, or a page with a visible FAQ but no FAQPage, can
@@ -299,7 +309,8 @@ export const GEO_CONFIG = {
       faqAnsweredFull: 5,
       faqAnsweredPartial: 3,
       // FAQPage/QAPage schema is a bonus on top of visible Q&A, not the only
-      // way to full points.
+      // way to full points — and worth nothing without visible questions,
+      // since markup must describe content on the page.
       faqSchemaBonus: 0.4,
       // Paragraphs shorter than this (in words) are bylines/teasers/captions
       // and skipped when looking for the key information upfront.

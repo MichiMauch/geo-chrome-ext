@@ -381,9 +381,22 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     const total = robotsTxt?.totalChecked ?? 0;
     const blockedCount = robotsTxt?.blockedBots.length ?? 0;
     const allowedCount = Math.max(0, total - blockedCount);
-    const robotsScore = total > 0 ? allowedCount / total : 1;
+    // Weighted by purpose (GEO_CONFIG.machineReadability.botPurposeWeights):
+    // what counts is whether the page can appear in AI answers.
+    const purposeWeights = config.botPurposeWeights;
+    const botWeight = (bot: string) => purposeWeights[BOT_INFO[bot]?.purpose ?? 'training'];
+    const checkedBots = Object.keys(robotsTxt?.allowedBots ?? {});
+    const blockedBots = robotsTxt?.blockedBots ?? [];
+    const totalBotWeight = checkedBots.reduce((sum, b) => sum + botWeight(b), 0);
+    const blockedBotWeight = blockedBots.reduce((sum, b) => sum + botWeight(b), 0);
+    const robotsScore = totalBotWeight > 0 ? 1 - blockedBotWeight / totalBotWeight : 1;
     const allBotsAllowed = blockedCount === 0;
-    const hasAnyBlock = blockedCount > 0;
+    // Only training crawlers blocked: a deliberate opt-out that keeps the
+    // page in AI answers — passes, without a recommendation.
+    const answerBotsBlocked =
+      robotsTxt?.unreachable === true ||
+      blockedBots.some((b) => (BOT_INFO[b]?.purpose ?? 'training') !== 'training');
+    const hasAnyBlock = answerBotsBlocked;
 
     const robotsValue = robotsTxt?.unreachable
       ? 'value_allBotsBlocked'
@@ -397,7 +410,7 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
 
     details.push({
       criterionKey: 'criterion_robotsTxt',
-      found: allBotsAllowed,
+      found: !answerBotsBlocked,
       value: robotsValue,
       weight: config.weights.robotsTxt,
       progress: {

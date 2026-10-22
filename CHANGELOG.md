@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.8.0] - 2026-10-22
+
+### Changed
+
+- **robots.txt: blocked crawlers are weighted by what they do:** Every blocked AI crawler used to cost the same. A site that only blocks training crawlers (GPTBot, CCBot, Google-Extended …) stays fully visible in ChatGPT, Claude and Perplexity answers, yet lost 5 of 12 shares and got the "AI bots blocked" recommendation. Search crawlers now weigh three times, on-request fetchers twice and training crawlers once. Blocking only training crawlers costs a few points, but the check passes and no recommendation is shown. An unreachable robots.txt still blocks everything.
+- **llms.txt weighs less:** Its weight in Machine Readability drops from 1.5 to 0.5. The format is a 2024 proposal, and no major AI provider confirms reading it. The report already said so; the score now matches.
+- **No FAQ points for FAQPage markup without visible questions:** The schema bonus alone gave 40 % on the FAQ check. Search engines expect markup to describe content that is visible on the page, so the bonus now only applies on top of visible questions. The report says why the schema earns nothing on its own.
+
 ## [4.7.3] - 2026-10-22
 
 ### Fixed

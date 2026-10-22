@@ -232,7 +232,8 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
     else if (answered >= t.faqAnsweredPartial) score = 0.6;
     else if (answered >= 1) score = 0.3;
 
-    if (hasFaqSchema) score += t.faqSchemaBonus;
+    // Markup without visible questions describes nothing on the page
+    if (hasFaqSchema && questionCount > 0) score += t.faqSchemaBonus;
 
     const evidence: EvidenceLine[] = [];
     if (questionCount === 0) {
