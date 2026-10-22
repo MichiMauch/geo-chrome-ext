@@ -1,3 +1,5 @@
+import { pruneStaleCaches } from '../utils/cache';
+
 const ALARM_PREFIX = 'geo_badge_clear_';
 
 // v2.x set chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).
@@ -13,6 +15,10 @@ function disableAutoOpenBehavior() {
 }
 
 chrome.runtime.onInstalled.addListener(disableAutoOpenBehavior);
+// Results cached by the previous version are invalid after an update
+chrome.runtime.onInstalled.addListener(() => {
+  pruneStaleCaches().catch((err) => console.warn('Cache cleanup failed:', err));
+});
 chrome.runtime.onStartup.addListener(disableAutoOpenBehavior);
 
 function isRestrictedUrl(url: string | undefined): boolean {

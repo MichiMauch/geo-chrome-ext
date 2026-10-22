@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.6.1] - 2026-10-22
+
+### Fixed
+
+- **Updates showed cached results from the previous version:** The analysis cache used a fixed key prefix (`geo_cache_v10`) that had to be bumped by hand, and 4.5.0 and 4.6.0 didn't. A page analyzed before the update was served from the cache as long as its content hadn't changed. It therefore showed neither the 4.5 rules (promo boxes, question/answer pairs) nor the 4.6 report texts, and the report fell back to the old one-liner, e.g. "The heading hierarchy is clean" next to 80%. The cache key now contains the extension version, and entries of other versions are removed on install and update.
+
 ## [4.6.0] - 2026-10-22
 
 ### Added
