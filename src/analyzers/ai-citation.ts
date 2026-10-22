@@ -161,13 +161,19 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
       questionCount
     );
 
-    // Hidden answers earn nothing. The remaining questions only count as
-    // answered when the page actually carries answer text — at most one
-    // answered question per substantive paragraph.
-    const answerParagraphs = pageData.paragraphs.filter(
-      (p) => p.trim().split(/\s+/).length >= t.upfrontMinWords
-    ).length;
-    const answered = Math.min(questionCount - hiddenCount, answerParagraphs);
+    // Hidden answers earn nothing. A question counts as answered when the
+    // text under it is substantive. Analyses without question/answer pairs
+    // (stored before 4.5) fall back to at most one answered question per
+    // substantive paragraph.
+    const substantive = (text: string) => text.trim().split(/\s+/).length >= t.upfrontMinWords;
+    const answeredQuestions = pageData.questionAnswers
+      ? new Set(
+          pageData.questionAnswers
+            .filter(({ answer }) => substantive(answer))
+            .map(({ question }) => normalize(question))
+        ).size
+      : pageData.paragraphs.filter(substantive).length;
+    const answered = Math.min(questionCount - hiddenCount, answeredQuestions);
 
     let score = 0;
     if (answered >= t.faqAnsweredFull) score = 1;

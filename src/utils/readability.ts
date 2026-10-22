@@ -1,5 +1,3 @@
-import type { Lang } from './i18n';
-
 const VOWELS_LATIN = /[aeiouyäöüáéíóúàèìòùâêîôûãõ]/i;
 const VOWEL_GROUPS = /[aeiouyäöüáéíóúàèìòùâêîôûãõ]+/gi;
 // German vowel nuclei inside a vowel group: diphthongs and doubled vowels
@@ -9,7 +7,12 @@ const DE_NUCLEI = /ei|ai|au|eu|äu|ie|ey|ay|aa|ee|oo|[aeiouyäöü]/gi;
 const SENTENCE_SPLIT = /[.!?…]+(?:\s|$)/;
 const WORD_SPLIT = /\s+/;
 
-const SUPPORTED_LANGS: readonly Lang[] = ['en', 'de', 'fr', 'es', 'pt', 'it'];
+// Declared language tags that carry no language: "undetermined", "multiple"
+// and "no linguistic content" (BCP 47 / ISO 639-2 special codes).
+const NON_LANGS = new Set(['und', 'mul', 'zxx', 'mis']);
+
+/** Readability formula used for a content language. */
+export type ReadabilityFormula = 'flesch' | 'lix';
 
 // High-frequency function words for the cheap DE/EN guess. Only words that
 // do not exist in the other language, so a German page with English product
@@ -61,7 +64,7 @@ function tokenize(blocks: string[]): TextStats {
   return { words, sentenceCount };
 }
 
-export function countSyllables(word: string, lang: Lang): number {
+export function countSyllables(word: string, lang: string): number {
   const w = word.toLowerCase();
   if (w.length === 0) return 0;
   if (w.length <= 2) return 1;
@@ -105,28 +108,52 @@ export function detectTextLang(text: string): 'de' | 'en' | null {
 }
 
 /**
- * Language whose readability formula applies to the PAGE content (not the
- * UI): the declared page language (<html lang>/inLanguage, e.g. 'de' or
- * 'de-CH') when it is one we support, otherwise a stopword guess from the
- * text, and only as a last resort the fallback (the UI language). A German
- * page analyzed with an English UI must still be measured with LIX.
+ * Language of the PAGE content (not the UI), as lowercase ISO 639 primary
+ * subtag: the declared page language (<html lang>/inLanguage, e.g. 'de-CH'
+ * → 'de', 'nl', 'sv') always wins, whatever language it is. Otherwise a
+ * DE/EN stopword guess from the text, else null (unknown). The UI language
+ * says nothing about the page and is deliberately not used: a Dutch page
+ * analyzed with an English UI must not be measured with English Flesch.
  */
 export function resolveContentLang(
   pageLang: string | null | undefined,
-  paragraphs: string[],
-  fallback: Lang
-): Lang {
-  const declared = (pageLang ?? '').toLowerCase().split(/[-_]/)[0] as Lang;
-  if (SUPPORTED_LANGS.includes(declared)) return declared;
-  return detectTextLang(paragraphs.join(' ')) ?? fallback;
+  paragraphs: string[]
+): string | null {
+  const declared = (pageLang ?? '').trim().toLowerCase().split(/[-_]/)[0];
+  if (/^[a-z]{2,3}$/.test(declared) && !NON_LANGS.has(declared)) return declared;
+  return detectTextLang(paragraphs.join(' '));
 }
 
 /**
- * Flesch Reading Ease (English formula, used as approximation for EN/FR/ES/PT/IT).
+ * Formula for a content language: Flesch only for English, LIX for every
+ * other (or unknown) language.
+ *
+ * Flesch Reading Ease is calibrated on English syllable and sentence norms;
+ * applied to other languages it systematically under-rates them (German,
+ * Dutch or Finnish compounds and Romance words simply have more syllables).
+ * LIX (Björnsson) counts only words per sentence and words > 6 letters, so
+ * it needs no syllable rules; Björnsson (1983) validated it on newspaper
+ * text in eleven European languages.
+ *
+ * FR/ES/PT/IT deliberately use LIX too instead of the adapted Flesch
+ * variants (Kandel-Moles, Fernández-Huerta, Martins, Flesch-Vacca): those
+ * only work with a proper syllabifier per language (French mute e and
+ * -ent endings, Spanish/Italian diphthongs vs. hiatus) that our vowel-group
+ * count does not provide, each has its own scale (Martins shifts Flesch by
+ * +42, Fernández-Huerta's published coefficients are disputed), and every
+ * one would need its own band mapping. Four half-right formulas are worse
+ * than one sound, language-neutral one.
+ */
+export function readabilityFormula(contentLang: string | null): ReadabilityFormula {
+  return contentLang === 'en' ? 'flesch' : 'lix';
+}
+
+/**
+ * Flesch Reading Ease (English formula; only applied to English content).
  * Clamped to 0-100; higher is easier. ~60+ is plain English. Unclamped, a
  * dense text yields negative values ("-10 Flesch") that mean nothing to users.
  */
-export function computeFleschReadingEase(text: string | string[], lang: Lang): number | null {
+export function computeFleschReadingEase(text: string | string[], lang = 'en'): number | null {
   const { words, sentenceCount } = tokenize(Array.isArray(text) ? text : [text]);
   if (words.length === 0 || sentenceCount === 0) return null;
 
@@ -139,7 +166,7 @@ export function computeFleschReadingEase(text: string | string[], lang: Lang): n
 }
 
 /**
- * LIX (Lasbarhetsindex) — well-suited for German.
+ * LIX (Läsbarhetsindex) — language-neutral, used for all non-English content.
  * Lower is easier: <30 very easy, 40 ok, 50 hard, 60+ very hard.
  */
 export function computeLix(text: string | string[]): number | null {
@@ -155,31 +182,36 @@ export function computeLix(text: string | string[]): number | null {
 // FAQs, guides) land at 50–60. The old scale (0 points from 60) failed
 // almost every German page. Now: ≤40 (easy) full points, ≥65 (academic /
 // legal prose) zero, linear between — so LIX 50 scores 0.6 and the
-// readabilityScoreMin of 0.5 sits at LIX 52.5.
+// readabilityScoreMin of 0.5 sits at LIX 52.5. The same scale applies to
+// all LIX languages: Dutch and the Scandinavian languages compound like
+// German. For sv/da/no LIX's original Swedish norms (the bands in
+// readabilityBand) apply unchanged; FR/ES/PT/IT texts compound less and
+// tend to score a few points lower, so the scale is slightly lenient there.
 const LIX_FULL = 40;
 const LIX_ZERO = 65;
 
 /**
  * Returns a normalized readability score 0-1 (1 = easy to read, AI-friendly).
- * Picks Flesch for EN/FR/ES/PT/IT and LIX for DE — pass the CONTENT language
- * (see resolveContentLang), not the UI language.
+ * Picks the formula via readabilityFormula (Flesch for English, LIX for
+ * everything else) — pass the CONTENT language (see resolveContentLang),
+ * not the UI language; null (unknown) means LIX.
  * Returns null if the text is too short to evaluate.
  */
 export function computeReadabilityScore(
   paragraphs: string[],
-  lang: Lang
-): { score: number; raw: number; formula: 'flesch' | 'lix' } | null {
+  lang: string | null
+): { score: number; raw: number; formula: ReadabilityFormula } | null {
   const blocks = paragraphs.map((p) => p.trim()).filter((p) => p.length > 0);
   if (blocks.join(' ').length < 50) return null;
 
-  if (lang === 'de') {
+  if (readabilityFormula(lang) === 'lix') {
     const lix = computeLix(blocks);
     if (lix === null) return null;
     const score = Math.max(0, Math.min(1, (LIX_ZERO - lix) / (LIX_ZERO - LIX_FULL)));
     return { score, raw: lix, formula: 'lix' };
   }
 
-  const flesch = computeFleschReadingEase(blocks, lang);
+  const flesch = computeFleschReadingEase(blocks, 'en');
   if (flesch === null) return null;
   // Map Flesch: 30 → 0, 90 → 1.0, linear between
   const score = Math.max(0, Math.min(1, (flesch - 30) / 60));
@@ -218,7 +250,7 @@ const BANDS: Record<ReadabilityBand, BandInfo> = {
  */
 export function readabilityBand(
   raw: number,
-  formula: 'flesch' | 'lix'
+  formula: ReadabilityFormula
 ): BandInfo {
   if (formula === 'lix') {
     if (raw < 30) return BANDS.very_easy;

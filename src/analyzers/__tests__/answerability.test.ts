@@ -179,3 +179,42 @@ describe('AnswerabilityAnalyzer', () => {
     });
   });
 });
+
+describe('direct answers under question headings', () => {
+  const analyzer = new AnswerabilityAnalyzer();
+  const score = (page: PageData) =>
+    analyzer.analyze(page).details.find((d) => d.criterionKey === 'criterion_definitions')!.progress!.current;
+  const qa = (question: string, answer: string) => ({ question, answer });
+
+  it('credits a question heading answered with a statement', () => {
+    const page = makePage({
+      questionAnswers: [
+        qa('Woher hat die Schweiz ihren Strom?', 'Rund 60 Prozent stammen aus Wasserkraft, etwa 30 Prozent aus Kernenergie.'),
+        qa('Ist Schweizer Strom klimaneutral?', 'Weitgehend ja, weil Wasserkraft und Kernenergie kaum CO2 ausstossen.'),
+        qa('Was kostet der Ausbau?', 'Die Schätzungen reichen von 30 bis 70 Milliarden Franken bis 2050.'),
+      ],
+    });
+    expect(score(page)).toBe(70);
+  });
+
+  it('gives nothing for hidden answers or answers that open with a question', () => {
+    const page = makePage({
+      questionAnswers: [
+        qa('Woher hat die Schweiz ihren Strom?', ''),
+        qa('Ist Schweizer Strom klimaneutral?', 'Gute Frage?'),
+        qa('Was kostet es?', 'Viel.'),
+      ],
+    });
+    expect(score(page)).toBe(0);
+  });
+
+  it('does not count an answer twice when it is also a definition', () => {
+    const def = 'Ein Smart Meter ist ein digitaler Stromzähler, der den Verbrauch laufend misst.';
+    const page = makePage({
+      paragraphs: [def],
+      questionAnswers: [qa('Was ist ein Smart Meter?', def)],
+    });
+    // One of three needed → 1/3 × 70 %
+    expect(score(page)).toBe(23);
+  });
+});

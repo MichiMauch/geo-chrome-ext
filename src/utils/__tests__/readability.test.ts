@@ -6,6 +6,7 @@ import {
   countSyllables,
   detectTextLang,
   readabilityBand,
+  readabilityFormula,
   resolveContentLang,
 } from '../readability';
 
@@ -103,17 +104,34 @@ describe('readability', () => {
     const de = ['Die Stromversorgung in der Schweiz ist sicher und wird auch in Zukunft von den Netzbetreibern gewährleistet.'];
     const en = ['The power supply is safe and will be guaranteed by the grid operators in the future, as they have said.'];
 
-    it('prefers the declared page language over text and UI', () => {
-      expect(resolveContentLang('de', en, 'en')).toBe('de');
-      expect(resolveContentLang('de-CH', en, 'en')).toBe('de');
-      expect(resolveContentLang('EN_us', de, 'de')).toBe('en');
+    it('prefers the declared page language over the text', () => {
+      expect(resolveContentLang('de', en)).toBe('de');
+      expect(resolveContentLang('de-CH', en)).toBe('de');
+      expect(resolveContentLang('EN_us', de)).toBe('en');
+      expect(resolveContentLang('en-GB', de)).toBe('en');
     });
 
-    it('falls back to the stopword guess, then to the UI language', () => {
-      expect(resolveContentLang(undefined, de, 'en')).toBe('de');
-      expect(resolveContentLang('', en, 'de')).toBe('en');
-      expect(resolveContentLang('nl', de, 'en')).toBe('de');
-      expect(resolveContentLang(undefined, ['Hallo Welt'], 'fr')).toBe('fr');
+    it('keeps any declared language, not only UI languages', () => {
+      expect(resolveContentLang('nl', de)).toBe('nl');
+      expect(resolveContentLang('sv-SE', en)).toBe('sv');
+      expect(resolveContentLang('nb', en)).toBe('nb');
+      expect(resolveContentLang(' PL ', en)).toBe('pl');
+    });
+
+    it('falls back to the stopword guess, else unknown (null)', () => {
+      expect(resolveContentLang(undefined, de)).toBe('de');
+      expect(resolveContentLang('', en)).toBe('en');
+      expect(resolveContentLang('und', en)).toBe('en');
+      expect(resolveContentLang('x-default', en)).toBe('en');
+      expect(resolveContentLang(undefined, ['Hallo Welt'])).toBeNull();
+    });
+
+    it('uses Flesch only for English, LIX for every other or unknown language', () => {
+      expect(readabilityFormula('en')).toBe('flesch');
+      for (const lang of ['de', 'nl', 'sv', 'da', 'no', 'nb', 'nn', 'fi', 'pl', 'fr', 'es', 'pt', 'it']) {
+        expect(readabilityFormula(lang)).toBe('lix');
+      }
+      expect(readabilityFormula(null)).toBe('lix');
     });
 
     it('detectTextLang needs a clear majority', () => {
@@ -186,6 +204,42 @@ describe('readability', () => {
       );
       expect(result).not.toBeNull();
       expect(result!.score).toBeLessThan(0.3);
+    });
+
+    // End-to-end: page language → formula, independent of the UI language
+    // (which resolveContentLang no longer takes at all).
+    const nl = ['De energievoorziening in Nederland is veilig. Netbeheerders investeren de komende jaren fors in het stroomnet.'];
+    const sv = ['Elförsörjningen i Sverige är trygg. Nätägarna investerar mycket i elnätet under de kommande åren.'];
+    const enText = ['The power supply is safe. The grid operators will invest a lot in the network over the next years.'];
+
+    it('measures a Dutch page with LIX (e.g. under an English UI)', () => {
+      const result = computeReadabilityScore(nl, resolveContentLang('nl-NL', nl))!;
+      expect(result.formula).toBe('lix');
+    });
+
+    it('measures a Swedish page with LIX', () => {
+      const result = computeReadabilityScore(sv, resolveContentLang('sv', sv))!;
+      expect(result.formula).toBe('lix');
+    });
+
+    it('measures an English page with Flesch (e.g. under a German UI)', () => {
+      expect(computeReadabilityScore(enText, resolveContentLang('en', enText))!.formula).toBe('flesch');
+      expect(computeReadabilityScore(enText, resolveContentLang('en-GB', enText))!.formula).toBe('flesch');
+    });
+
+    it('measures undeclared English text with Flesch, undeclared unknown text with LIX', () => {
+      expect(computeReadabilityScore(enText, resolveContentLang(undefined, enText))!.formula).toBe('flesch');
+      expect(computeReadabilityScore(nl, resolveContentLang(undefined, nl))!.formula).toBe('lix');
+    });
+
+    it('measures French, Spanish, Portuguese and Italian pages with LIX', () => {
+      const fr = ['La sécurité de l’approvisionnement est garantie. Les gestionnaires de réseau investissent beaucoup.'];
+      const es = ['El suministro eléctrico es seguro. Los operadores de la red invierten mucho en los próximos años.'];
+      const pt = ['O fornecimento de energia é seguro. Os operadores da rede investem muito nos próximos anos.'];
+      const it = ['La fornitura di energia è sicura. I gestori della rete investono molto nei prossimi anni.'];
+      for (const [lang, text] of [['fr', fr], ['es', es], ['pt-BR', pt], ['it', it]] as const) {
+        expect(computeReadabilityScore([...text], resolveContentLang(lang, [...text]))!.formula).toBe('lix');
+      }
     });
 
     it('clamps scores to [0, 1]', () => {

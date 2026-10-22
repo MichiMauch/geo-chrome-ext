@@ -1,5 +1,22 @@
 # Changelog
 
+## [4.5.0] - 2026-10-22
+
+### Changed
+
+- **Readability formula follows the content language for every language:** 4.4.0 only told German from English. A Dutch, Swedish or Polish page fell back to the UI language and was measured with English Flesch under an English browser. Now any declared page language counts (`<html lang>` or schema `inLanguage`, `und`/`x-default` ignored). Undeclared text falls back to a German/English stopword guess and no longer to the UI language. Flesch is used for English only. LIX for every other language, including French, Spanish, Portuguese and Italian, which used to get English Flesch as an approximation. Their adapted Flesch variants (Kandel-Moles, Fernández-Huerta, Flesch-Vacca, Martins) each need language-specific syllable rules and their own scale. LIX needs no syllables at all and was validated across eleven European languages (Björnsson 1983).
+- **Question headings answered right below them count as direct answers:** "Direct answers/definitions" only looked for definition sentences ("X ist ein …"). A FAQ whose question headings are each followed by a plain statement ("Woher hat die Schweiz ihren Strom?" → "Rund 60 Prozent stammen aus Wasserkraft …") now gets credit for those answers. An answer that is also a definition is counted once.
+- **FAQ answers are counted per question:** The FAQ criterion counted at most one answered question per long paragraph *anywhere* on the page, so five question headings plus five unrelated paragraphs read as five answered questions. Each question is now paired with the text between it and the next heading or accordion trigger, and only questions with a substantive answer count. Analyses stored before this version keep the old approximation.
+- **Unlabeled promo boxes are no longer content:** Sidebar boxes like "Dossierpolitik – das Neuste zum Thema Energiepolitik" carry no semantic markup and no telling class names, so 4.4.0 still counted them as headings and paragraphs. A block with a heading, at most 1,500 characters and at least half of its text in links to the site itself is now treated as a promo block. Links to other sites don't count towards that share, so a "Sources" section with a list of citations stays content.
+
+### Added
+
+- `PageData.questionAnswers`: every question heading and accordion question in the content area with its answer text (empty when the answer is not in the DOM).
+
+### Performance
+
+- **The content area is computed once per pass:** Every extractor recomputed the content scope, about five times per analysis plus once per highlight collector. `withContentScope()` pins one scope for the whole extraction and for all highlight collectors. Outside such a pass the scope is still recomputed, because the live DOM may change between analyses.
+
 ## [4.4.0] - 2026-10-22
 
 An audit of every criterion against a real page (the economiesuisse.ch FAQ on Switzerland's power supply, a German Next.js site) showed that the unit tests all passed while many results were wrong or right for the wrong reason. This release fixes what the audit found. Scores change on most pages, usually downwards where site chrome used to be counted as content.

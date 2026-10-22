@@ -294,3 +294,28 @@ describe('AiCitation — Kerninformation am Anfang', () => {
     expect(result.recommendations).not.toContain('no_key_info_upfront');
   });
 });
+
+describe('FAQ answered count from question/answer pairs', () => {
+  const answer = 'Rund 60 Prozent des Stroms stammen aus Wasserkraft und etwa 30 Prozent aus Kernenergie.';
+  const headings = Array.from({ length: 5 }, (_, i) => ({ level: 3, text: `Frage Nummer ${i + 1}?` }));
+
+  it('counts only the questions that have their own answer', () => {
+    // Five question headings, but only the first one has text under it. The
+    // old approximation credited one answer per long paragraph anywhere on
+    // the page (here: five), the pairs credit exactly one.
+    const page = makePage({
+      headings,
+      paragraphs: Array.from({ length: 5 }, () => answer),
+      questionAnswers: headings.map((h, i) => ({ question: h.text, answer: i === 0 ? answer : '' })),
+    });
+    expect(detail(page, 'criterion_faq')?.progress?.current).toBe(30);
+  });
+
+  it('reaches full points when every question is answered', () => {
+    const page = makePage({
+      headings,
+      questionAnswers: headings.map((h) => ({ question: h.text, answer })),
+    });
+    expect(detail(page, 'criterion_faq')?.progress?.current).toBe(100);
+  });
+});

@@ -101,6 +101,9 @@ export const GEO_CONFIG = {
     },
     thresholds: {
       definitionMinCount: 3,
+      // A question heading counts as directly answered when the text under
+      // it opens with a statement of at least this many words.
+      directAnswerMinWords: 4,
       listMinCount: 3,
       sectionMinCount: 3,
       sectionMinParagraphs: 3,

@@ -2,8 +2,14 @@ import type { HighlightTarget } from '../types/analysis';
 import { cssPath } from './selector';
 import { GEO_CONFIG } from '../config/geo-config';
 import { computeReadabilityScore, readabilityBand, resolveContentLang } from './readability';
-import { getLang, t } from './i18n';
-import { contentHeadingElements, contentParagraphElements, extractLang, registrableDomain } from './dom-helpers';
+import { t } from './i18n';
+import {
+  contentHeadingElements,
+  contentParagraphElements,
+  extractLang,
+  registrableDomain,
+  withContentScope,
+} from './dom-helpers';
 import { isSourceLink } from './source-links';
 
 // Maps recommendation keys to the page elements they refer to, as CSS
@@ -32,13 +38,16 @@ export function computeHighlightTargets(
     if (found.length > 0) targets[key] = found;
   };
 
-  add('images_missing_alts', () => collectImagesWithoutAlt(doc));
-  add('bad_hierarchy', () => collectHierarchyBreaks(doc));
-  add('low_scanability', () => collectLongParagraphs(doc));
-  add('no_h1', () => collectH1Issues(doc));
-  add('low_readability', () => collectHardParagraphs(doc));
-  add('no_sourced_claims', () => collectUnsourcedClaims(doc));
-  add('no_key_info_upfront', () => collectKeyInfoSpot(doc));
+  // One content scope for all collectors, like extractPageData()
+  withContentScope(doc, () => {
+    add('images_missing_alts', () => collectImagesWithoutAlt(doc));
+    add('bad_hierarchy', () => collectHierarchyBreaks(doc));
+    add('low_scanability', () => collectLongParagraphs(doc));
+    add('no_h1', () => collectH1Issues(doc));
+    add('low_readability', () => collectHardParagraphs(doc));
+    add('no_sourced_claims', () => collectUnsourcedClaims(doc));
+    add('no_key_info_upfront', () => collectKeyInfoSpot(doc));
+  });
 
   return targets;
 }
@@ -146,17 +155,16 @@ function collectH1Issues(doc: Document): HighlightTarget[] {
 
 // Mirrors ContentClarityAnalyzer check 4: same formula choice (Flesch/LIX via
 // computeReadabilityScore + resolveContentLang, i.e. the page language from
-// extractLang() as for PageData.lang, else a stopword guess, else the UI
-// language) and the same readabilityScoreMin threshold, applied per paragraph
-// to find the ones dragging the page down. The language is resolved once for the whole page so
-// every paragraph is measured with the same formula.
+// extractLang() as for PageData.lang, else a stopword guess, else unknown →
+// LIX) and the same readabilityScoreMin threshold, applied per paragraph to
+// find the ones dragging the page down. The language is resolved once for the
+// whole page so every paragraph is measured with the same formula.
 function collectHardParagraphs(doc: Document): HighlightTarget[] {
   const minScore = GEO_CONFIG.contentClarity.thresholds.readabilityScoreMin;
   const paragraphs = countableParagraphs(doc);
   const lang = resolveContentLang(
     extractLang(doc),
-    paragraphs.map(({ text }) => text),
-    getLang()
+    paragraphs.map(({ text }) => text)
   );
 
   const result: HighlightTarget[] = [];

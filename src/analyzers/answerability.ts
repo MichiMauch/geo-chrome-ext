@@ -1,4 +1,4 @@
-import { PageData, AnalysisCategory, CategoryDetail, PageType } from '../types/analysis';
+import { PageData, AnalysisCategory, CategoryDetail, PageType, QuestionAnswer } from '../types/analysis';
 import { BaseAnalyzer } from './base';
 import { GEO_CONFIG } from '../config/geo-config';
 
@@ -16,7 +16,7 @@ export class AnswerabilityAnalyzer extends BaseAnalyzer {
     const isHomepage = pageType === 'homepage';
 
     // Check 1: Direkte Antworten/Definitionen
-    const definitionScore = this.evaluateDefinitions(pageData.paragraphs);
+    const definitionScore = this.evaluateDefinitions(pageData.paragraphs, pageData.questionAnswers);
     const hasDefinitions = definitionScore > 0.3;
     const definitionPercent = Math.round(definitionScore * 100);
 
@@ -93,12 +93,16 @@ export class AnswerabilityAnalyzer extends BaseAnalyzer {
     return this.createCategory(0, weightedScore, totalWeight, details, recommendations);
   }
 
-  private evaluateDefinitions(paragraphs: string[]): number {
+  private evaluateDefinitions(
+    paragraphs: string[],
+    questionAnswers: QuestionAnswer[] = []
+  ): number {
     const definitionPatterns = GEO_CONFIG.answerability.patterns.definitions;
     const structuredPatterns = GEO_CONFIG.answerability.patterns.structured;
 
     let definitionCount = 0;
     let structuredCount = 0;
+    const definitionParagraphs: string[] = [];
 
     paragraphs.forEach((p) => {
       // Definition patterns are anchored at the sentence start, so test each
@@ -109,12 +113,29 @@ export class AnswerabilityAnalyzer extends BaseAnalyzer {
           !sentence.endsWith('?') &&
           definitionPatterns.some((pattern) => pattern.test(sentence))
       );
-      if (hasDefinition) definitionCount++;
+      if (hasDefinition) {
+        definitionCount++;
+        definitionParagraphs.push(p);
+      }
 
       if (structuredPatterns.some((pattern) => pattern.test(p))) structuredCount++;
     });
 
-    const defScore = Math.min(1, definitionCount / GEO_CONFIG.answerability.thresholds.definitionMinCount);
+    // A question heading followed straight away by a statement is a direct
+    // answer, whatever its wording. Answers that open with a paragraph
+    // already counted as a definition are not counted twice.
+    const minWords = GEO_CONFIG.answerability.thresholds.directAnswerMinWords;
+    const directAnswers = questionAnswers.filter(({ answer }) => {
+      const first = splitSentences(answer)[0];
+      if (!first || first.endsWith('?')) return false;
+      if (first.split(/\s+/).length < minWords) return false;
+      return !definitionParagraphs.some((p) => answer.startsWith(p));
+    }).length;
+
+    const defScore = Math.min(
+      1,
+      (definitionCount + directAnswers) / GEO_CONFIG.answerability.thresholds.definitionMinCount
+    );
     const structScore = Math.min(1, structuredCount / 2);
 
     return defScore * 0.7 + structScore * 0.3;

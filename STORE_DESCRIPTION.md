@@ -67,7 +67,7 @@ AI systems rely on clear content hierarchy to identify the main topic of a page 
 - H1 heading presence and quality (is there exactly one, well-written H1?)
 - Heading hierarchy (H1 → H2 → H3 without skipping levels)
 - Scannability (paragraph length, use of subheadings, list usage, content-to-heading ratio)
-- Readability (Flesch Reading Ease for most languages, LIX for German — flags overly complex sentences)
+- Readability (Flesch Reading Ease for English, LIX for all other languages, chosen by the page language — flags overly complex sentences)
 
 Answerability (0–5 points)
 Generative engines are designed to answer questions. Content that directly answers common questions is far more likely to be cited:

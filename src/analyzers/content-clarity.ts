@@ -2,7 +2,6 @@ import { PageData, AnalysisCategory, CategoryDetail } from '../types/analysis';
 import { BaseAnalyzer, AnalyzerResult } from './base';
 import { GEO_CONFIG } from '../config/geo-config';
 import { computeReadabilityScore, resolveContentLang } from '../utils/readability';
-import { getLang } from '../utils/i18n';
 
 export class ContentClarityAnalyzer extends BaseAnalyzer {
   protected readonly categoryKey = 'cat_contentClarity';
@@ -85,9 +84,9 @@ export class ContentClarityAnalyzer extends BaseAnalyzer {
     weightedScore += scanScore * config.weights.scanability;
     totalWeight += config.weights.scanability;
 
-    // Check 4: Lesbarkeit (Flesch / LIX, gewählt nach Sprache des Inhalts —
-    // nicht nach UI-Sprache: eine deutsche Seite bleibt LIX, auch mit EN-UI)
-    const contentLang = resolveContentLang(pageData.lang, pageData.paragraphs, getLang());
+    // Check 4: Lesbarkeit (Flesch nur für englischen Inhalt, sonst LIX —
+    // gewählt nach Sprache des Inhalts, nie nach UI-Sprache)
+    const contentLang = resolveContentLang(pageData.lang, pageData.paragraphs);
     const readability = computeReadabilityScore(pageData.paragraphs, contentLang);
     let hasGoodReadability = false;
     if (readability !== null) {

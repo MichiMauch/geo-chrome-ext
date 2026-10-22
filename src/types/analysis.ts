@@ -94,6 +94,10 @@ export interface PageData {
   // DOM (e.g. closed Radix accordions that only mount on click) — text a
   // crawler never sees.
   faqAnswersHidden?: number;
+  // Question headings and accordion questions in the content area, each with
+  // the text that follows it up to the next heading (empty when the answer
+  // is not in the DOM). Undefined for analyses stored before 4.5.
+  questionAnswers?: QuestionAnswer[];
   // Primary language subtag of the page content (from <html lang> or
   // schema inLanguage), lowercased, e.g. 'de'. Undefined when unknown.
   lang?: string;
@@ -160,6 +164,11 @@ export interface ListData {
   type: 'ul' | 'ol';
   itemCount: number;
   items: string[];
+}
+
+export interface QuestionAnswer {
+  question: string;
+  answer: string;
 }
 
 // Only http(s) links; tel:/mailto:/javascript: never make it into the list.

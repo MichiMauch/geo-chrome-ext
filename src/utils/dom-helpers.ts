@@ -16,6 +16,7 @@ import type {
   RobotsMetaData,
   ViewportData,
   CanonicalData,
+  QuestionAnswer,
 } from '../types/analysis';
 import { GEO_CONFIG } from '../config/geo-config';
 import { extractTextDates } from './text-dates';
@@ -39,32 +40,36 @@ export async function extractPageData(
         checkRobotsTxt(undefined, originOf(pageUrl), robotsPathFromUrl(pageUrl)),
       ]);
 
-  const schema = extractSchemaData(doc);
-  const faq = scanFaq(doc);
+  // Every extractor below shares one content scope instead of recomputing it
+  return withContentScope(doc, () => {
+    const schema = extractSchemaData(doc);
+    const faq = scanFaq(doc);
 
-  return {
-    url: pageUrl,
-    headings: extractHeadings(doc),
-    paragraphs: extractParagraphs(doc),
-    lists: extractLists(doc),
-    links: extractLinks(doc, pageUrl),
-    meta: extractMetaData(doc),
-    schema,
-    lang: extractLang(doc, schema),
-    author: extractAuthorInfo(doc),
-    dates: extractDates(doc),
-    semanticElements: extractSemanticElements(doc),
-    llmsTxt,
-    robotsTxt,
-    faqQuestions: faq.questions,
-    faqAnswersHidden: faq.hidden,
-    images: extractImages(doc),
-    openGraph: extractOpenGraph(doc),
-    twitterCard: extractTwitterCard(doc),
-    robotsMeta: extractRobotsMeta(doc),
-    viewport: extractViewport(doc),
-    canonical: extractCanonical(doc, pageUrl),
-  };
+    return {
+      url: pageUrl,
+      headings: extractHeadings(doc),
+      paragraphs: extractParagraphs(doc),
+      lists: extractLists(doc),
+      links: extractLinks(doc, pageUrl),
+      meta: extractMetaData(doc),
+      schema,
+      lang: extractLang(doc, schema),
+      author: extractAuthorInfo(doc),
+      dates: extractDates(doc),
+      semanticElements: extractSemanticElements(doc),
+      llmsTxt,
+      robotsTxt,
+      faqQuestions: faq.questions,
+      faqAnswersHidden: faq.hidden,
+      questionAnswers: extractQuestionAnswers(doc),
+      images: extractImages(doc),
+      openGraph: extractOpenGraph(doc),
+      twitterCard: extractTwitterCard(doc),
+      robotsMeta: extractRobotsMeta(doc),
+      viewport: extractViewport(doc),
+      canonical: extractCanonical(doc, pageUrl),
+    };
+  });
 }
 
 // Primary language subtag of the content: <html lang="de-CH"> → 'de', else
@@ -229,6 +234,11 @@ export function extractRobotsMeta(doc: Document = document): RobotsMetaData {
 //    the heading plus its ancestors up to the highest one that still begins
 //    with that heading and holds no other heading of the same or a higher
 //    rank.
+//  - promo blocks without any naming (sidebar "Dossier: das Neuste zum
+//    Thema …" boxes): a block with a heading and at most PROMO_MAX_CHARS of
+//    text, of which at least PROMO_LINK_SHARE sits in links to the site
+//    itself. External links don't count towards the share, so a "Sources"
+//    section with a heading and a list of citations stays content.
 // Headings and paragraphs inside a link (teaser and author cards) are left
 // out by extractHeadings/extractParagraphs themselves.
 // ---------------------------------------------------------------------------
@@ -285,6 +295,36 @@ function hasBoilerplateName(el: Element): boolean {
 
 const NEVER_BOILERPLATE = new Set(['HTML', 'BODY', 'MAIN', 'ARTICLE']);
 
+const PROMO_MAX_CHARS = 1500;
+const PROMO_LINK_SHARE = 0.5;
+
+// Same site as the document: relative hrefs, or the same registrable domain.
+// Judged on the raw attribute because DOMParser documents (sitemap batch)
+// resolve relative links against the open tab, not the analyzed page.
+function isSameSiteHref(href: string, siteDomain: string): boolean {
+  if (!/^[a-z][a-z0-9+.-]*:|^\/\//i.test(href)) return !href.startsWith('#');
+  try {
+    const url = new URL(href.startsWith('//') ? `https:${href}` : href);
+    return /^https?:$/.test(url.protocol) && registrableDomain(url.hostname) === siteDomain;
+  } catch {
+    return false;
+  }
+}
+
+function isPromoBlock(el: Element, siteDomain: string): boolean {
+  if (!el.querySelector('h2, h3, h4, h5, h6') || !el.querySelector('a[href]')) return false;
+  const total = normalizeText(el.textContent).length;
+  if (total === 0 || total > PROMO_MAX_CHARS) return false;
+  let linked = 0;
+  el.querySelectorAll('a[href]').forEach((a) => {
+    if (a.parentElement?.closest('a[href]')) return;
+    if (isSameSiteHref(a.getAttribute('href') || '', siteDomain)) {
+      linked += normalizeText(a.textContent).length;
+    }
+  });
+  return linked / total >= PROMO_LINK_SHARE;
+}
+
 function boilerplateHeadingBlocks(root: Element): Set<Element> {
   const blocks = new Set<Element>();
   root.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((h) => {
@@ -307,7 +347,31 @@ function boilerplateHeadingBlocks(root: Element): Set<Element> {
   return blocks;
 }
 
+// Scopes pinned for the duration of one extraction pass (see
+// withContentScope). Outside such a pass every call recomputes, because the
+// live DOM may have changed in between (accordions opened, SPA navigation).
+const pinnedScopes = new WeakMap<Document, ContentScope>();
+
+/**
+ * Runs `fn` with the content scope of `doc` computed once and shared by every
+ * extractor called inside — instead of once per extractor. Only for code that
+ * reads the DOM without changing it.
+ */
+export function withContentScope<T>(doc: Document, fn: () => T): T {
+  if (pinnedScopes.has(doc)) return fn();
+  pinnedScopes.set(doc, computeContentScope(doc));
+  try {
+    return fn();
+  } finally {
+    pinnedScopes.delete(doc);
+  }
+}
+
 export function getContentScope(doc: Document = document): ContentScope {
+  return pinnedScopes.get(doc) ?? computeContentScope(doc);
+}
+
+function computeContentScope(doc: Document): ContentScope {
   const body = doc.body ?? doc.documentElement;
   const h1 =
     Array.from(doc.querySelectorAll('h1')).find(
@@ -331,12 +395,18 @@ export function getContentScope(doc: Document = document): ContentScope {
 
   const headingBlocks = boilerplateHeadingBlocks(root);
   const cache = new Map<Element, boolean>();
+  let siteDomain = '';
+  try {
+    siteDomain = registrableDomain(new URL(doc.baseURI).hostname);
+  } catch {
+    // about:blank and friends — only relative links count as same-site
+  }
   const excludedSelf = (el: Element): boolean => {
     if (el.matches(LANDMARK_CHROME) || isPageLevelHeaderFooter(el)) return true;
     if (headingBlocks.has(el)) return true;
     if (NEVER_BOILERPLATE.has(el.tagName)) return false;
     if (h1 && el.contains(h1)) return false;
-    return hasBoilerplateName(el);
+    return hasBoilerplateName(el) || isPromoBlock(el, siteDomain);
   };
   const isExcluded = (el: Element): boolean => {
     const path: Element[] = [];
@@ -599,6 +669,69 @@ export function extractFaqQuestions(doc: Document = document): string[] {
 // <details> without body text. A crawler sees the question but no answer.
 export function countHiddenFaqAnswers(doc: Document = document): number {
   return scanFaq(doc).hidden;
+}
+
+// ---------------------------------------------------------------------------
+// Question → answer pairs
+// ---------------------------------------------------------------------------
+
+const QUESTION_START = GEO_CONFIG.aiCitation.patterns.questions;
+
+function isQuestionText(text: string): boolean {
+  return /[?？]$/.test(text) || QUESTION_START.some((p) => p.test(text));
+}
+
+const follows = (a: Node, b: Node): boolean =>
+  (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+/**
+ * Pairs every question in the content area — a heading phrased as a question
+ * or an accordion trigger — with the body text between it and the next
+ * heading or trigger: the content paragraphs (incl. accordion panels) and
+ * lists in that stretch. A question whose answer is not in the DOM gets an
+ * empty answer.
+ */
+export function extractQuestionAnswers(doc: Document = document): QuestionAnswer[] {
+  const scope = getContentScope(doc);
+  const headings = contentHeadingElements(doc).filter((h) => h.tagName !== 'H1');
+  const triggers = accordionTriggers(doc, scope).filter(
+    (b) => !b.closest('h1, h2, h3, h4, h5, h6')
+  );
+  const markers = [...headings, ...triggers].sort((a, b) => (follows(a, b) ? -1 : 1));
+
+  const blocks: { el: Element; text: string }[] = [
+    ...contentParagraphElements(doc),
+    ...Array.from(scope.root.querySelectorAll('ul, ol'))
+      .filter((list) => !scope.isExcluded(list) && !list.parentElement?.closest('ul, ol'))
+      // Item by item: textContent would glue "<li>A</li><li>B</li>" into "AB"
+      .map((list) => ({
+        el: list,
+        text: Array.from(list.querySelectorAll(':scope > li'))
+          .map((li) => normalizeText(li.textContent))
+          .filter(Boolean)
+          .join(' '),
+      })),
+  ]
+    .filter(({ text }) => text.length > 0)
+    .sort((a, b) => (follows(a.el, b.el) ? -1 : 1));
+
+  const pairs: QuestionAnswer[] = [];
+  markers.forEach((marker, i) => {
+    const question = normalizeText(marker.textContent);
+    if (question.length < 5 || question.length > 300 || !isQuestionText(question)) return;
+    const next = markers[i + 1];
+    const answer = blocks
+      .filter(
+        ({ el }) =>
+          !marker.contains(el) &&
+          follows(marker, el) &&
+          (!next || follows(el, next))
+      )
+      .map(({ text }) => text)
+      .join(' ');
+    pairs.push({ question, answer });
+  });
+  return pairs;
 }
 
 export function extractLists(doc: Document = document): ListData[] {

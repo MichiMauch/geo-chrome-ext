@@ -262,3 +262,95 @@ describe('lang', () => {
     expect(extractLang(doc)).toBeUndefined();
   });
 });
+
+describe('withContentScope', () => {
+  it('shares one scope inside the pass and recomputes outside it', async () => {
+    const { withContentScope } = await import('../dom-helpers');
+    const doc = new DOMParser().parseFromString(
+      '<main><h1>Titel der Seite</h1><p>Ein Absatz mit genug Text für die Analyse.</p></main>',
+      'text/html'
+    );
+    const [a, b] = withContentScope(doc, () => [getContentScope(doc), getContentScope(doc)]);
+    expect(a).toBe(b);
+    expect(getContentScope(doc)).not.toBe(a);
+  });
+});
+
+describe('promo blocks without naming', () => {
+  const page = (aside: string) =>
+    new DOMParser().parseFromString(
+      `<main><div><h1>Stromversorgung in der Schweiz</h1>
+        <p>Die Schweiz steht vor zentralen energiepolitischen Fragen zur Versorgung.</p></div>
+        <div class="w-2/3 lg:block">${aside}</div></main>`,
+      'text/html'
+    );
+
+  it('drops a sidebar teaser box linking to the own site', () => {
+    const doc = page(`<div><h3>Dossierpolitik</h3><p>das Neuste zum Thema Energiepolitik</p></div>
+      <a href="/de/dossier-politik/wasserstoff"><p>Wasserstoff und erneuerbare Gase: Der Energieträger der Zukunft</p></a>`);
+    expect(extractHeadings(doc).map((h) => h.text)).toEqual(['Stromversorgung in der Schweiz']);
+    expect(extractParagraphs(doc)).toHaveLength(1);
+  });
+
+  it('keeps a sources section whose links point elsewhere', () => {
+    const doc = page(`<h3>Quellen</h3><ul>
+      <li><a href="https://www.bfe.admin.ch/statistik">Bundesamt für Energie: Elektrizitätsstatistik 2025</a></li>
+      <li><a href="https://www.iea.org/reports/switzerland">IEA: Switzerland Energy Policy Review</a></li></ul>`);
+    expect(extractHeadings(doc).map((h) => h.text)).toContain('Quellen');
+    expect(extractLists(doc)).toHaveLength(1);
+  });
+
+  it('keeps a section with a short internal link in running text', () => {
+    const doc = page(`<h2>Winterstrom</h2><p>Im Winter importiert die Schweiz Strom. Mehr dazu im
+      <a href="/de/dossier">Dossier</a>, das alle Zahlen zur Versorgungslage zusammenfasst.</p>`);
+    expect(extractHeadings(doc).map((h) => h.text)).toContain('Winterstrom');
+  });
+});
+
+describe('extractQuestionAnswers', () => {
+  it('pairs question headings with the text up to the next heading', async () => {
+    const { extractQuestionAnswers } = await import('../dom-helpers');
+    const doc = new DOMParser().parseFromString(
+      `<main><h1>Stromversorgung in der Schweiz</h1>
+        <h2>Unsere heutige Versorgung</h2>
+        <h3>Woher hat die Schweiz ihren Strom?</h3>
+        <p>Rund 60 Prozent stammen aus Wasserkraft, etwa 30 Prozent aus Kernenergie.</p>
+        <ul><li>Wasserkraft</li><li>Kernenergie</li></ul>
+        <h3>Ist Schweizer Strom klimaneutral?</h3>
+        <h3>Ausblick</h3>
+        <p>Die nächsten Jahre bringen zusätzliche Solaranlagen auf Dächern und Fassaden.</p>
+      </main>`,
+      'text/html'
+    );
+    expect(extractQuestionAnswers(doc)).toEqual([
+      {
+        question: 'Woher hat die Schweiz ihren Strom?',
+        answer: 'Rund 60 Prozent stammen aus Wasserkraft, etwa 30 Prozent aus Kernenergie. Wasserkraft Kernenergie',
+      },
+      { question: 'Ist Schweizer Strom klimaneutral?', answer: '' },
+    ]);
+  });
+
+  it('gives closed Radix accordion items an empty answer and open ones their panel text', async () => {
+    const { extractQuestionAnswers } = await import('../dom-helpers');
+    const item = (id: string, q: string, panel: string, state: string) => `
+      <div data-state="${state}">
+        <h3><button aria-expanded="${state === 'open'}" aria-controls="p${id}" id="t${id}">${q}</button></h3>
+        <div id="p${id}" role="region" aria-labelledby="t${id}" ${state === 'open' ? '' : 'hidden'}>${panel}</div>
+      </div>`;
+    const doc = new DOMParser().parseFromString(
+      `<main><h1>Fragen und Antworten</h1>
+        ${item('1', 'Woher hat die Schweiz ihren Strom?', '', 'closed')}
+        ${item('2', 'Ist Schweizer Strom klimaneutral?', '<p>Weitgehend ja, weil Wasserkraft und Kernenergie kaum CO2 ausstossen.</p>', 'open')}
+      </main>`,
+      'text/html'
+    );
+    expect(extractQuestionAnswers(doc)).toEqual([
+      { question: 'Woher hat die Schweiz ihren Strom?', answer: '' },
+      {
+        question: 'Ist Schweizer Strom klimaneutral?',
+        answer: 'Weitgehend ja, weil Wasserkraft und Kernenergie kaum CO2 ausstossen.',
+      },
+    ]);
+  });
+});
