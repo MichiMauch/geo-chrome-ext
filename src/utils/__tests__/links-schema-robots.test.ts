@@ -213,3 +213,19 @@ describe('source links from extractLinks', () => {
     expect(getSourceLinks(links)).toHaveLength(1);
   });
 });
+
+describe('readable text', () => {
+  it('keeps words apart across block elements in links and answer panels', async () => {
+    const { extractLinks, extractParagraphs } = await import('../dom-helpers');
+    const doc = new DOMParser().parseFromString(
+      `<main><h1>Titel</h1>
+        <a href="/de/team/lukas-federer"><div>Lukas Federer</div><div>Bereichsleiter Energie</div></a>
+        <div data-state="open"><h3><button aria-expanded="true" aria-controls="p1" id="t1">Frage?</button></h3>
+          <div id="p1" role="region" aria-labelledby="t1"><div>Rund 60 Prozent stammen aus Wasserkraft.</div><div>Der Rest aus Kernenergie.</div></div></div>
+      </main>`,
+      'text/html'
+    );
+    expect(extractLinks(doc, 'https://www.example.ch/')[0].text).toBe('Lukas Federer Bereichsleiter Energie');
+    expect(extractParagraphs(doc)).toContain('Rund 60 Prozent stammen aus Wasserkraft. Der Rest aus Kernenergie.');
+  });
+});

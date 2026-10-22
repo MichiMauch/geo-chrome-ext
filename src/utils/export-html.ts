@@ -237,7 +237,9 @@ function renderCategoryHtml(category: AnalysisCategory, iconKey: string, delay: 
 
     if (d.progress) {
       const pct = (d.progress.current / d.progress.target) * 100;
-      if (pct >= 100) { icon = '✓'; iconColor = '#10b981'; bgColor = 'rgba(16,185,129,0.06)'; }
+      // A full bar that still fails (e.g. enough subheadings, too little
+      // text under them) is partial, not green
+      if (pct >= 100 && d.found) { icon = '✓'; iconColor = '#10b981'; bgColor = 'rgba(16,185,129,0.06)'; }
       else if (pct > 0) { icon = '◐'; iconColor = '#f59e0b'; bgColor = 'rgba(245,158,11,0.06)'; }
       else { icon = '✗'; iconColor = '#ef4444'; bgColor = 'rgba(239,68,68,0.06)'; }
     } else {
@@ -250,10 +252,7 @@ function renderCategoryHtml(category: AnalysisCategory, iconKey: string, delay: 
       ? ` <span style="color:#94a3b8;font-weight:500">(${d.progress.current}/${d.progress.target})</span>`
       : '';
 
-    const explanation = getExplanation(d);
-    const explanationHtml = explanation
-      ? `<div style="font-size:12px;color:#64748b;margin-top:6px;padding-left:22px;line-height:1.5">${escapeHtml(explanation)}</div>`
-      : '';
+    const explanationHtml = renderReportExplanation(d);
 
     return `<div style="background:${bgColor};border-radius:10px;padding:12px 14px;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:8px">
@@ -279,6 +278,31 @@ function renderCategoryHtml(category: AnalysisCategory, iconKey: string, delay: 
         ${details}
       </div>
     </div>`;
+}
+
+// What was found, why it matters, how to fix it. Analyses stored before the
+// report texts existed (no evidenceText) fall back to the one-line
+// explanation.
+function renderReportExplanation(d: CategoryDetail): string {
+  const box = (inner: string) =>
+    `<div style="font-size:12px;color:#475569;margin-top:8px;padding-left:22px;line-height:1.55">${inner}</div>`;
+  const notApplicable = d.value === t('value_notApplicable');
+  if (notApplicable || !d.evidenceText?.length) {
+    const explanation = getExplanation(d);
+    return explanation ? box(escapeHtml(explanation)) : '';
+  }
+
+  const label = (key: string) =>
+    `<div style="font-weight:600;color:#0f172a;margin-top:8px">${escapeHtml(t(key))}</div>`;
+  const evidence = `<ul style="margin:2px 0 0;padding-left:18px">${d.evidenceText
+    .map((line) => `<li>${escapeHtml(line)}</li>`)
+    .join('')}</ul>`;
+  return box(
+    label('report_found') +
+      evidence +
+      (d.whyText ? label('report_why') + `<div>${escapeHtml(d.whyText)}</div>` : '') +
+      (d.fixText ? label('report_fix') + `<div>${escapeHtml(d.fixText)}</div>` : '')
+  );
 }
 
 function renderRecommendationItemHtml(recKey: string, index: number): string {

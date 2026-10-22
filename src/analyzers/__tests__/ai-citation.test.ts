@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { AiCitationAnalyzer } from '../ai-citation';
 import { GEO_CONFIG } from '../../config/geo-config';
 import { mapAnalysisResult } from '../../utils/analysis-mapper';
+import { setLang } from '../../utils/i18n';
 import { collectAllRecommendations } from '../../utils/recommendations';
 import { getFixSnippet } from '../../utils/fix-snippets';
 import type { LinkData, PageData, PageType } from '../../types/analysis';
@@ -317,5 +318,159 @@ describe('FAQ answered count from question/answer pairs', () => {
       questionAnswers: headings.map((h) => ({ question: h.text, answer })),
     });
     expect(detail(page, 'criterion_faq')?.progress?.current).toBe(100);
+  });
+});
+
+describe('AiCitation — Report-Belege', () => {
+  afterEach(() => setLang('en'));
+
+  const keys = (d?: { evidence?: { key: string }[] }) => (d?.evidence ?? []).map((e) => e.key);
+  const intro = 'Die Schweiz steht vor zentralen energiepolitischen Fragen zur sicheren und bezahlbaren Versorgung.';
+  const questions = ['Woher hat die Schweiz ihren Strom?', 'Ist Schweizer Strom klimaneutral?', 'Wie hoch ist das Risiko?'];
+  // The economiesuisse situation: one intro paragraph, every FAQ answer
+  // missing from the HTML, no source links, social links only.
+  const hiddenFaqPage = makePage({
+    headings: [{ level: 1, text: 'Stromversorgung in der Schweiz: Fragen und Antworten' }],
+    paragraphs: [intro],
+    faqQuestions: questions,
+    faqAnswersHidden: 3,
+    questionAnswers: questions.map((question) => ({ question, answer: '' })),
+    meta: { ...makePage().meta, description: 'Die Schweiz steht vor zentralen energiepolitischen Fragen: Wie bleibt die Stromversorgung sicher?' },
+    links: [link('https://www.linkedin.com/company/acme', '', { isNavigational: true })],
+  });
+
+  it('facts: counts paragraphs, notes hidden FAQ answers and switches the fix', () => {
+    const d = detail(hiddenFaqPage, 'criterion_facts');
+    expect(d?.evidence).toEqual([
+      { key: 'ev_facts_counted', params: { total: 1, facts: 0, target: 4 } },
+      { key: 'ev_facts_hidden_faq', params: { hidden: 3 } },
+    ]);
+    expect(d?.fixKey).toBe('fix_facts_hidden');
+  });
+
+  it('facts: shows the figures found', () => {
+    const d = detail(makePage({ paragraphs: ['Die Schweiz verbraucht rund 56 TWh Strom pro Jahr.', 'Ohne Zahl.'] }), 'criterion_facts');
+    expect(d?.evidence).toEqual([
+      { key: 'ev_facts_counted', params: { total: 2, facts: 1, target: 4 } },
+      { key: 'ev_facts_example', params: { text: 'Die Schweiz verbraucht rund 56 TWh Strom pro Jahr.' } },
+    ]);
+    expect(d?.fixKey).toBeUndefined();
+    expect(keys(detail(makePage(), 'criterion_facts'))).toEqual(['ev_facts_no_paragraphs']);
+  });
+
+  it('faq: hidden answers, examples and missing schema', () => {
+    const d = detail(hiddenFaqPage, 'criterion_faq');
+    expect(d?.evidence).toEqual([
+      { key: 'ev_faq_questions', params: { count: 3, answered: 0, full: 5 } },
+      { key: 'ev_faq_hidden', params: { hidden: 3, total: 3 } },
+      { key: 'ev_faq_example', params: { text: 'Woher hat die Schweiz ihren Strom?' } },
+      { key: 'ev_faq_example', params: { text: 'Ist Schweizer Strom klimaneutral?' } },
+      { key: 'ev_faq_schema_no' },
+    ]);
+    expect(d?.fixKey).toBe('fix_faq_hidden');
+  });
+
+  it('faq: answered questions with schema, no FAQ at all, schema only', () => {
+    const headings = Array.from({ length: 5 }, (_, i) => ({ level: 3, text: `Frage Nummer ${i + 1}?` }));
+    const full = detail(makePage({
+      headings,
+      questionAnswers: headings.map((h) => ({ question: h.text, answer: LONG })),
+      schema: [{ '@type': 'FAQPage' }],
+    }), 'criterion_faq');
+    expect(full?.evidence?.[0]).toEqual({ key: 'ev_faq_questions', params: { count: 5, answered: 5, full: 5 } });
+    expect(keys(full)).toContain('ev_faq_schema_yes');
+
+    const none = detail(makePage({ headings: [{ level: 1, text: 'Energie' }] }), 'criterion_faq');
+    expect(keys(none)).toEqual(['ev_faq_none', 'ev_faq_schema_no']);
+    expect(none?.fixKey).toBe('fix_faq');
+
+    const schemaOnly = detail(makePage({ headings: [{ level: 1, text: 'Energie' }], schema: [{ '@type': 'FAQPage' }] }), 'criterion_faq');
+    expect(keys(schemaOnly)).toEqual(['ev_faq_schema_only']);
+    expect(schemaOnly?.fixKey).toBe('fix_faq_schema_only');
+  });
+
+  it('faq: counts answers that are too short', () => {
+    const qs = ['Was ist Strom?', 'Was ist Gas?'];
+    const d = detail(makePage({ questionAnswers: [{ question: qs[0], answer: LONG }, { question: qs[1], answer: 'Ein Gas.' }], faqQuestions: qs }), 'criterion_faq');
+    expect(d?.evidence).toContainEqual({ key: 'ev_faq_short', params: { count: 1, min: 8 } });
+    expect(d?.fixKey).toBe('fix_faq_more');
+  });
+
+  it('sourcedClaims: no sources, social links explained', () => {
+    const d = detail(hiddenFaqPage, 'criterion_sourcedClaims');
+    expect(d?.evidence).toEqual([
+      { key: 'ev_sourcedClaims_no_citations' },
+      { key: 'ev_sourcedClaims_no_links' },
+      { key: 'ev_sources_excluded_social', params: { count: 1, hosts: 'linkedin.com' } },
+    ]);
+  });
+
+  it('sourcedClaims: citations and source links with hosts', () => {
+    const d = detail(makePage({
+      paragraphs: ['Der Anteil liegt bei 30 % (BFE 2024).', 'Siehe auch [1].'],
+      links: [link('https://www.bfe.admin.ch/a'), link('https://www.oecd.org/b')],
+    }), 'criterion_sourcedClaims');
+    expect(d?.evidence).toEqual([
+      { key: 'ev_sourcedClaims_citations', params: { count: 2 } },
+      { key: 'ev_sourcedClaims_citation_example', params: { text: '(BFE 2024)' } },
+      { key: 'ev_sourcedClaims_citation_example', params: { text: '[1]' } },
+      { key: 'ev_sourcedClaims_links', params: { count: 2, hosts: 'bfe.admin.ch, oecd.org', many: 4 } },
+    ]);
+  });
+
+  it('sourcedClaims: links without figures', () => {
+    const d = detail(makePage({
+      paragraphs: ['Ein Text ohne jede Zahl.'],
+      links: [link('https://www.bfe.admin.ch/a'), link('https://www.oecd.org/b')],
+    }), 'criterion_sourcedClaims');
+    expect(keys(d)).toContain('ev_sourcedClaims_links_no_numbers');
+  });
+
+  it('keyInfoUpfront: lists every part as met or not met', () => {
+    const d = detail(hiddenFaqPage, 'criterion_keyInfoUpfront');
+    expect(keys(d)).toEqual([
+      'ev_keyInfoUpfront_lead',
+      'ev_keyInfoUpfront_h1_ok',
+      'ev_keyInfoUpfront_short_ok',
+      'ev_keyInfoUpfront_meta_ok',
+      'ev_keyInfoUpfront_definition_missing',
+      'ev_keyInfoUpfront_number_missing',
+    ]);
+    expect(d?.evidence?.[2].params).toEqual({ chars: intro.length, points: 15 });
+
+    const good = detail(makePage({
+      headings: [{ level: 1, text: 'Was ist Netto-Null?' }],
+      paragraphs: ['Netto-Null ist ein Ziel, bei dem die Schweiz bis 2050 rund 45 Millionen Tonnen CO₂ weniger ausstösst.'],
+    }), 'criterion_keyInfoUpfront');
+    expect(keys(good)).toEqual([
+      'ev_keyInfoUpfront_lead',
+      'ev_keyInfoUpfront_h1_ok',
+      'ev_keyInfoUpfront_short_ok',
+      'ev_keyInfoUpfront_meta_missing',
+      'ev_keyInfoUpfront_definition_ok',
+      'ev_keyInfoUpfront_number_ok',
+    ]);
+    expect(keys(detail(makePage(), 'criterion_keyInfoUpfront'))).toEqual(['ev_keyInfoUpfront_no_text']);
+  });
+
+  it('no evidence for not-applicable checks on a homepage', () => {
+    const result = analyze(hiddenFaqPage, 'homepage');
+    expect(result.details.find((d) => d.criterionKey === 'criterion_faq')?.evidence).toBeUndefined();
+    expect(result.details.find((d) => d.criterionKey === 'criterion_keyInfoUpfront')?.evidence).toBeUndefined();
+  });
+
+  it('translates the economiesuisse case into concrete German text', () => {
+    setLang('de');
+    const mapped = mapAnalysisResult(analyze(hiddenFaqPage));
+    const all = mapped.details.flatMap((d) => [...(d.evidenceText ?? []), d.whyText ?? '', d.fixText ?? '']).join('\n');
+    expect(all).not.toMatch(/\{\w+\}/);
+    const [facts, faq, sourced, upfront] = mapped.details;
+    expect(facts.evidenceText).toContain('FAQ-Antworten, die nicht im HTML stehen: 3. Sie konnten nicht geprüft werden. Stehen dort Zahlen, sehen KI-Systeme sie ebenfalls nicht.');
+    expect(facts.fixText).toContain('per CSS zugeklappt');
+    expect(faq.evidenceText?.[1]).toContain('Bei 3 von 3 Fragen fehlt die Antwort im HTML');
+    expect(faq.evidenceText).toContain('Beispiel: «Woher hat die Schweiz ihren Strom?»');
+    expect(faq.fixText).toContain('Akkordeon');
+    expect(sourced.evidenceText?.join(' ')).toContain('linkedin.com');
+    expect(upfront.evidenceText).toContain('Nicht erfüllt (30 %): Am Anfang steht keine Kernaussage in der Form «X ist …» oder «X bedeutet …».');
   });
 });

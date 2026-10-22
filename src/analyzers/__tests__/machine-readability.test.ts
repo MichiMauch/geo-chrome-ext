@@ -416,3 +416,169 @@ describe('MachineReadabilityAnalyzer — semantic HTML', () => {
     expect(semanticPercent({ ...all, hasFooter: false, hasAside: true })).toBe(95);
   });
 });
+
+describe('MachineReadabilityAnalyzer — report evidence', () => {
+  const analyzer = new MachineReadabilityAnalyzer();
+  const detail = (page: PageData, key: string) =>
+    analyzer.analyze(page).details.find((d) => d.criterionKey === key)!;
+  const ev = (page: PageData, key: string) => detail(page, key).evidence ?? [];
+  const keys = (page: PageData, key: string) => ev(page, key).map((e) => e.key);
+  const faq = Array.from({ length: 52 }, (_, i) => `Frage ${i + 1}?`);
+  const newsArticle: SchemaData = {
+    '@type': 'NewsArticle',
+    headline: 'Stromversorgung',
+    author: { '@type': 'Person', name: 'Lukas Federer', url: 'https://example.com/person/lf' },
+    datePublished: '2026-07-29',
+    publisher: { '@type': 'Organization', name: 'economiesuisse', logo: { url: 'https://example.com/logo.png' } },
+  };
+
+  it('schema: names the found type and the missing FAQPage with the question count', () => {
+    const page = makePage({ schema: [newsArticle], faqQuestions: faq });
+    const d = detail(page, 'criterion_schema');
+    expect(d.evidence).toContainEqual({ key: 'ev_schema_found', params: { types: 'NewsArticle' } });
+    expect(d.evidence).toContainEqual({ key: 'ev_schema_missing_faq', params: { count: 52, example: 'Frage 1?' } });
+    expect(d.evidence).toContainEqual({ key: 'ev_schema_target', params: { count: 1, target: 2 } });
+    expect(d.fixKey).toBe('fix_schema_faq');
+  });
+
+  it('schema: passing page lists its types and confirms the FAQPage', () => {
+    const page = makePage({ schema: [newsArticle, { '@type': 'FAQPage', mainEntity: [{}] }], faqQuestions: faq });
+    const d = detail(page, 'criterion_schema');
+    expect(d.evidence).toEqual([
+      { key: 'ev_schema_found', params: { types: 'NewsArticle, FAQPage' } },
+      { key: 'ev_schema_faq_ok', params: { count: 52 } },
+    ]);
+    expect(d.fixKey).toBeUndefined();
+  });
+
+  it('schema: no schema, and a single non-article type that needs a second one', () => {
+    expect(keys(makePage(), 'criterion_schema')).toEqual(['ev_schema_none', 'ev_schema_target', 'ev_schema_too_few']);
+    const d = detail(makePage({ schema: [{ '@type': 'WebPage', name: 'x' }, { '@type': 'WebSite' }] }), 'criterion_schema');
+    expect(d.evidence).toContainEqual({ key: 'ev_schema_other', params: { types: 'WebSite' } });
+    expect(d.fixKey).toBe('fix_schema_more');
+  });
+
+  it('schema completeness: lists the missing fields per block and the unnamed author', () => {
+    const page = makePage({ schema: [{ '@type': 'Article', headline: 'H', author: { '@type': 'Person' } }] });
+    const d = detail(page, 'criterion_schema_completeness');
+    expect(d.evidence).toEqual([
+      { key: 'ev_schema_completeness_summary', params: { found: 1, total: 3 } },
+      { key: 'ev_schema_completeness_missing', params: { type: 'Article', fields: 'author, datePublished' } },
+      { key: 'ev_schema_completeness_author_unnamed' },
+    ]);
+    expect(d.fixKey).toBe('fix_schema_completeness_author');
+    expect(ev(makePage({ schema: [newsArticle] }), 'criterion_schema_completeness')).toContainEqual({
+      key: 'ev_schema_completeness_ok',
+      params: { types: 'NewsArticle' },
+    });
+  });
+
+  it('entities: one line per signal, with names', () => {
+    expect(ev(makePage({ schema: [newsArticle] }), 'criterion_entities')).toEqual([
+      { key: 'ev_entities_org_named', params: { name: 'economiesuisse' } },
+      { key: 'ev_entities_org_verifiable' },
+      { key: 'ev_entities_person_named', params: { name: 'Lukas Federer' } },
+      { key: 'ev_entities_person_verifiable' },
+      { key: 'ev_entities_graph_loose' },
+      { key: 'ev_entities_topic_none' },
+    ]);
+    const bare = makePage({ author: { name: 'Anna Muster', source: 'dom' } });
+    expect(keys(bare, 'criterion_entities')).toEqual([
+      'ev_entities_org_none',
+      'ev_entities_person_named_page',
+      'ev_entities_graph_loose',
+      'ev_entities_topic_none',
+    ]);
+    const withTopic = makePage({ schema: [{ ...newsArticle, about: [{ '@type': 'Thing', name: 'Energiepolitik' }] }] });
+    expect(ev(withTopic, 'criterion_entities')).toContainEqual({
+      key: 'ev_entities_topic',
+      params: { topics: '«Energiepolitik»' },
+    });
+  });
+
+  it('semantic HTML: lists present elements and each missing one', () => {
+    const semanticElements = { hasArticle: false, hasMain: true, hasNav: true, hasAside: false, hasHeader: true, hasFooter: true, hasSection: true };
+    expect(ev(makePage({ semanticElements }), 'criterion_semanticHtml')).toEqual([
+      { key: 'ev_semanticHtml_present', params: { elements: '<main>, <section>, <header>, <nav>, <footer>' } },
+      { key: 'ev_semanticHtml_missing_article' },
+    ]);
+    expect(keys(makePage(), 'criterion_semanticHtml')[0]).toBe('ev_semanticHtml_none');
+  });
+
+  it('llms.txt: found and missing, with the URL', () => {
+    const page = makePage({ url: 'https://example.com/a', llmsTxt: { exists: true, url: 'https://example.com/llms.txt', contentLength: 384 } });
+    expect(ev(page, 'criterion_llmsTxt')).toEqual([
+      { key: 'ev_llmsTxt_found', params: { url: 'https://example.com/llms.txt', chars: 384 } },
+      { key: 'ev_llmsTxt_full_missing' },
+    ]);
+    expect(ev(makePage({ url: 'https://example.com/a' }), 'criterion_llmsTxt')[0]).toEqual({
+      key: 'ev_llmsTxt_missing',
+      params: { url: 'https://example.com/llms.txt' },
+    });
+  });
+
+  it('robots.txt: groups blocked bots by purpose, with owners', () => {
+    const robotsTxt = { exists: true, path: '/blog/', allowedBots: {}, blockedBots: ['GPTBot', 'OAI-SearchBot', 'CCBot'], totalChecked: 12 };
+    const d = detail(makePage({ robotsTxt }), 'criterion_robotsTxt');
+    expect(d.evidence).toEqual([
+      { key: 'ev_robotsTxt_blocked_count', params: { blocked: 3, total: 12, path: '/blog/' } },
+      { key: 'ev_robotsTxt_blocked_search', params: { bots: 'OAI-SearchBot (OpenAI)' } },
+      { key: 'ev_robotsTxt_blocked_training', params: { bots: 'GPTBot (OpenAI), CCBot (Common Crawl)' } },
+    ]);
+    expect(d.fixKey).toBeUndefined();
+    const trainingOnly = { ...robotsTxt, blockedBots: ['GPTBot'] };
+    expect(detail(makePage({ robotsTxt: trainingOnly }), 'criterion_robotsTxt').fixKey).toBe('fix_robotsTxt_training');
+    const allowed = { ...robotsTxt, blockedBots: [] };
+    expect(ev(makePage({ robotsTxt: allowed }), 'criterion_robotsTxt')).toEqual([
+      { key: 'ev_robotsTxt_all_allowed', params: { count: 12, path: '/blog/' } },
+    ]);
+  });
+
+  it('crawler view: characters, headings and missing heading examples', () => {
+    const crawlerView: CrawlerViewData = {
+      status: 'partial', httpStatus: 200, renderedChars: 5000, rawChars: 2000, coverage: 0.4,
+      renderedHeadings: 6, rawHeadings: 2, renderedHasH1: true, rawHasH1: false,
+      renderedSchemaBlocks: 2, rawSchemaBlocks: 1, rawBytes: 9000,
+      missingHeadings: ['Woher hat die Schweiz ihren Strom?', 'Was kostet das?'],
+    };
+    expect(ev(makePage({ crawlerView }), 'criterion_crawlerView')).toEqual([
+      { key: 'ev_crawlerView_text', params: { raw: 2000, rendered: 5000, percent: 40 } },
+      { key: 'ev_crawlerView_headings', params: { raw: 2, rendered: 6 } },
+      { key: 'ev_crawlerView_h1_missing' },
+      {
+        key: 'ev_crawlerView_missing_headings',
+        params: { count: 2, examples: '«Woher hat die Schweiz ihren Strom?», «Was kostet das?»' },
+      },
+      { key: 'ev_crawlerView_schema', params: { raw: 1, rendered: 2 } },
+    ]);
+    const ok = { ...crawlerView, status: 'ok' as const, rawChars: 5000, coverage: 1, rawHeadings: 6, rawHasH1: true, rawSchemaBlocks: 2, missingHeadings: [] };
+    expect(keys(makePage({ crawlerView: ok }), 'criterion_crawlerView')).toEqual(['ev_crawlerView_text', 'ev_crawlerView_headings']);
+  });
+});
+
+describe('MachineReadabilityAnalyzer — report texts (German)', () => {
+  it('explains the missing FAQPage with the concrete count and the Google caveat', async () => {
+    const { setLang } = await import('../../utils/i18n');
+    const { mapAnalysisResult } = await import('../../utils/analysis-mapper');
+    setLang('de');
+    const page = makePage({
+      schema: [{ '@type': 'NewsArticle', headline: 'H', author: 'Lukas Federer', datePublished: '2026-07-29' }],
+      faqQuestions: Array.from({ length: 52 }, (_, i) => `Woher hat die Schweiz ihren Strom ${i}?`),
+      robotsTxt: { exists: true, path: '/', allowedBots: {}, blockedBots: ['OAI-SearchBot'], totalChecked: 12 },
+    });
+    const mapped = mapAnalysisResult(new MachineReadabilityAnalyzer().analyze(page));
+    const schema = mapped.details.find((d) => d.criterionKey === 'Strukturierte Daten (Schema.org)')!;
+    const text = [...(schema.evidenceText ?? []), schema.whyText, schema.fixText].join('\n');
+    expect(text).toContain('Gefunden: NewsArticle.');
+    expect(text).toContain('Fehlt: FAQPage. Die Seite enthält 52 Fragen');
+    expect(text).toContain('seit 2023');
+    for (const d of mapped.details) {
+      for (const line of [...(d.evidenceText ?? []), d.whyText ?? '', d.fixText ?? '']) {
+        expect(line).not.toMatch(/\{[a-zA-Z]+\}/);
+      }
+    }
+    const robots = mapped.details.find((d) => (d.evidenceText ?? []).some((l) => l.includes('OAI-SearchBot (OpenAI)')));
+    expect(robots?.evidenceText?.join(' ')).toContain('Gesperrte Such-Crawler: OAI-SearchBot (OpenAI)');
+    setLang('en');
+  });
+});

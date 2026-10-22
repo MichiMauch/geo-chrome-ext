@@ -1,15 +1,25 @@
-import { PageData, AnalysisCategory, CategoryDetail, PageType } from '../types/analysis';
+import { PageData, AnalysisCategory, CategoryDetail, PageType, EvidenceLine } from '../types/analysis';
 import { BaseAnalyzer } from './base';
 import { GEO_CONFIG } from '../config/geo-config';
 import { getSourceLinks } from '../utils/source-links';
 import { hasSchemaType } from '../utils/schema-types';
+import { excerpt, excludedLinkEvidence, hostList, matchExcerpt } from './trust-evidence';
 
 interface FaqEvaluation {
   score: number;
   questionCount: number;
   // Questions whose answer is not in the DOM (closed accordions etc.)
   hiddenCount: number;
+  hasFaqSchema: boolean;
+  evidence: EvidenceLine[];
 }
+
+interface Evaluation {
+  score: number;
+  evidence: EvidenceLine[];
+}
+
+const MAX_EXAMPLES = 3;
 
 export class AiCitationAnalyzer extends BaseAnalyzer {
   protected readonly categoryKey = 'cat_aiCitation';
@@ -24,16 +34,25 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
     // upfront definition belong on content pages, not here.
     const isHomepage = pageType === 'homepage';
 
+    // FAQ first: its hidden answers also explain missing facts (check 1).
+    const faq = this.evaluateFaqSections(pageData);
+
     // Check 1: Citable fact statements
-    const factScore = this.evaluateFactStatements(pageData.paragraphs);
+    const facts = this.evaluateFactStatements(pageData.paragraphs);
+    const factScore = facts.score;
     const hasFacts = factScore > 0.3;
     const factPercent = Math.round(factScore * 100);
+    // Figures may sit in the answers a crawler never gets to see.
+    const factsHiddenAnswers = faq.hiddenCount > 0 && factScore < 1;
+    if (factsHiddenAnswers) facts.evidence.push({ key: 'ev_facts_hidden_faq', params: { hidden: faq.hiddenCount } });
 
     details.push({
       criterionKey: 'criterion_facts',
       found: hasFacts,
       value: `${factPercent}%`,
       weight: config.weights.factStatements,
+      evidence: facts.evidence,
+      ...(factsHiddenAnswers ? { fixKey: 'fix_facts_hidden' } : {}),
       progress: {
         current: factPercent,
         target: 100,
@@ -45,7 +64,6 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
     totalWeight += config.weights.factStatements;
 
     // Check 2: FAQ / Q&A sections
-    const faq = this.evaluateFaqSections(pageData);
     const faqScore = faq.score;
     const hasFaq = faqScore > 0;
     const faqPercent = Math.round(faqScore * 100);
@@ -64,6 +82,12 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
           ? { hidden: String(faq.hiddenCount), total: String(faq.questionCount) }
           : undefined,
         weight: config.weights.faqQa,
+        evidence: faq.evidence,
+        fixKey: faqAnswersHidden
+          ? 'fix_faq_hidden'
+          : faq.questionCount > 0
+            ? 'fix_faq_more'
+            : faq.hasFaqSchema ? 'fix_faq_schema_only' : 'fix_faq',
         progress: {
           current: faqPercent,
           target: 100,
@@ -76,7 +100,8 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
     }
 
     // Check 3: Sourced claims
-    const sourcedScore = this.evaluateSourcedClaims(pageData);
+    const sourced = this.evaluateSourcedClaims(pageData);
+    const sourcedScore = sourced.score;
     const hasSourcedClaims = sourcedScore > 0.3;
     const sourcedPercent = Math.round(sourcedScore * 100);
 
@@ -85,6 +110,7 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
       found: hasSourcedClaims,
       value: `${sourcedPercent}%`,
       weight: config.weights.sourcedClaims,
+      evidence: sourced.evidence,
       progress: {
         current: sourcedPercent,
         target: 100,
@@ -96,7 +122,8 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
     totalWeight += config.weights.sourcedClaims;
 
     // Check 4: Key information upfront
-    const upfrontScore = this.evaluateKeyInfoUpfront(pageData);
+    const upfront = this.evaluateKeyInfoUpfront(pageData);
+    const upfrontScore = upfront.score;
     const hasKeyInfoUpfront = upfrontScore > 0.5;
     const upfrontPercent = Math.round(upfrontScore * 100);
 
@@ -108,6 +135,7 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
         found: hasKeyInfoUpfront,
         value: `${upfrontPercent}%`,
         weight: config.weights.keyInfoUpfront,
+        evidence: upfront.evidence,
         progress: {
           current: upfrontPercent,
           target: 100,
@@ -133,9 +161,21 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
     return GEO_CONFIG.aiCitation.patterns.facts.some((p) => p.test(text));
   }
 
-  private evaluateFactStatements(paragraphs: string[]): number {
-    const factCount = paragraphs.filter((p) => this.isFact(p)).length;
-    return Math.min(1, factCount / GEO_CONFIG.aiCitation.thresholds.factCountDivisor);
+  private evaluateFactStatements(paragraphs: string[]): Evaluation {
+    const target = GEO_CONFIG.aiCitation.thresholds.factCountDivisor;
+    const factParagraphs = paragraphs.filter((p) => this.isFact(p));
+    const score = Math.min(1, factParagraphs.length / target);
+
+    const content = paragraphs.filter((p) => p.trim().length > 0);
+    if (content.length === 0) return { score, evidence: [{ key: 'ev_facts_no_paragraphs' }] };
+    const evidence: EvidenceLine[] = [
+      { key: 'ev_facts_counted', params: { total: content.length, facts: factParagraphs.length, target } },
+    ];
+    for (const p of factParagraphs.slice(0, MAX_EXAMPLES)) {
+      const text = matchExcerpt(p, GEO_CONFIG.aiCitation.patterns.facts);
+      if (text) evidence.push({ key: 'ev_facts_example', params: { text } });
+    }
+    return { score, evidence };
   }
 
   private evaluateFaqSections(pageData: PageData): FaqEvaluation {
@@ -174,6 +214,14 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
         ).size
       : pageData.paragraphs.filter(substantive).length;
     const answered = Math.min(questionCount - hiddenCount, answeredQuestions);
+    // Answers that are in the HTML but too short to count
+    const shortAnswers = pageData.questionAnswers
+      ? new Set(
+          pageData.questionAnswers
+            .filter(({ answer }) => answer.trim().length > 0 && !substantive(answer))
+            .map(({ question }) => normalize(question))
+        ).size
+      : 0;
 
     let score = 0;
     if (answered >= t.faqAnsweredFull) score = 1;
@@ -182,31 +230,81 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
 
     if (hasFaqSchema) score += t.faqSchemaBonus;
 
-    return { score: Math.min(1, score), questionCount, hiddenCount };
+    const evidence: EvidenceLine[] = [];
+    if (questionCount === 0) {
+      evidence.push({ key: hasFaqSchema ? 'ev_faq_schema_only' : 'ev_faq_none' });
+    } else {
+      evidence.push({
+        key: 'ev_faq_questions',
+        params: { count: questionCount, answered, full: t.faqAnsweredFull },
+      });
+      if (hiddenCount > 0) evidence.push({ key: 'ev_faq_hidden', params: { hidden: hiddenCount, total: questionCount } });
+      if (shortAnswers > 0) evidence.push({ key: 'ev_faq_short', params: { count: shortAnswers, min: t.upfrontMinWords } });
+      // Example questions: the ones without an answer when answers are
+      // missing, otherwise the first ones found.
+      const unanswered = (pageData.questionAnswers ?? [])
+        .filter(({ answer }) => answer.trim().length === 0)
+        .map(({ question }) => question);
+      const examples = hiddenCount > 0 && unanswered.length > 0
+        ? unanswered
+        : [...detected, ...pageData.headings.map((h) => h.text).filter((h) => questionPatterns.some((p) => p.test(h.trim())))];
+      for (const q of [...new Set(examples)].slice(0, 2)) {
+        evidence.push({ key: 'ev_faq_example', params: { text: excerpt(q) } });
+      }
+    }
+    if (questionCount > 0 || !hasFaqSchema) {
+      evidence.push({ key: hasFaqSchema ? 'ev_faq_schema_yes' : 'ev_faq_schema_no' });
+    }
+
+    return { score: Math.min(1, score), questionCount, hiddenCount, hasFaqSchema, evidence };
   }
 
-  private evaluateSourcedClaims(pageData: PageData): number {
+  private evaluateSourcedClaims(pageData: PageData): Evaluation {
     const t = GEO_CONFIG.aiCitation.thresholds;
     const allText = this.getFullText(pageData);
     const citationPatterns = GEO_CONFIG.aiCitation.patterns.citations;
 
     let citationCount = 0;
+    const citationExamples: string[] = [];
     for (const pattern of citationPatterns) {
       // Keep the pattern's own flags (u for \p{…}); only add g to count.
       const flags = pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`;
       const matches = allText.match(new RegExp(pattern.source, flags));
-      if (matches) citationCount += matches.length;
+      if (matches) {
+        citationCount += matches.length;
+        citationExamples.push(...matches);
+      }
     }
 
     // Same filter as TrustSources: no social/share/nav links, no tel:/mailto:
-    const sourceLinks = getSourceLinks(pageData.links).length;
+    const links = getSourceLinks(pageData.links);
+    const sourceLinks = links.length;
     const hasNumbers = pageData.paragraphs.some((p) => this.isFact(p));
 
     let score = Math.min(0.5, citationCount / 4);
     if (sourceLinks >= t.sourceLinksWithNumbers && hasNumbers) score += 0.3;
     if (sourceLinks >= t.sourceLinksMany) score += 0.2;
 
-    return Math.min(1, score);
+    const evidence: EvidenceLine[] = [];
+    if (citationCount > 0) {
+      evidence.push({ key: 'ev_sourcedClaims_citations', params: { count: citationCount } });
+      for (const text of [...new Set(citationExamples.map((c) => excerpt(c)))].slice(0, 2)) {
+        evidence.push({ key: 'ev_sourcedClaims_citation_example', params: { text } });
+      }
+    } else {
+      evidence.push({ key: 'ev_sourcedClaims_no_citations' });
+    }
+    evidence.push(
+      sourceLinks > 0
+        ? { key: 'ev_sourcedClaims_links', params: { count: sourceLinks, hosts: hostList(links), many: t.sourceLinksMany } }
+        : { key: 'ev_sourcedClaims_no_links' }
+    );
+    if (sourceLinks >= t.sourceLinksWithNumbers && !hasNumbers) {
+      evidence.push({ key: 'ev_sourcedClaims_links_no_numbers' });
+    }
+    evidence.push(...excludedLinkEvidence(pageData.links));
+
+    return { score: Math.min(1, score), evidence };
   }
 
   // The first paragraphs a reader (and an AI) actually reads: skips a
@@ -229,28 +327,64 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
     return (lead.length > 0 ? lead : pageData.paragraphs).slice(0, 3);
   }
 
-  private evaluateKeyInfoUpfront(pageData: PageData): number {
+  private evaluateKeyInfoUpfront(pageData: PageData): Evaluation {
     const firstParagraphs = this.leadParagraphs(pageData);
     const firstText = firstParagraphs.join(' ');
     const words = firstText.split(/\s+/).filter(Boolean);
     const first150 = words.slice(0, 150).join(' ');
 
-    if (first150.length === 0) return 0;
+    if (first150.length === 0) return { score: 0, evidence: [{ key: 'ev_keyInfoUpfront_no_text' }] };
 
+    // Each part adds its share; the evidence lists every part as met or
+    // missing, with that share, so the percentage adds up for the reader.
+    const evidence: EvidenceLine[] = [{ key: 'ev_keyInfoUpfront_lead', params: { text: excerpt(first150) } }];
     let score = 0;
-    if (GEO_CONFIG.aiCitation.patterns.definitions.some((p) => p.test(first150))) {
-      score += 0.3;
-    }
-
-    if (this.isFact(first150)) score += 0.2;
 
     const h1 = pageData.headings.find((h) => h.level === 1);
-    if (h1 && h1.text.length >= GEO_CONFIG.contentClarity.thresholds.h1MinLength) score += 0.2;
+    const h1Min = GEO_CONFIG.contentClarity.thresholds.h1MinLength;
+    if (h1 && h1.text.length >= h1Min) {
+      score += 0.2;
+      evidence.push({ key: 'ev_keyInfoUpfront_h1_ok', params: { text: excerpt(h1.text), points: 20 } });
+    } else if (h1) {
+      evidence.push({ key: 'ev_keyInfoUpfront_h1_short', params: { text: excerpt(h1.text), min: h1Min, points: 20 } });
+    } else {
+      evidence.push({ key: 'ev_keyInfoUpfront_h1_missing', params: { points: 20 } });
+    }
 
-    if (firstParagraphs.length > 0 && firstParagraphs[0].length < 500) score += 0.15;
+    const leadChars = firstParagraphs.length > 0 ? firstParagraphs[0].length : 0;
+    if (firstParagraphs.length > 0 && leadChars < 500) {
+      score += 0.15;
+      evidence.push({ key: 'ev_keyInfoUpfront_short_ok', params: { chars: leadChars, points: 15 } });
+    } else {
+      evidence.push({ key: 'ev_keyInfoUpfront_short_long', params: { chars: leadChars, points: 15 } });
+    }
 
-    if (pageData.meta.description && pageData.meta.description.length > 50) score += 0.15;
+    const description = pageData.meta.description ?? '';
+    if (description && description.length > 50) {
+      score += 0.15;
+      evidence.push({ key: 'ev_keyInfoUpfront_meta_ok', params: { chars: description.length, points: 15 } });
+    } else if (description.trim()) {
+      evidence.push({ key: 'ev_keyInfoUpfront_meta_short', params: { chars: description.length, points: 15 } });
+    } else {
+      evidence.push({ key: 'ev_keyInfoUpfront_meta_missing', params: { points: 15 } });
+    }
 
-    return Math.min(1, score);
+    const definition = matchExcerpt(first150, GEO_CONFIG.aiCitation.patterns.definitions);
+    if (definition) {
+      score += 0.3;
+      evidence.push({ key: 'ev_keyInfoUpfront_definition_ok', params: { text: definition, points: 30 } });
+    } else {
+      evidence.push({ key: 'ev_keyInfoUpfront_definition_missing', params: { points: 30 } });
+    }
+
+    const figure = matchExcerpt(first150, GEO_CONFIG.aiCitation.patterns.facts);
+    if (figure) {
+      score += 0.2;
+      evidence.push({ key: 'ev_keyInfoUpfront_number_ok', params: { text: figure, points: 20 } });
+    } else {
+      evidence.push({ key: 'ev_keyInfoUpfront_number_missing', params: { points: 20 } });
+    }
+
+    return { score: Math.min(1, score), evidence };
   }
 }

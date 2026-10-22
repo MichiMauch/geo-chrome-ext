@@ -23,6 +23,7 @@ const RECOMMENDATION_KEYS: Record<string, { i18nKey: string; priority: number }>
   'few_sources': { i18nKey: 'rec_few_sources', priority: 6 },
   // Machine Readability
   'no_schema': { i18nKey: 'rec_no_schema', priority: 10 },
+  'no_faq_schema': { i18nKey: 'rec_no_faq_schema', priority: 9 },
   'schema_incomplete': { i18nKey: 'rec_schema_incomplete', priority: 9 },
   'few_entities': { i18nKey: 'rec_few_entities', priority: 5 },
   'weak_semantic_html': { i18nKey: 'rec_weak_semantic_html', priority: 4 },

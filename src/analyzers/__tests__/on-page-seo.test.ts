@@ -284,3 +284,121 @@ describe('OnPageSeoAnalyzer', () => {
     });
   });
 });
+
+describe('OnPageSeoAnalyzer — report evidence', () => {
+  const analyzer = new OnPageSeoAnalyzer();
+  const detail = (page: PageData, key: string) =>
+    analyzer.analyze(page).details.find((d) => d.criterionKey === key)!;
+  const meta = makePage().meta;
+
+  it('title: shows the text and length, and what Google cuts off', () => {
+    const ok = detail(makePage({ meta: { ...meta, title: 'Stromversorgung in der Schweiz: FAQ | economiesuisse' } }), 'criterion_title_quality');
+    expect(ok.evidence).toEqual([
+      { key: 'ev_title_quality_text', params: { text: 'Stromversorgung in der Schweiz: FAQ | economiesuisse', len: 52, min: 30, max: 60 } },
+    ]);
+    expect(ok.fixKey).toBeUndefined();
+    const long = detail(makePage({ meta: { ...meta, title: 'A'.repeat(70) } }), 'criterion_title_quality');
+    expect(long.evidence?.[1]).toEqual({ key: 'ev_title_quality_long', params: { over: 10, visible: `${'A'.repeat(60)}…` } });
+    expect(long.fixKey).toBe('fix_title_quality_long');
+    const missing = detail(makePage({ meta: { ...meta, title: '' } }), 'criterion_title_quality');
+    expect(missing.evidence).toEqual([{ key: 'ev_title_quality_missing', params: { min: 30, max: 60 } }]);
+    expect(missing.fixKey).toBe('fix_title_quality_missing');
+  });
+
+  it('meta description: short description with its length', () => {
+    const d = detail(makePage({ meta: { ...meta, description: 'Kurz.' } }), 'criterion_meta_description');
+    expect(d.evidence).toEqual([
+      { key: 'ev_meta_description_text', params: { text: 'Kurz.', len: 5, min: 120, max: 160 } },
+      { key: 'ev_meta_description_short', params: { len: 5, min: 120 } },
+    ]);
+    expect(d.fixKey).toBe('fix_meta_description_short');
+  });
+
+  it('image alts: counts, decorative images and example file names', () => {
+    const images = [
+      { src: 'https://example.com/img/team-photo.jpg', alt: null, hasAltAttribute: false },
+      { src: 'data:image/svg+xml,<svg/>', alt: null, hasAltAttribute: false },
+      { src: 'https://example.com/a.png', alt: '', hasAltAttribute: true },
+      { src: 'https://example.com/b.png', alt: 'Chart', hasAltAttribute: true },
+    ];
+    expect(detail(makePage({ images }), 'criterion_image_alts').evidence).toEqual([
+      { key: 'ev_image_alts_count', params: { withAlt: 2, total: 4 } },
+      { key: 'ev_image_alts_decorative', params: { count: 1 } },
+      { key: 'ev_image_alts_missing', params: { count: 2, examples: '«team-photo.jpg»' } },
+    ]);
+    const none = detail(makePage(), 'criterion_image_alts');
+    expect(none.evidence).toEqual([{ key: 'ev_image_alts_none' }]);
+    expect(none.fixKey).toBe('fix_image_alts_none');
+  });
+
+  it('indexability: shows the robots setting', () => {
+    const robotsMeta = { hasNoIndex: true, hasNoFollow: false, hasNoArchive: false, hasNoSnippet: true, rawContent: 'noindex, nosnippet' };
+    expect(detail(makePage({ robotsMeta }), 'criterion_indexability').evidence).toEqual([
+      { key: 'ev_indexability_noindex', params: { raw: 'noindex, nosnippet' } },
+      { key: 'ev_indexability_nosnippet' },
+    ]);
+    expect(detail(makePage(), 'criterion_indexability').evidence).toEqual([{ key: 'ev_indexability_ok' }]);
+  });
+
+  it('viewport: content of the tag, missing device width, zoom lock', () => {
+    const viewport = { hasViewport: true, hasDeviceWidth: false, userScalableNo: true, rawContent: 'width=1024, user-scalable=no' };
+    const d = detail(makePage({ viewport }), 'criterion_viewport');
+    expect(d.evidence).toEqual([
+      { key: 'ev_viewport_no_device_width', params: { content: 'width=1024, user-scalable=no' } },
+      { key: 'ev_viewport_no_zoom' },
+    ]);
+    expect(d.fixKey).toBe('fix_viewport_device_width');
+    expect(detail(makePage(), 'criterion_viewport').evidence).toEqual([
+      { key: 'ev_viewport_ok', params: { content: 'width=device-width, initial-scale=1' } },
+    ]);
+  });
+
+  it('social cards: present and missing tags and what a shared link looks like', () => {
+    const page = makePage({
+      schema: [{ '@type': 'NewsArticle' }],
+      openGraph: { title: 'T', description: 'D', image: 'https://example.com/og-image-default.jpg', url: null, type: 'website' },
+      twitterCard: { card: null, title: null, description: null, image: null },
+    });
+    expect(detail(page, 'criterion_social_cards').evidence).toEqual([
+      { key: 'ev_social_cards_present', params: { tags: 'og:title, og:description' } },
+      { key: 'ev_social_cards_missing', params: { tags: 'og:image (logo/default), og:url, og:type=article, twitter:card' } },
+      { key: 'ev_social_cards_generic_image', params: { file: 'og-image-default.jpg' } },
+      { key: 'ev_social_cards_type', params: { type: 'website' } },
+      { key: 'ev_social_cards_preview_noimage' },
+      { key: 'ev_social_cards_preview_x' },
+      { key: 'ev_social_cards_preview_nourl' },
+    ]);
+    const full = makePage({
+      openGraph: { title: 'T', description: 'D', image: 'https://example.com/hero.jpg', url: 'https://example.com', type: 'website' },
+      twitterCard: { card: 'summary_large_image', title: null, description: null, image: null },
+    });
+    expect(detail(full, 'criterion_social_cards').evidence?.slice(-1)[0]).toEqual({ key: 'ev_social_cards_preview_ok' });
+  });
+
+  it('canonical: canonical URL against page URL', () => {
+    expect(detail(makePage(), 'criterion_canonical').evidence).toEqual([
+      { key: 'ev_canonical_self', params: { canonical: 'https://example.com' } },
+    ]);
+    const d = detail(makePage({ url: 'https://example.com/a', canonical: { href: 'https://example.com/' } }), 'criterion_canonical');
+    expect(d.evidence).toEqual([
+      { key: 'ev_canonical_mismatch', params: { canonical: 'https://example.com/', page: 'https://example.com/a' } },
+    ]);
+    expect(d.fixKey).toBe('fix_canonical_mismatch');
+  });
+
+  it('German report text carries the concrete data and no raw placeholder', async () => {
+    const { setLang } = await import('../../utils/i18n');
+    const { mapAnalysisResult } = await import('../../utils/analysis-mapper');
+    setLang('de');
+    const mapped = mapAnalysisResult(
+      analyzer.analyze(makePage({ url: 'https://example.com/a', meta: { ...meta, title: 'Kurz' }, canonical: { href: 'https://example.com/' } }))
+    );
+    const all = mapped.details.flatMap((d) => [...(d.evidenceText ?? []), d.whyText ?? '', d.fixText ?? '']);
+    expect(all).toContain('Seitentitel: «Kurz» (4 Zeichen, empfohlen 30–60).');
+    expect(all).toContain('Das Canonical zeigt auf eine andere Adresse: https://example.com/. Diese Seite: https://example.com/a.');
+    for (const line of all) expect(line).not.toMatch(/\{[a-zA-Z]+\}/);
+    // No images: no fix text to show
+    expect(mapped.details.find((d) => d.criterionKey === 'Bild-Alt-Texte')?.fixText).toBeUndefined();
+    setLang('en');
+  });
+});

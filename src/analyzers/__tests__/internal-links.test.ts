@@ -138,3 +138,35 @@ describe('internal linking check', () => {
     expect(detail.value).toBe('1 (100%)');
   });
 });
+
+describe('internal links — report evidence', () => {
+  it('counts contextual links, shows examples and the generic anchors', () => {
+    const { detail } = linkingDetail(
+      makePage([
+        link('Guide to GEO basics'),
+        link('mehr'),
+        link('Home', false, { isNavigational: true }),
+      ])
+    );
+    expect(detail.evidence).toEqual([
+      { key: 'ev_internalLinks_count', params: { count: 2, min: 3, nav: 1 } },
+      { key: 'ev_internalLinks_examples', params: { examples: '«Guide to GEO basics»' } },
+      { key: 'ev_internalLinks_generic', params: { count: 1, examples: '«mehr»' } },
+      { key: 'ev_internalLinks_ratio', params: { percent: 50, min: 80 } },
+    ]);
+  });
+
+  it('reports no contextual links, and the anchor-text fix when only the texts fail', () => {
+    expect(linkingDetail(makePage([])).detail.evidence).toEqual([
+      { key: 'ev_internalLinks_none', params: { min: 3, nav: 0 } },
+    ]);
+    const { detail } = linkingDetail(makePage([link('Guide to GEO basics'), link('mehr'), link('hier'), link('weiter')]));
+    expect(detail.fixKey).toBe('fix_internalLinks_anchors');
+  });
+
+  it('a passing page has examples and no fix override', () => {
+    const { detail } = linkingDetail(makePage([link('Guide A one'), link('Guide B two'), link('Guide C three')]));
+    expect(detail.evidence?.[0]).toEqual({ key: 'ev_internalLinks_count', params: { count: 3, min: 3, nav: 0 } });
+    expect(detail.fixKey).toBeUndefined();
+  });
+});

@@ -1,7 +1,19 @@
+import { reportTexts as contentClarityReport } from '../i18n/report/content-clarity';
+import { reportTexts as answerabilityReport } from '../i18n/report/answerability';
+import { reportTexts as trustSourcesReport } from '../i18n/report/trust-sources';
+import { reportTexts as machineReadabilityReport } from '../i18n/report/machine-readability';
+import { reportTexts as aiCitationReport } from '../i18n/report/ai-citation';
+import { reportTexts as onPageSeoReport } from '../i18n/report/on-page-seo';
+
 export type Lang = 'en' | 'de' | 'fr' | 'es' | 'pt' | 'it';
 
 export const translations: Record<Lang, Record<string, string>> = {
   en: {
+    value_chars: "{count} characters",
+    rec_no_faq_schema: "Add a FAQPage Schema.org block that lists the questions and answers already on the page.",
+    report_found: "What we found on this page",
+    report_why: "Why it matters",
+    report_fix: "How to fix it",
     // UI
     ui_loading: 'Analyzing page...',
     ui_topRecommendations: 'Top Recommendations',
@@ -363,6 +375,11 @@ export const translations: Record<Lang, Record<string, string>> = {
   },
 
   de: {
+    value_chars: "{count} Zeichen",
+    rec_no_faq_schema: "Ergänzen Sie einen FAQPage-Block (Schema.org) mit den Fragen und Antworten, die schon auf der Seite stehen.",
+    report_found: "Was wir auf dieser Seite gefunden haben",
+    report_why: "Warum das wichtig ist",
+    report_fix: "So beheben Sie es",
     ui_loading: 'Seite wird analysiert...',
     ui_topRecommendations: 'Top-Empfehlungen',
     ui_analysisFailed: 'Analyse fehlgeschlagen',
@@ -709,6 +726,11 @@ export const translations: Record<Lang, Record<string, string>> = {
   },
 
   fr: {
+    value_chars: "{count} caractères",
+    rec_no_faq_schema: "Ajoutez un bloc Schema.org FAQPage reprenant les questions et réponses déjà présentes sur la page.",
+    report_found: "Ce que nous avons trouvé sur cette page",
+    report_why: "Pourquoi c'est important",
+    report_fix: "Comment corriger",
     rec_faq_answers_hidden: "Les réponses de la FAQ sont absentes du HTML (p. ex. accordéons fermés) — les crawlers ne voient que les questions. Intégrez les réponses au HTML, même lorsqu'elles sont repliées.",
     explain_faq_answers_hidden: "{hidden} réponses de FAQ sur {total} ne figurent pas dans le HTML (p. ex. accordéons fermés) — les crawlers ne voient que les questions. Les réponses masquées ne sont pas comptabilisées.",
     value_sourceLinks: "{count} liens sources (objectif : {target})",
@@ -1052,6 +1074,11 @@ export const translations: Record<Lang, Record<string, string>> = {
   },
 
   es: {
+    value_chars: "{count} caracteres",
+    rec_no_faq_schema: "Añada un bloque Schema.org FAQPage con las preguntas y respuestas que ya están en la página.",
+    report_found: "Lo que encontramos en esta página",
+    report_why: "Por qué importa",
+    report_fix: "Cómo solucionarlo",
     rec_faq_answers_hidden: "Las respuestas de las FAQ no están en el HTML (p. ej., acordeones cerrados): los crawlers solo ven las preguntas. Incluya las respuestas en el HTML aunque estén plegadas.",
     explain_faq_answers_hidden: "{hidden} de {total} respuestas de las FAQ no están en el HTML (p. ej., acordeones cerrados): los crawlers solo ven las preguntas. Las respuestas ocultas no puntúan.",
     value_sourceLinks: "{count} enlaces a fuentes (objetivo: {target})",
@@ -1395,6 +1422,11 @@ export const translations: Record<Lang, Record<string, string>> = {
   },
 
   pt: {
+    value_chars: "{count} caracteres",
+    rec_no_faq_schema: "Adicione um bloco Schema.org FAQPage com as perguntas e respostas que já estão na página.",
+    report_found: "O que encontrámos nesta página",
+    report_why: "Porque é importante",
+    report_fix: "Como corrigir",
     rec_faq_answers_hidden: "As respostas das FAQ não estão no HTML (p. ex., acordeões fechados) — os crawlers só veem as perguntas. Inclua as respostas no HTML, mesmo quando recolhidas.",
     explain_faq_answers_hidden: "{hidden} de {total} respostas das FAQ não estão no HTML (p. ex., acordeões fechados) — os crawlers só veem as perguntas. Respostas ocultas não pontuam.",
     value_sourceLinks: "{count} links de fontes (meta: {target})",
@@ -1738,6 +1770,11 @@ export const translations: Record<Lang, Record<string, string>> = {
   },
 
   it: {
+    value_chars: "{count} caratteri",
+    rec_no_faq_schema: "Aggiungete un blocco Schema.org FAQPage con le domande e le risposte già presenti nella pagina.",
+    report_found: "Cosa abbiamo trovato su questa pagina",
+    report_why: "Perché è importante",
+    report_fix: "Come risolvere",
     rec_faq_answers_hidden: "Le risposte delle FAQ non sono presenti nell'HTML (ad es. accordion chiusi): i crawler vedono solo le domande. Inserite le risposte nell'HTML anche quando sono chiuse.",
     explain_faq_answers_hidden: "{hidden} risposte FAQ su {total} non sono nell'HTML (ad es. accordion chiusi): i crawler vedono solo le domande. Le risposte nascoste non vengono conteggiate.",
     value_sourceLinks: "{count} link a fonti (obiettivo: {target})",
@@ -2081,6 +2118,21 @@ export const translations: Record<Lang, Record<string, string>> = {
   },
 };
 
+// Report explanations (evidence / why / fix) live in one file per category
+const REPORT_TEXTS = [
+  contentClarityReport,
+  answerabilityReport,
+  trustSourcesReport,
+  machineReadabilityReport,
+  aiCitationReport,
+  onPageSeoReport,
+];
+for (const texts of REPORT_TEXTS) {
+  (Object.keys(translations) as Lang[]).forEach((lang) => {
+    Object.assign(translations[lang], texts[lang]);
+  });
+}
+
 let currentLang: Lang = 'en';
 
 export function detectLanguage(): Lang {
@@ -2102,6 +2154,10 @@ export function setLang(lang: Lang): void {
 
 export function getLang(): Lang {
   return currentLang;
+}
+
+export function hasTranslation(key: string): boolean {
+  return key in translations.en;
 }
 
 export function t(key: string, params?: Record<string, string | number>): string {

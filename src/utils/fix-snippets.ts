@@ -349,6 +349,7 @@ export function getFixSnippet(key: string): FixSnippetResult | null {
     case 'no_schema':
       return { type: 'snippet', language: 'json-ld', code: jsonLdArticle(), note: t('snippet_note_schema') };
     case 'no_faq':
+    case 'no_faq_schema':
       return { type: 'snippet', language: 'html', code: jsonLdFaq(), note: t('snippet_note_faq') };
     case 'no_author':
       return { type: 'snippet', language: 'html', code: authorMarkup(), note: t('snippet_note_author') };

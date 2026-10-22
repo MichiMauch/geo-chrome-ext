@@ -266,6 +266,35 @@ const BOILERPLATE_HEADINGS: RegExp[] = [
 const normalizeText = (text: string | null | undefined): string =>
   (text || '').trim().replace(/\s+/g, ' ');
 
+const BLOCK_TAGS = new Set([
+  'ADDRESS', 'ARTICLE', 'ASIDE', 'BLOCKQUOTE', 'BR', 'DD', 'DIV', 'DL', 'DT',
+  'FIGCAPTION', 'FIGURE', 'FOOTER', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+  'HEADER', 'HR', 'LI', 'MAIN', 'NAV', 'OL', 'P', 'SECTION', 'TABLE', 'TD',
+  'TH', 'TR', 'UL',
+]);
+
+// Text as a reader sees it: block elements start a new word, so an author
+// card <a><div>Lukas Federer</div><div>Bereichsleiter</div></a> reads
+// "Lukas Federer Bereichsleiter", not "Lukas FedererBereichsleiter" as with
+// textContent. jsdom/DOMParser documents have no layout, so innerText is no
+// option.
+function readableText(el: Element): string {
+  let out = '';
+  const walk = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      out += node.textContent ?? '';
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const block = BLOCK_TAGS.has((node as Element).tagName);
+    if (block) out += ' ';
+    node.childNodes.forEach(walk);
+    if (block) out += ' ';
+  };
+  walk(el);
+  return normalizeText(out);
+}
+
 export interface ContentScope {
   root: Element;
   // The page H1 (first one outside chrome landmarks), if any
@@ -490,7 +519,7 @@ export function contentParagraphElements(
   );
   const seen = new Set<string>();
   const pushIfGood = (el: Element) => {
-    const t = normalizeText(el.textContent);
+    const t = readableText(el);
     if (t.length > 30 && !seen.has(t) && !h1Texts.has(t)) {
       seen.add(t);
       result.push({ el, text: t });
@@ -707,7 +736,7 @@ export function extractQuestionAnswers(doc: Document = document): QuestionAnswer
       .map((list) => ({
         el: list,
         text: Array.from(list.querySelectorAll(':scope > li'))
-          .map((li) => normalizeText(li.textContent))
+          .map((li) => readableText(li))
           .filter(Boolean)
           .join(' '),
       })),
@@ -741,7 +770,7 @@ export function extractLists(doc: Document = document): ListData[] {
     if (scope.isExcluded(list)) return;
     const items = Array.from(list.querySelectorAll(':scope > li'))
       .slice(0, 10)
-      .map((li) => li.textContent?.trim() || '')
+      .map((li) => readableText(li))
       .filter((text) => text.length > 0);
 
     if (items.length > 0) {
@@ -816,7 +845,7 @@ export function extractLinks(doc: Document = document, baseUrl: string = window.
     // tel:, mailto:, javascript:, data:, … are not links a crawler follows
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
-    const text = a.textContent?.trim() || '';
+    const text = readableText(a);
     const isExternal = registrableDomain(url.hostname) !== siteDomain;
     const isNavigational =
       scope.isExcluded(a) ||

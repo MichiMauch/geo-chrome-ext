@@ -7,6 +7,11 @@ export interface AnalysisCategory {
   recommendations: string[]; // These are translation keys
 }
 
+export interface EvidenceLine {
+  key: string;
+  params?: Record<string, string | number>;
+}
+
 export interface CategoryDetail {
   criterionKey: string; // Translation key
   found: boolean;
@@ -15,6 +20,17 @@ export interface CategoryDetail {
   // "{date} (older than 1 year)". Ignored for values that are already text.
   valueParams?: Record<string, string>;
   weight: number;
+  // What the check found on this page, for the report: translation keys with
+  // their params, set by the analyzer (e.g. { key: 'ev_schema_missing_type',
+  // params: { types: 'NewsArticle', missing: 'FAQPage' } }).
+  evidence?: EvidenceLine[];
+  // Situation-specific fix text key; defaults to `fix_<criterion>`.
+  fixKey?: string;
+  // Filled by mapAnalysisResult from evidence / why_ / fix_ keys, in the UI
+  // language at analysis time (like criterionKey and value).
+  evidenceText?: string[];
+  whyText?: string;
+  fixText?: string;
   // Progress info for partial completion (e.g., "2/3" or "67%")
   progress?: {
     current: number;

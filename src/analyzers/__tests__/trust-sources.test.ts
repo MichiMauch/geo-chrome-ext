@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { TrustSourcesAnalyzer } from '../trust-sources';
 import { mapAnalysisResult } from '../../utils/analysis-mapper';
 import { getSourceLinks, isSourceLink } from '../../utils/source-links';
+import { setLang } from '../../utils/i18n';
 import type { LinkData, PageData } from '../../types/analysis';
 
 function makePage(links: LinkData[]): PageData {
@@ -117,5 +118,53 @@ describe('TrustSourcesAnalyzer — externe Quellen', () => {
     expect(detail?.found).toBe(false);
     expect(detail?.progress?.current).toBe(1);
     expect(category.recommendations).toContain('few_sources');
+  });
+});
+
+describe('TrustSourcesAnalyzer — Report-Belege', () => {
+  afterEach(() => setLang('en'));
+
+  function detailOf(page: PageData, key: string) {
+    return new TrustSourcesAnalyzer().analyze(page, 'article').details.find((d) => d.criterionKey === key);
+  }
+
+  it('nennt die Herkunft des Autors', () => {
+    const fromSchema = detailOf({ ...makePage([]), author: { name: 'Jane Doe', source: 'schema' } }, 'criterion_author');
+    expect(fromSchema?.evidence).toEqual([{ key: 'ev_author_schema', params: { name: 'Jane Doe' } }]);
+    const fromByline = detailOf({ ...makePage([]), author: { name: 'Jane Doe', source: 'dom' } }, 'criterion_author');
+    expect(fromByline?.evidence?.[0].key).toBe('ev_author_byline');
+    const publisher = detailOf({ ...makePage([]), author: { name: 'ACME AG', source: 'publisher' } }, 'criterion_author');
+    expect(publisher?.evidence?.[0]).toEqual({ key: 'ev_author_publisher', params: { name: 'ACME AG' } });
+  });
+
+  it('meldet einen fehlenden Autor', () => {
+    expect(detailOf(makePage([]), 'criterion_author')?.evidence).toEqual([{ key: 'ev_author_none' }]);
+  });
+
+  it('listet gefundene Quellen mit Host und erklärt, welche Links nicht zählen', () => {
+    const { detail } = sourcesDetail([
+      link('https://www.bfe.admin.ch/statistik', 'Stromstatistik'),
+      link('https://www.oecd.org/report', 'OECD-Bericht'),
+      link('https://www.linkedin.com/company/acme', 'LinkedIn'),
+      link('https://www.facebook.com/sharer/sharer.php?u=x', ''),
+      link('https://partner.example.org', 'Partner', { isNavigational: true }),
+    ]);
+    expect(detail?.evidence).toEqual([
+      { key: 'ev_sources_found', params: { count: 2, target: 2, hosts: 'bfe.admin.ch, oecd.org' } },
+      { key: 'ev_sources_excluded_social', params: { count: 2, hosts: 'linkedin.com, facebook.com' } },
+      { key: 'ev_sources_excluded_chrome', params: { count: 1, hosts: 'partner.example.org' } },
+    ]);
+  });
+
+  it('meldet fehlende Quellen und übersetzt ohne offene Platzhalter', () => {
+    setLang('de');
+    const { category, detail } = sourcesDetail([link('https://x.com/acme', '', { isNavigational: true })]);
+    expect(detail?.evidence?.[0]).toEqual({ key: 'ev_sources_none', params: { target: 2 } });
+    const mapped = mapAnalysisResult(category).details.find((d) => d.evidenceText?.some((e) => e.includes('x.com')));
+    const text = mapped?.evidenceText?.join(' ') ?? '';
+    expect(text).toContain('Links auf soziale Netzwerke oder Teilen-Buttons: 1 (x.com)');
+    expect(text).toContain('x.com');
+    expect(text).not.toMatch(/\{\w+\}/);
+    expect(mapped?.fixText).toContain('Fliesstext');
   });
 });

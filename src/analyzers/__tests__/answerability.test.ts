@@ -1,5 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { AnswerabilityAnalyzer } from '../answerability';
+import { mapAnalysisResult } from '../../utils/analysis-mapper';
+import { setLang } from '../../utils/i18n';
 import { PageData, HeadingData, ListData } from '../../types/analysis';
 
 function makePage(overrides: Partial<PageData> = {}): PageData {
@@ -216,5 +218,148 @@ describe('direct answers under question headings', () => {
     });
     // One of three needed → 1/3 × 70 %
     expect(score(page)).toBe(23);
+  });
+});
+
+describe('AnswerabilityAnalyzer report evidence', () => {
+  const analyzer = new AnswerabilityAnalyzer();
+  const detail = (page: PageData, key: string) =>
+    analyzer.analyze(page).details.find((d) => d.criterionKey === key)!;
+  const keys = (d: { evidence?: { key: string }[] }) => (d.evidence ?? []).map((e) => e.key);
+  const line = (d: { evidence?: { key: string; params?: Record<string, string | number> }[] }, key: string) =>
+    d.evidence!.find((e) => e.key === key)!;
+
+  afterEach(() => setLang('en'));
+
+  describe('definitions', () => {
+    it('counts definitions and direct answers with examples', () => {
+      const d = detail(
+        makePage({
+          paragraphs: ['Ein Smart Meter ist ein digitaler Stromzähler. Er misst den Verbrauch.'],
+          questionAnswers: [
+            { question: 'Woher kommt der Strom?', answer: 'Rund 60 Prozent stammen aus Wasserkraft.' },
+            { question: 'Was kostet das?', answer: 'Kommt drauf an?' },
+          ],
+        }),
+        'criterion_definitions'
+      );
+      expect(line(d, 'ev_definitions_sentences').params).toEqual({
+        count: 1,
+        example: '"Ein Smart Meter ist ein digitaler Stromzähler."',
+      });
+      expect(line(d, 'ev_definitions_answers').params).toEqual({ questions: 2, answered: 1 });
+      expect(line(d, 'ev_definitions_answer_example').params).toEqual({
+        question: '"Woher kommt der Strom?"',
+        answer: '"Rund 60 Prozent stammen aus Wasserkraft."',
+      });
+      expect(line(d, 'ev_definitions_total').params).toEqual({ count: 2, target: 3 });
+      expect(d.fixKey).toBeUndefined();
+    });
+
+    it('says when question headings have their answers hidden', () => {
+      const d = detail(
+        makePage({
+          questionAnswers: [{ question: 'A?', answer: '' }, { question: 'B?', answer: '' }],
+          faqAnswersHidden: 2,
+        }),
+        'criterion_definitions'
+      );
+      expect(keys(d)).toEqual([
+        'ev_definitions_sentences_none',
+        'ev_definitions_answers',
+        'ev_definitions_answers_hidden',
+        'ev_definitions_total',
+        'ev_definitions_structured',
+      ]);
+      expect(line(d, 'ev_definitions_answers_hidden').params).toEqual({ count: 2 });
+      expect(d.fixKey).toBe('fix_definitions_hidden');
+    });
+
+    it('reports empty question headings and the no-question case', () => {
+      const empty = detail(makePage({ questionAnswers: [{ question: 'A?', answer: ' ' }] }), 'criterion_definitions');
+      expect(line(empty, 'ev_definitions_answers_empty').params).toEqual({ count: 1 });
+      expect(keys(detail(makePage(), 'criterion_definitions'))).toContain('ev_definitions_no_questions');
+    });
+
+    it('points to the step-form share once enough answers exist', () => {
+      const d = detail(
+        makePage({
+          paragraphs: [
+            'Ein Smart Meter ist ein digitaler Stromzähler.',
+            'Die Grundversorgung bezeichnet die Belieferung durch den Netzbetreiber.',
+            'Netzstabilität ist die Fähigkeit, Last und Erzeugung auszugleichen.',
+          ],
+        }),
+        'criterion_definitions'
+      );
+      expect(line(d, 'ev_definitions_total').params).toEqual({ count: 3, target: 3 });
+      expect(d.fixKey).toBe('fix_definitions_structured');
+    });
+  });
+
+  describe('lists', () => {
+    it('describes the lists found', () => {
+      const d = detail(makePage({ lists: [list(3), { type: 'ol', itemCount: 2, items: ['Antrag stellen', 'Warten'] }] }), 'criterion_lists');
+      expect(line(d, 'ev_lists_found').params).toEqual({ count: 2, ul: 1, ol: 1, items: 5, target: 3 });
+      expect(line(d, 'ev_lists_examples').params).toEqual({ examples: '"Item 0", "Antrag stellen"' });
+    });
+
+    it('reports missing lists', () => {
+      expect(keys(detail(makePage(), 'criterion_lists'))).toEqual(['ev_lists_none']);
+    });
+  });
+
+  describe('sections', () => {
+    it('explains why 3/3 subheadings still fail with too little text', () => {
+      const d = detail(
+        makePage({
+          headings: [h(1), h(2, 'A'), h(3, 'B?'), h(3, 'C?')],
+          paragraphs: ['Only one paragraph.'],
+          faqAnswersHidden: 2,
+        }),
+        'criterion_sections'
+      );
+      expect(d.found).toBe(false);
+      expect(line(d, 'ev_sections_count').params).toEqual({ count: 3, target: 3, examples: '"A", "B?", "C?"' });
+      expect(line(d, 'ev_sections_thin_half').params).toEqual({ paragraphs: 1, min: 3 });
+      expect(line(d, 'ev_sections_hidden_answers').params).toEqual({ count: 2 });
+      expect(d.fixKey).toBe('fix_sections_hidden');
+    });
+
+    it('uses the thin-content fix without hidden answers', () => {
+      const d = detail(makePage({ headings: [h(2), h(2), h(2)], paragraphs: ['x'] }), 'criterion_sections');
+      expect(d.fixKey).toBe('fix_sections_thin');
+    });
+
+    it('confirms passing sections', () => {
+      const d = detail(makePage({ headings: [h(2), h(2), h(2)], paragraphs: ['a', 'b', 'c'] }), 'criterion_sections');
+      expect(keys(d)).toEqual(['ev_sections_count', 'ev_sections_paragraphs_ok']);
+      expect(d.fixKey).toBeUndefined();
+    });
+
+    it('reports missing subheadings', () => {
+      const d = detail(makePage({ paragraphs: ['a'] }), 'criterion_sections');
+      expect(keys(d)).toEqual(['ev_sections_none', 'ev_sections_thin']);
+    });
+  });
+
+  it('translates into German report text with the concrete data', () => {
+    setLang('de');
+    const category = analyzer.analyze(
+      makePage({
+        headings: [h(1), h(2, 'Woher kommt der Strom?'), h(3, 'B'), h(3, 'C')],
+        paragraphs: ['Nur ein Absatz.'],
+        questionAnswers: [{ question: 'Woher kommt der Strom?', answer: '' }],
+        faqAnswersHidden: 1,
+      })
+    );
+    const mapped = mapAnalysisResult(category).details;
+    const all = mapped.flatMap((d) => [...(d.evidenceText ?? []), d.whyText ?? '', d.fixText ?? '']).join('\n');
+    expect(all).toContain('Frage-Überschriften: 1. Direkt mit einer Aussage darunter beantwortet: 0.');
+    expect(all).toContain('Fragen, deren Antwort nicht im HTML steht: 1');
+    expect(all).toContain('aber zu wenige Textabsätze: 1 (nötig sind mindestens 3)');
+    expect(all).toContain('Zwischenüberschriften (H2–H6): 3 (Ziel: 3), z. B. «Woher kommt der Strom?», «B», «C».');
+    expect(all).not.toMatch(/\{[a-zA-Z]+\}/);
+    expect(all).not.toMatch(/\bev_/);
   });
 });

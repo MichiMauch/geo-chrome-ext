@@ -218,6 +218,35 @@ export function computeReadabilityScore(
   return { score, raw: flesch, formula: 'flesch' };
 }
 
+/**
+ * Raw counts behind LIX and Flesch, for explaining a value in the report:
+ * words, sentences, words longer than 6 letters and (English rules unless
+ * lang says otherwise) syllables. Null when there is no countable text.
+ */
+export function readabilityStats(
+  paragraphs: string[],
+  lang = 'en'
+): { words: number; sentences: number; longWords: number; syllables: number } | null {
+  const { words, sentenceCount } = tokenize(paragraphs);
+  if (words.length === 0 || sentenceCount === 0) return null;
+  return {
+    words: words.length,
+    sentences: sentenceCount,
+    longWords: words.filter((w) => w.length > 6).length,
+    syllables: words.reduce((sum, w) => sum + countSyllables(w, lang), 0),
+  };
+}
+
+/**
+ * Raw LIX / Flesch value at which computeReadabilityScore reaches a given
+ * normalized score (inverse of its linear mapping), e.g. the pass mark.
+ */
+export function readabilityRawForScore(score: number, formula: ReadabilityFormula): number {
+  return formula === 'lix'
+    ? LIX_ZERO - score * (LIX_ZERO - LIX_FULL)
+    : 30 + score * 60;
+}
+
 // Five readability bands shared by LIX and Flesch, easiest → hardest. The
 // i18nKey resolves to a localized label; color follows the score palette
 // (green → red) so a marker's hue alone tells you how hard the passage is.

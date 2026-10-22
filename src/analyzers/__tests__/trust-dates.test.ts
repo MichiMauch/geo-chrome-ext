@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { TrustSourcesAnalyzer } from '../trust-sources';
 import { mapAnalysisResult } from '../../utils/analysis-mapper';
+import { setLang } from '../../utils/i18n';
 import type { DateData, PageData } from '../../types/analysis';
 
 function makePage(dates: DateData[]): PageData {
@@ -50,7 +51,8 @@ describe('TrustSourcesAnalyzer — Datum', () => {
     ]);
 
     const detail = datumsDetail(page);
-    expect(detail?.value).toBe('Last updated: heute');
+    // Als Tag angezeigt, nicht als Rohtext der Fundstelle
+    expect(detail?.value).toBe(neu.toISOString().slice(0, 10));
     expect(detail?.progress?.current).toBe(1);
   });
 
@@ -75,5 +77,73 @@ describe('TrustSourcesAnalyzer — Datum', () => {
     const detail = datumsDetail(makePage([]));
     expect(detail?.value).toBe('value_noDateFound');
     expect(detail?.progress?.current).toBe(0);
+  });
+});
+
+describe('TrustSourcesAnalyzer — Datum, Report-Belege', () => {
+  afterEach(() => setLang('en'));
+
+  const tag = (d: Date) => d.toISOString().slice(0, 10);
+  // Exact days back (DST-safe), plus an hour so the floor is stable.
+  const tageZurueck = (tage: number) => new Date(Date.now() - tage * 86400000 - 3600000);
+
+  it('nennt Änderungs- und Veröffentlichungsdatum mit Alter', () => {
+    const geaendert = tageZurueck(42);
+    const publiziert = tageZurueck(85);
+    const page = {
+      ...makePage([
+        { date: geaendert, formatted: geaendert.toISOString(), source: 'schema' as const },
+        { date: publiziert, formatted: publiziert.toISOString(), source: 'schema' as const },
+      ]),
+      schema: [{ '@type': 'NewsArticle', dateModified: geaendert.toISOString(), datePublished: publiziert.toISOString() }],
+    };
+    expect(datumsDetail(page)?.evidence).toEqual([
+      { key: 'ev_date_newest_modified', params: { date: tag(geaendert) } },
+      { key: 'ev_date_age_days', params: { days: 42 } },
+      { key: 'ev_date_also_published', params: { date: tag(publiziert) } },
+    ]);
+  });
+
+  it('meldet ein altes Veröffentlichungsdatum ohne Änderungsdatum', () => {
+    setLang('de');
+    const alt = tageZurueck(800);
+    const base = makePage([{ date: alt, formatted: alt.toISOString(), source: 'meta' }]);
+    const page = { ...base, meta: { ...base.meta, publishDate: alt.toISOString() } };
+    const detail = datumsDetail(page);
+    expect(detail?.evidence).toEqual([
+      { key: 'ev_date_newest_published', params: { date: tag(alt) } },
+      { key: 'ev_date_age_years', params: { years: 2 } },
+      { key: 'ev_date_stale' },
+      { key: 'ev_date_no_modified' },
+    ]);
+    expect(detail?.fixKey).toBe('fix_date_old');
+
+    const mapped = mapAnalysisResult(new TrustSourcesAnalyzer().analyze(page, 'article'))
+      .details.find((d) => d.evidenceText?.some((e) => e.includes(tag(alt))));
+    const text = mapped?.evidenceText?.join(' ') ?? '';
+    expect(text).toContain(`veröffentlicht am ${tag(alt)}`);
+    expect(text).toContain('rund 2 Jahre her');
+    expect(text).not.toMatch(/\{\w+\}/);
+    expect(mapped?.fixText).toContain('Änderungsdatum');
+  });
+
+  it('meldet fehlendes Datum mit eigenem Beleg', () => {
+    const detail = datumsDetail(makePage([]));
+    expect(detail?.evidence).toEqual([{ key: 'ev_date_none' }]);
+    expect(detail?.fixKey).toBe('fix_date');
+  });
+
+  it('kennzeichnet ein Datum nur im sichtbaren Text', () => {
+    const d = tageZurueck(1);
+    const detail = datumsDetail(makePage([{ date: d, formatted: 'gestern', source: 'text' }]));
+    expect(detail?.evidence).toEqual([
+      { key: 'ev_date_newest_visible', params: { date: tag(d) } },
+      { key: 'ev_date_age_today' },
+    ]);
+  });
+
+  it('gibt nicht anwendbaren Seiten keine Belege', () => {
+    const detail = new TrustSourcesAnalyzer().analyze(makePage([]), 'homepage').details.find((x) => x.criterionKey === 'criterion_date');
+    expect(detail?.evidence).toBeUndefined();
   });
 });

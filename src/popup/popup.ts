@@ -619,7 +619,7 @@ function renderCategory(category: AnalysisCategory, extraHtml = ''): string {
 
       if (d.progress) {
         const progressPercent = (d.progress.current / d.progress.target) * 100;
-        if (progressPercent >= 100) {
+        if (progressPercent >= 100 && d.found) {
           progressColor = 'text-green-600';
           icon = '✓';
         } else if (progressPercent > 0) {

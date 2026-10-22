@@ -1,5 +1,24 @@
 # Changelog
 
+## [4.6.0] - 2026-10-22
+
+### Added
+
+- **The HTML report explains every criterion in three parts:** what was found on this page, why it matters, and how to fix it. The report used to give one generic sentence per criterion, e.g. "Few citable fact statements found (Score: 0%)", which left non-technical readers guessing what exactly was wrong.
+  - **What we found** lists concrete findings with numbers and short examples from the page. Examples: "Found: NewsArticle. Missing: FAQPage, the page contains 52 questions in FAQ format, e.g. «Woher hat die Schweiz ihren Strom?»", "Skipped levels: H1 → H3 «Auf einen Blick»", "Checked paragraphs: 1, with a number, percentage or source: 0", and which parts of "Key information upfront" were met, each with its share of the score. Passing criteria show what was found too, so it is clear why they are green.
+  - **Why it matters** explains in plain words what search engines and AI systems do with it. It explains jargon in passing and states caveats honestly: Google only shows FAQ rich results for government and health sites since 2023, and the effect of llms.txt is unproven.
+  - **How to fix it** is an action and says who can do it: the editorial team in the CMS, or the web agency in the template. Where a copy-paste template exists, it points to it. Several criteria have case-specific fixes, e.g. FAQ answers missing from the HTML vs. no FAQ at all.
+  - All texts exist in all six interface languages. They live in one file per category under `src/i18n/report/`, with writing rules in its README. Analyses stored before this version keep the previous one-line explanation.
+- **FAQPage template when only FAQPage is missing:** A page whose only missing schema type is FAQPage got the recommendation and snippet for an Article block. It now gets `no_faq_schema` with the FAQPage template.
+
+### Fixed
+
+- **Green tick on a failing check:** "Structured sections" could show 3/3 with a green tick in the panel and the report while failing for lack of text under the subheadings. A full progress bar on a failing check now shows as partial.
+- **Raw value keys:** The value mapper treated every value containing a digit as finished text, so `value_h1Optimal` appeared verbatim. It now translates every value that is a known key.
+- **"52 chars" in German and other languages:** Title and meta description lengths were hard-coded in English. They are now translated.
+- **Dates shown as raw timestamps:** "2026-09-10T09:01:46+00:00" is now shown as "2026-09-10".
+- **Words glued together:** Link texts, list items and accordion panels built from several `<div>`s were read with `textContent`, so an author card read "Lukas FedererBereichsleiter". Block elements now separate words.
+
 ## [4.5.0] - 2026-10-22
 
 ### Changed

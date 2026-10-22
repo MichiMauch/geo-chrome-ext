@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { ContentClarityAnalyzer } from '../content-clarity';
 import { PageData, HeadingData } from '../../types/analysis';
 import { setLang } from '../../utils/i18n';
+import { mapAnalysisResult } from '../../utils/analysis-mapper';
 
 function makePage(overrides: Partial<PageData> = {}): PageData {
   return {
@@ -215,5 +216,145 @@ describe('ContentClarityAnalyzer', () => {
     );
     expect(result.score).toBeGreaterThan(4);
     expect(result.recommendations).toEqual([]);
+  });
+});
+
+describe('ContentClarityAnalyzer report evidence', () => {
+  const analyzer = new ContentClarityAnalyzer();
+  const detail = (page: PageData, key: string) =>
+    analyzer.analyze(page).details.find((d) => d.criterionKey === key)!;
+  const keys = (d: { evidence?: { key: string }[] }) => (d.evidence ?? []).map((e) => e.key);
+  const line = (d: { evidence?: { key: string; params?: Record<string, string | number> }[] }, key: string) =>
+    d.evidence!.find((e) => e.key === key)!;
+
+  afterEach(() => setLang('en'));
+
+  describe('h1', () => {
+    it('names the H1 when it is fine', () => {
+      const d = detail(makePage({ headings: [h(1, 'Heat pumps explained')] }), 'criterion_h1');
+      expect(line(d, 'ev_h1_ok').params).toEqual({ text: '"Heat pumps explained"' });
+      expect(d.fixKey).toBeUndefined();
+    });
+
+    it('reports a missing H1 and the first heading instead', () => {
+      const d = detail(makePage({ headings: [h(2, 'Intro')] }), 'criterion_h1');
+      expect(keys(d)).toEqual(['ev_h1_none', 'ev_h1_first_heading']);
+      expect(line(d, 'ev_h1_first_heading').params).toEqual({ level: 2, text: '"Intro"' });
+    });
+
+    it('lists multiple H1s and picks the multiple-H1 fix', () => {
+      const d = detail(makePage({ headings: [h(1, 'Logo'), h(1, 'Main topic')] }), 'criterion_h1');
+      expect(line(d, 'ev_h1_multiple').params).toEqual({ count: 2, examples: '"Logo", "Main topic"' });
+      expect(d.fixKey).toBe('fix_h1_multiple');
+    });
+
+    it('reports a too-short H1 with its length', () => {
+      const d = detail(makePage({ headings: [h(1, 'GEO')] }), 'criterion_h1');
+      expect(line(d, 'ev_h1_too_short').params).toEqual({ text: '"GEO"', length: 3, min: 5 });
+      expect(d.fixKey).toBe('fix_h1_length');
+    });
+  });
+
+  describe('hierarchy', () => {
+    it('names each skipped level with the heading text', () => {
+      const d = detail(
+        makePage({ headings: [h(1, 'Title'), h(3, 'Auf einen Blick'), h(2, 'A'), h(3, 'B')] }),
+        'criterion_hierarchy'
+      );
+      expect(line(d, 'ev_hierarchy_outline').params).toEqual({ outline: '1 × H1, 1 × H2, 2 × H3' });
+      expect(line(d, 'ev_hierarchy_skips').params).toEqual({ count: 1, examples: 'H1 → H3 "Auf einen Blick"' });
+      expect(keys(d)).not.toContain('ev_hierarchy_ok');
+    });
+
+    it('confirms a clean outline', () => {
+      const d = detail(makePage({ headings: [h(1), h(2), h(3), h(2)] }), 'criterion_hierarchy');
+      expect(keys(d)).toEqual(['ev_hierarchy_outline', 'ev_hierarchy_ok']);
+    });
+
+    it('reports a late H1 and the no-H1 case', () => {
+      const late = detail(makePage({ headings: [h(2, 'X'), h(2, 'Y'), h(3, 'Z'), h(1, 'T'), h(2)] }), 'criterion_hierarchy');
+      expect(line(late, 'ev_hierarchy_late_h1').params).toEqual({ position: 4, before: '"X", "Y"' });
+      const none = detail(makePage({ headings: [h(2), h(2)] }), 'criterion_hierarchy');
+      expect(keys(none)).toContain('ev_hierarchy_no_h1');
+      expect(none.fixKey).toBe('fix_hierarchy_no_h1');
+      expect(keys(detail(makePage(), 'criterion_hierarchy'))).toEqual(['ev_hierarchy_none']);
+    });
+  });
+
+  describe('scannable', () => {
+    it('explains headings without text and hidden FAQ answers', () => {
+      const d = detail(
+        makePage({
+          headings: [h(1, 'FAQ'), ...Array.from({ length: 6 }, (_, i) => h(3, `Question ${i}?`))],
+          paragraphs: ['A'.repeat(405)],
+          faqAnswersHidden: 6,
+        }),
+        'criterion_scannable'
+      );
+      expect(line(d, 'ev_scannable_paragraphs').params).toEqual({ count: 1, avg: 405, min: 80, good: 300 });
+      expect(keys(d)).toContain('ev_scannable_no_lists');
+      expect(line(d, 'ev_scannable_headings_too_many').params).toEqual({ headings: 6, blocks: 1 });
+      expect(line(d, 'ev_scannable_hidden_answers').params).toEqual({ count: 6 });
+      expect(d.fixKey).toBe('fix_scannable_hidden');
+    });
+
+    it('describes a well-chunked page', () => {
+      const d = detail(
+        makePage({ headings: [h(1, 'T'), h(2, 'A'), h(2, 'B')], paragraphs: EN_PARAGRAPHS, lists: LISTS }),
+        'criterion_scannable'
+      );
+      expect(keys(d)).toEqual(['ev_scannable_paragraphs', 'ev_scannable_lists', 'ev_scannable_headings_ok']);
+      expect(d.fixKey).toBeUndefined();
+    });
+
+    it('names the longest paragraph when several are too long', () => {
+      const long = 'Word '.repeat(80).trim();
+      const d = detail(makePage({ paragraphs: [long, long + ' extra', EN_PARAGRAPHS[0]] }), 'criterion_scannable');
+      expect(line(d, 'ev_scannable_longest').params).toMatchObject({ count: 2, length: long.length + 6 });
+    });
+  });
+
+  describe('readability', () => {
+    it('explains formula, value, scale and the hardest paragraph for German text', () => {
+      setLang('de');
+      const hard = 'Die Versorgungssicherheitsbeurteilung berücksichtigt Wechselwirkungen zwischen Produktionskapazitäten, Netzinfrastruktur, Speichertechnologien und grenzüberschreitenden Handelsbeziehungen.';
+      const d = detail(makePage({ lang: 'de', paragraphs: [...DE_PARAGRAPHS, hard] }), 'criterion_readability');
+      expect(line(d, 'ev_readability_formula_lix').params).toEqual({ lang: 'Deutsch' });
+      expect(line(d, 'ev_readability_value_lix').params).toMatchObject({ pass: 52 });
+      expect(keys(d)).toContain('ev_readability_stats_lix');
+      expect(String(line(d, 'ev_readability_hardest_lix').params!.text)).toContain('Die Versorgungssicherheitsbeurteilung');
+    });
+
+    it('uses Flesch wording for English text and flags little text', () => {
+      const d = detail(makePage({ lang: 'en', paragraphs: EN_PARAGRAPHS }), 'criterion_readability');
+      expect(keys(d)).toContain('ev_readability_formula_flesch');
+      expect(line(d, 'ev_readability_value_flesch').params).toMatchObject({ pass: 60 });
+      expect(line(d, 'ev_readability_stats_flesch').params).toHaveProperty('syllables');
+      expect(keys(d)).toContain('ev_readability_little_text');
+    });
+
+    it('says when the page language is unknown', () => {
+      const d = detail(makePage({ paragraphs: ['xyzzy plugh quux frobnicate wibble wobble foo bar baz qux. Lorem ipsum dolor sit amet consectetur.'] }), 'criterion_readability');
+      expect(keys(d)).toContain('ev_readability_formula_lix_unknown');
+    });
+  });
+
+  it('translates into German report text with the concrete data', () => {
+    setLang('de');
+    const category = analyzer.analyze(
+      makePage({
+        lang: 'de',
+        headings: [h(1, 'Stromversorgung der Schweiz'), h(3, 'Auf einen Blick'), h(2, 'A'), h(3, 'B')],
+        paragraphs: DE_PARAGRAPHS,
+      })
+    );
+    const mapped = mapAnalysisResult(category).details;
+    const all = mapped.flatMap((d) => [...(d.evidenceText ?? []), d.whyText ?? '', d.fixText ?? '']).join('\n');
+    expect(all).toContain('H1 gefunden: «Stromversorgung der Schweiz».');
+    expect(all).toContain('Übersprungene Ebenen (1): H1 → H3 «Auf einen Blick».');
+    expect(all).toMatch(/LIX \d+: /);
+    expect(all).toContain('weil die Seite auf Deutsch ist');
+    expect(all).not.toMatch(/\{[a-zA-Z]+\}/);
+    expect(all).not.toMatch(/\bev_/);
   });
 });
