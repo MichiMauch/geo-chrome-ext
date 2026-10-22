@@ -7,6 +7,7 @@ import { computeHighlightTargets } from '../utils/highlight-targets';
 import { applyHighlights, clearHighlights, scrollToFirst } from '../utils/highlight';
 import { discoverSitemapPages } from '../utils/sitemap';
 import { analyzeCrawlerView } from '../utils/crawler-view';
+import { withXRobotsTag } from '../utils/x-robots-tag';
 import { saveAnalysis } from '../utils/history';
 import { reportAnalysis } from '../utils/analytics';
 
@@ -50,6 +51,7 @@ async function runBatchAnalysis(maxPages: number): Promise<void> {
         const html = await res.text();
         const parsed = new DOMParser().parseFromString(html, 'text/html');
         const pageData = await extractPageData(parsed, url, { llmsTxt, robotsTxt });
+        pageData.robotsMeta = withXRobotsTag(pageData.robotsMeta, res.headers.get('x-robots-tag'));
         const result = runFullAnalysis(pageData);
         await saveAnalysis(result);
         void reportAnalysis(result);
@@ -173,6 +175,9 @@ chrome.runtime.onMessage.addListener(
             analyzeCrawlerView().catch(() => undefined),
           ]);
           pageData.crawlerView = crawlerView;
+          // noindex can also come as an HTTP header; only the crawler fetch
+          // sees the response headers of the page.
+          pageData.robotsMeta = withXRobotsTag(pageData.robotsMeta, crawlerView?.xRobotsTag);
 
           // Run full analysis
           const result = runFullAnalysis(pageData);

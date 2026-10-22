@@ -317,11 +317,18 @@ export class OnPageSeoAnalyzer extends BaseAnalyzer {
   }
 
   private indexEvidence(robots: PageData['robotsMeta']): EvidenceLine[] {
-    const raw = robots.rawContent?.trim();
+    const meta = robots.rawContent?.trim();
+    const header = robots.headerContent?.trim();
+    const metaNoIndex = !!meta && /(^|,)\s*(noindex|none)\s*(,|$)/i.test(meta);
+    // The noindex may sit only in the X-Robots-Tag header: quote that then.
+    const raw = robots.hasNoIndex && !metaNoIndex && header ? `X-Robots-Tag: ${header}` : meta;
     const evidence: EvidenceLine[] = [];
-    if (robots.hasNoIndex) evidence.push({ key: 'ev_indexability_noindex', params: { raw: raw || 'noindex' } });
+    if (robots.hasNoIndex) evidence.push({ key: 'ev_indexability_noindex', params: { raw: clip(raw || 'noindex') } });
     else if (raw) evidence.push({ key: 'ev_indexability_ok_raw', params: { raw: clip(raw) } });
     else evidence.push({ key: 'ev_indexability_ok' });
+    if (header && !(robots.hasNoIndex && raw?.startsWith('X-Robots-Tag'))) {
+      evidence.push({ key: 'ev_indexability_header', params: { raw: clip(header) } });
+    }
     if (robots.hasNoSnippet) evidence.push({ key: 'ev_indexability_nosnippet' });
     return evidence;
   }

@@ -172,6 +172,9 @@ export interface RobotsMetaData {
   hasNoArchive: boolean;
   hasNoSnippet: boolean;
   rawContent: string | null; // The original content of <meta name="robots">
+  // X-Robots-Tag HTTP header of the page, when it was read (live crawler
+  // fetch, sitemap batch). Its noindex/nosnippet count like the meta tag's.
+  headerContent?: string | null;
 }
 
 export interface HeadingData {
@@ -281,6 +284,8 @@ export interface CrawlerViewData {
   rawBytes: number;
   // Headings visible in the browser but absent from the crawler's HTML
   missingHeadings: string[];
+  // X-Robots-Tag response header of the crawler fetch, if any
+  xRobotsTag?: string | null;
 }
 
 export interface RobotsTxtData {
@@ -295,6 +300,10 @@ export interface RobotsTxtData {
   allowedBots: Record<string, boolean>;
   blockedBots: string[];
   totalChecked: number;
+  // robots.txt answered with a server error (5xx/429): per RFC 9309 every
+  // bot must assume a complete disallow, so all checked bots are blocked.
+  unreachable?: boolean;
+  httpStatus?: number;
 }
 
 // Domain dashboard: one row per analyzed URL of a domain

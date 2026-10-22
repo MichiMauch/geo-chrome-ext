@@ -35,6 +35,7 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_indexability_ok_raw: `The page’s robots setting: “{raw}”, without “noindex”.`,
     ev_indexability_noindex: `The page carries “noindex” (robots setting: “{raw}”). Search engines will not include it in their results.`,
     ev_indexability_nosnippet: `Also “nosnippet”: Google shows no text excerpt and does not use the text in AI Overviews either.`,
+    ev_indexability_header: `HTTP header X-Robots-Tag: “{raw}”.`,
     why_indexability: `With “noindex” in its code, a page asks search engines not to include it. A page that is not in the index cannot be found through search, and AI search tools that build on search indexes do not know it either. “noindex” is often left over by mistake from a test environment.`,
     fix_indexability: `Check whether the block is intended. If not, the editorial team removes the “do not index” or “hide from search engines” option for this page in the CMS. If it is built into the template, the web agency removes it there.`,
 
@@ -96,6 +97,7 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_indexability_ok_raw: `Robots-Angabe der Seite: «{raw}», ohne «noindex».`,
     ev_indexability_noindex: `Die Seite trägt «noindex» (Robots-Angabe: «{raw}»). Suchmaschinen nehmen sie nicht in ihre Ergebnisse auf.`,
     ev_indexability_nosnippet: `Zusätzlich «nosnippet»: Google zeigt keinen Textauszug und verwendet den Text auch nicht in KI-Übersichten.`,
+    ev_indexability_header: `HTTP-Header X-Robots-Tag: «{raw}».`,
     why_indexability: `Mit «noindex» im Seitencode bittet eine Seite Suchmaschinen, sie nicht aufzunehmen. Was nicht im Index ist, findet niemand über die Suche, und auch KI-Suchen, die auf Suchindizes aufbauen, kennen die Seite dann nicht. Oft bleibt «noindex» versehentlich aus einer Testumgebung stehen.`,
     fix_indexability: `Prüfen Sie, ob die Sperre gewollt ist. Wenn nicht, entfernt die Redaktion im CMS die Option «Nicht indexieren» oder «Vor Suchmaschinen verbergen» für diese Seite. Ist sie im Template fest eingebaut, entfernt die Web-Agentur sie dort.`,
 
@@ -157,6 +159,7 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_indexability_ok_raw: `Directive robots de la page : « {raw} », sans « noindex ».`,
     ev_indexability_noindex: `La page porte « noindex » (directive robots : « {raw} »). Les moteurs de recherche ne l’incluent pas dans leurs résultats.`,
     ev_indexability_nosnippet: `En plus « nosnippet » : Google n’affiche aucun extrait et n’utilise pas non plus le texte dans les AI Overviews.`,
+    ev_indexability_header: `En-tête HTTP X-Robots-Tag : « {raw} ».`,
     why_indexability: `Avec « noindex » dans son code, une page demande aux moteurs de recherche de ne pas l’inclure. Une page absente de l’index est introuvable par la recherche, et les recherches IA qui s’appuient sur ces index ne la connaissent pas non plus. Souvent, « noindex » reste par erreur après un environnement de test.`,
     fix_indexability: `Vérifiez si ce blocage est voulu. Sinon, la rédaction désactive dans le CMS l’option « Ne pas indexer » ou « Masquer aux moteurs de recherche » pour cette page. Si elle est intégrée au gabarit, l’agence web la retire à cet endroit.`,
 
@@ -218,6 +221,7 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_indexability_ok_raw: `Indicación robots de la página: «{raw}», sin «noindex».`,
     ev_indexability_noindex: `La página lleva «noindex» (indicación robots: «{raw}»). Los buscadores no la incluyen en sus resultados.`,
     ev_indexability_nosnippet: `Además «nosnippet»: Google no muestra ningún extracto y tampoco usa el texto en las AI Overviews.`,
+    ev_indexability_header: `Cabecera HTTP X-Robots-Tag: «{raw}».`,
     why_indexability: `Con «noindex» en su código, una página pide a los buscadores que no la incluyan. Lo que no está en el índice no se encuentra en la búsqueda, y las búsquedas con IA que se basan en esos índices tampoco conocen la página. A menudo «noindex» queda por error de un entorno de pruebas.`,
     fix_indexability: `Compruebe si el bloqueo es intencionado. Si no lo es, el equipo editorial desactiva en el CMS la opción «No indexar» u «Ocultar a los buscadores» para esta página. Si está fijada en la plantilla, la agencia web la elimina allí.`,
 
@@ -279,6 +283,7 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_indexability_ok_raw: `Indicação robots da página: «{raw}», sem «noindex».`,
     ev_indexability_noindex: `A página tem «noindex» (indicação robots: «{raw}»). Os motores de pesquisa não a incluem nos resultados.`,
     ev_indexability_nosnippet: `Também «nosnippet»: o Google não mostra excerto e também não usa o texto nas AI Overviews.`,
+    ev_indexability_header: `Cabeçalho HTTP X-Robots-Tag: «{raw}».`,
     why_indexability: `Com «noindex» no código, uma página pede aos motores de pesquisa que não a incluam. O que não está no índice não é encontrado na pesquisa, e as pesquisas com IA que se baseiam nesses índices também não conhecem a página. Muitas vezes o «noindex» fica por engano de um ambiente de testes.`,
     fix_indexability: `Verifique se o bloqueio é intencional. Se não for, a equipa editorial desativa no CMS a opção «Não indexar» ou «Ocultar dos motores de pesquisa» para esta página. Se estiver fixada no modelo, a agência web remove-a lá.`,
 
@@ -340,6 +345,7 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_indexability_ok_raw: `Indicazione robots della pagina: «{raw}», senza «noindex».`,
     ev_indexability_noindex: `La pagina ha «noindex» (indicazione robots: «{raw}»). I motori di ricerca non la includono nei risultati.`,
     ev_indexability_nosnippet: `In più «nosnippet»: Google non mostra alcun estratto e non usa il testo nemmeno nelle AI Overviews.`,
+    ev_indexability_header: `Header HTTP X-Robots-Tag: «{raw}».`,
     why_indexability: `Con «noindex» nel codice, una pagina chiede ai motori di ricerca di non includerla. Ciò che non è nell’indice non si trova con la ricerca, e nemmeno le ricerche con IA basate su quegli indici conoscono la pagina. Spesso «noindex» rimane per errore da un ambiente di test.`,
     fix_indexability: `Verificate se il blocco è voluto. Se no, la redazione disattiva nel CMS l’opzione «Non indicizzare» o «Nascondi ai motori di ricerca» per questa pagina. Se è fissata nel template, l’agenzia web la rimuove lì.`,
 

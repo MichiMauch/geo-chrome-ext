@@ -83,3 +83,64 @@ describe('Startseite mit Sprachpräfix', () => {
     (url) => expect(type(url)).toBe('other')
   );
 });
+
+describe('Fliesstext ohne <p>', () => {
+  it('erfasst Text in div-Blättern, aber keine Labels', async () => {
+    const { extractParagraphs } = await import('../dom-helpers');
+    const doc = parse(`<body><main><h1>Seite</h1>
+      <div class="text">${TEXT} Und noch ein zweiter Satz zum Thema.</div>
+      <div class="meta">5 Minuten Lesezeit</div>
+      <div><p>${TEXT} Mit p.</p></div>
+      <div class="card"><a href="/x"><div>${TEXT} Teaser im Link.</div></a></div></main></body>`);
+    expect(extractParagraphs(doc)).toEqual([
+      `${TEXT} Und noch ein zweiter Satz zum Thema.`,
+      `${TEXT} Mit p.`,
+    ]);
+  });
+});
+
+describe('X-Robots-Tag', async () => {
+  const { parseXRobotsTag, withXRobotsTag } = await import('../x-robots-tag');
+  const base = { hasNoIndex: false, hasNoFollow: false, hasNoArchive: false, hasNoSnippet: false, rawContent: null };
+
+  it('liest allgemeine und bot-spezifische Anweisungen', () => {
+    expect(parseXRobotsTag('noindex, nofollow')).toEqual(['noindex', 'nofollow']);
+    expect(parseXRobotsTag('googlebot: noindex, nofollow')).toEqual(['noindex', 'nofollow']);
+    expect(parseXRobotsTag('otherbot: noindex, nofollow')).toEqual([]);
+    expect(parseXRobotsTag('max-snippet: 20, GPTBot: noindex')).toEqual(['max-snippet: 20', 'noindex']);
+  });
+
+  it('macht die Seite per Header nicht indexierbar', () => {
+    const merged = withXRobotsTag(base, 'noindex');
+    expect(merged.hasNoIndex).toBe(true);
+    expect(merged.headerContent).toBe('noindex');
+    expect(withXRobotsTag(base, null)).toBe(base);
+  });
+});
+
+describe('robots.txt mit Serverfehler', () => {
+  it('gilt nach RFC 9309 als komplette Sperre', async () => {
+    const { checkRobotsTxt } = await import('../dom-helpers');
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () => new Response('oops', { status: 503 })) as typeof fetch;
+    try {
+      const r = await checkRobotsTxt(['GPTBot', 'ClaudeBot'], 'https://x.ch', '/');
+      expect(r.unreachable).toBe(true);
+      expect(r.blockedBots).toEqual(['GPTBot', 'ClaudeBot']);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  it('404 erlaubt weiterhin alles', async () => {
+    const { checkRobotsTxt } = await import('../dom-helpers');
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () => new Response('nope', { status: 404 })) as typeof fetch;
+    try {
+      const r = await checkRobotsTxt(['GPTBot'], 'https://x.ch', '/');
+      expect(r.blockedBots).toEqual([]);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});

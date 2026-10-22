@@ -385,7 +385,9 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     const allBotsAllowed = blockedCount === 0;
     const hasAnyBlock = blockedCount > 0;
 
-    const robotsValue = !robotsTxt?.exists
+    const robotsValue = robotsTxt?.unreachable
+      ? 'value_allBotsBlocked'
+      : !robotsTxt?.exists
       ? 'value_allBotsAllowed'
       : allBotsAllowed
         ? 'value_allBotsAllowed'
@@ -623,6 +625,12 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     robots: PageData['robotsTxt'] | undefined,
     total: number
   ): { evidence: EvidenceLine[]; fixKey?: string } {
+    if (robots?.unreachable) {
+      return {
+        evidence: [{ key: 'ev_robotsTxt_unreachable', params: { status: robots.httpStatus ?? 500 } }],
+        fixKey: 'fix_robotsTxt_unreachable',
+      };
+    }
     if (!robots?.exists) return { evidence: [{ key: 'ev_robotsTxt_none' }] };
     const path = robots.path || '/';
     const blocked = robots.blockedBots;

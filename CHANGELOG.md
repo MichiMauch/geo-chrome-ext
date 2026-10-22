@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.7.3] - 2026-10-22
+
+### Fixed
+
+- **Body text outside `<p>` was not read:** Only `<p>` elements (and FAQ answer panels) counted as paragraphs. Sites built with page builders or React components that put copy straight into a `<div>` had zero paragraphs, so readability, facts, key information upfront and scanability all dropped to zero. Text blocks without block-level children are now read as paragraphs too, as long as they look like prose (at least 80 characters and sentence punctuation). Labels such as "5 min read", text inside links, list items, table cells and form controls stay out. Paragraphs are now kept in document order, so the lead the upfront check reads really is the first text on the page.
+- **A noindex in the HTTP header went unnoticed:** Indexability only read `<meta name="robots">`. A server or CDN can set `noindex` in the `X-Robots-Tag` header without any trace in the HTML. The header is now read from the crawler fetch (live analysis) and from each page of the sitemap batch, including crawler-specific rules such as `googlebot: noindex`. The report quotes the header.
+- **robots.txt with a server error counted as "all allowed":** Under RFC 9309 a robots.txt that answers with 5xx (or 429) is unreachable, and crawlers must assume the whole site is blocked. The check now scores it that way and explains the cause in all six languages.
+
 ## [4.7.2] - 2026-10-22
 
 ### Fixed

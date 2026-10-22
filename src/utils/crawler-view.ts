@@ -63,10 +63,14 @@ export async function analyzeCrawlerView(
     return authWall(response.status);
   }
 
-  return compareDocuments(renderedDoc, rawDoc, {
-    httpStatus: response.status,
-    rawBytes: byteLength(html),
-  });
+  return {
+    ...compareDocuments(renderedDoc, rawDoc, {
+      httpStatus: response.status,
+      rawBytes: byteLength(html),
+    }),
+    // Same response, so the indexability check can read the header too
+    xRobotsTag: response.headers.get('x-robots-tag'),
+  };
 }
 
 function authWall(httpStatus: number): CrawlerViewData {

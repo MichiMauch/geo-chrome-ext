@@ -80,6 +80,8 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
 
     // robots.txt
     ev_robotsTxt_none: `No robots.txt found. This means all AI crawlers may read the page.`,
+    ev_robotsTxt_unreachable: `robots.txt answers with a server error (HTTP {status}). Under the robots standard (RFC 9309) crawlers must then assume that the whole site is blocked, so for AI crawlers the page is off limits.`,
+    fix_robotsTxt_unreachable: `The web agency or hosting makes /robots.txt answer reliably with status 200 (or 404 if there is none). Also check whether a firewall or CDN rejects requests for the file.`,
     ev_robotsTxt_all_allowed: `robots.txt allows all {count} checked AI crawlers to access this page ({path}), including GPTBot and OAI-SearchBot (OpenAI), ClaudeBot (Anthropic) and PerplexityBot.`,
     ev_robotsTxt_blocked_count: `{blocked} of {total} checked AI crawlers are blocked for this page ({path}).`,
     ev_robotsTxt_blocked_search: `Blocked search crawlers: {bots}. They fetch pages for answers in ChatGPT, Claude and Perplexity. While blocked, the page does not appear there as a source.`,
@@ -167,6 +169,8 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     fix_llmsTxt_fullOnly: `Es gibt nur die Langfassung llms-full.txt. Die Web-Agentur ergänzt im Hauptverzeichnis die kurze Übersichtsdatei llms.txt, die auf die wichtigsten Seiten und auf llms-full.txt verweist (Vorlage in den Empfehlungen).`,
 
     ev_robotsTxt_none: `Keine robots.txt gefunden. Damit dürfen alle KI-Crawler die Seite lesen.`,
+    ev_robotsTxt_unreachable: `Die robots.txt antwortet mit einem Serverfehler (HTTP {status}). Nach dem Robots-Standard (RFC 9309) müssen Crawler dann annehmen, dass die ganze Site gesperrt ist. Für KI-Crawler ist die Seite damit tabu.`,
+    fix_robotsTxt_unreachable: `Die Webagentur oder das Hosting sorgt dafür, dass /robots.txt zuverlässig mit Status 200 antwortet (oder mit 404, wenn es keine gibt). Prüfen Sie auch, ob eine Firewall oder ein CDN Anfragen nach der Datei abweist.`,
     ev_robotsTxt_all_allowed: `Die robots.txt erlaubt allen {count} geprüften KI-Crawlern den Zugriff auf diese Seite ({path}), darunter GPTBot und OAI-SearchBot (OpenAI), ClaudeBot (Anthropic) und PerplexityBot.`,
     ev_robotsTxt_blocked_count: `{blocked} von {total} geprüften KI-Crawlern sind für diese Seite ({path}) gesperrt.`,
     ev_robotsTxt_blocked_search: `Gesperrte Such-Crawler: {bots}. Sie holen Seiten für Antworten in ChatGPT, Claude und Perplexity. Solange sie gesperrt sind, erscheint die Seite dort nicht als Quelle.`,
@@ -253,6 +257,8 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     fix_llmsTxt_fullOnly: `Seule la version longue llms-full.txt existe. L’agence web ajoute à la racine le court fichier de synthèse llms.txt, qui renvoie aux pages les plus importantes et à llms-full.txt (modèle dans les recommandations).`,
 
     ev_robotsTxt_none: `Aucun robots.txt trouvé. Tous les robots d’IA peuvent donc lire la page.`,
+    ev_robotsTxt_unreachable: `Le robots.txt répond par une erreur serveur (HTTP {status}). Selon la norme robots (RFC 9309), les robots doivent alors considérer tout le site comme bloqué : la page est donc interdite aux robots d’IA.`,
+    fix_robotsTxt_unreachable: `L’agence web ou l’hébergeur fait en sorte que /robots.txt réponde de manière fiable avec le statut 200 (ou 404 s’il n’existe pas). Vérifiez aussi qu’un pare-feu ou un CDN ne rejette pas les requêtes vers ce fichier.`,
     ev_robotsTxt_all_allowed: `Le robots.txt autorise les {count} robots d’IA vérifiés à accéder à cette page ({path}), dont GPTBot et OAI-SearchBot (OpenAI), ClaudeBot (Anthropic) et PerplexityBot.`,
     ev_robotsTxt_blocked_count: `{blocked} des {total} robots d’IA vérifiés sont bloqués pour cette page ({path}).`,
     ev_robotsTxt_blocked_search: `Robots de recherche bloqués : {bots}. Ils récupèrent des pages pour les réponses de ChatGPT, Claude et Perplexity. Tant qu’ils sont bloqués, la page n’y apparaît pas comme source.`,
@@ -339,6 +345,8 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     fix_llmsTxt_fullOnly: `Solo existe la versión larga llms-full.txt. La agencia web añade en el directorio raíz el breve archivo de resumen llms.txt, que remite a las páginas más importantes y a llms-full.txt (plantilla en las recomendaciones).`,
 
     ev_robotsTxt_none: `No se encontró robots.txt. Por tanto, todos los rastreadores de IA pueden leer la página.`,
+    ev_robotsTxt_unreachable: `El robots.txt responde con un error del servidor (HTTP {status}). Según el estándar robots (RFC 9309), los rastreadores deben suponer entonces que todo el sitio está bloqueado, así que la página queda vetada para los rastreadores de IA.`,
+    fix_robotsTxt_unreachable: `La agencia web o el hosting se asegura de que /robots.txt responda de forma fiable con el estado 200 (o 404 si no existe). Compruebe también si un firewall o una CDN rechaza las peticiones a ese archivo.`,
     ev_robotsTxt_all_allowed: `El robots.txt permite a los {count} rastreadores de IA comprobados acceder a esta página ({path}), entre ellos GPTBot y OAI-SearchBot (OpenAI), ClaudeBot (Anthropic) y PerplexityBot.`,
     ev_robotsTxt_blocked_count: `{blocked} de {total} rastreadores de IA comprobados están bloqueados para esta página ({path}).`,
     ev_robotsTxt_blocked_search: `Rastreadores de búsqueda bloqueados: {bots}. Recuperan páginas para las respuestas de ChatGPT, Claude y Perplexity. Mientras estén bloqueados, la página no aparece allí como fuente.`,
@@ -425,6 +433,8 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     fix_llmsTxt_fullOnly: `Só existe a versão longa llms-full.txt. A agência web acrescenta na raiz o ficheiro curto de resumo llms.txt, que remete para as páginas mais importantes e para llms-full.txt (modelo nas recomendações).`,
 
     ev_robotsTxt_none: `Não foi encontrado robots.txt. Assim, todos os crawlers de IA podem ler a página.`,
+    ev_robotsTxt_unreachable: `O robots.txt responde com um erro do servidor (HTTP {status}). Segundo o padrão robots (RFC 9309), os crawlers devem então assumir que todo o site está bloqueado, pelo que a página fica vedada aos crawlers de IA.`,
+    fix_robotsTxt_unreachable: `A agência web ou o alojamento garante que /robots.txt responde de forma fiável com o estado 200 (ou 404 se não existir). Verifique também se uma firewall ou CDN rejeita os pedidos a esse ficheiro.`,
     ev_robotsTxt_all_allowed: `O robots.txt permite aos {count} crawlers de IA verificados aceder a esta página ({path}), incluindo GPTBot e OAI-SearchBot (OpenAI), ClaudeBot (Anthropic) e PerplexityBot.`,
     ev_robotsTxt_blocked_count: `{blocked} de {total} crawlers de IA verificados estão bloqueados para esta página ({path}).`,
     ev_robotsTxt_blocked_search: `Crawlers de pesquisa bloqueados: {bots}. Obtêm páginas para as respostas do ChatGPT, Claude e Perplexity. Enquanto estiverem bloqueados, a página não aparece lá como fonte.`,
@@ -511,6 +521,8 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     fix_llmsTxt_fullOnly: `Esiste solo la versione lunga llms-full.txt. L’agenzia web aggiunge nella cartella principale il breve file di sintesi llms.txt, che rimanda alle pagine più importanti e a llms-full.txt (modello nelle raccomandazioni).`,
 
     ev_robotsTxt_none: `Nessun robots.txt trovato. Tutti i crawler di IA possono quindi leggere la pagina.`,
+    ev_robotsTxt_unreachable: `Il robots.txt risponde con un errore del server (HTTP {status}). Secondo lo standard robots (RFC 9309) i crawler devono allora considerare bloccato l’intero sito, quindi la pagina è preclusa ai crawler di IA.`,
+    fix_robotsTxt_unreachable: `L’agenzia web o l’hosting fa sì che /robots.txt risponda in modo affidabile con lo stato 200 (o 404 se non esiste). Verificate anche che un firewall o una CDN non respinga le richieste al file.`,
     ev_robotsTxt_all_allowed: `Il robots.txt consente a tutti i {count} crawler di IA controllati di accedere a questa pagina ({path}), tra cui GPTBot e OAI-SearchBot (OpenAI), ClaudeBot (Anthropic) e PerplexityBot.`,
     ev_robotsTxt_blocked_count: `{blocked} dei {total} crawler di IA controllati sono bloccati per questa pagina ({path}).`,
     ev_robotsTxt_blocked_search: `Crawler di ricerca bloccati: {bots}. Recuperano pagine per le risposte di ChatGPT, Claude e Perplexity. Finché sono bloccati, la pagina non vi compare come fonte.`,

@@ -540,7 +540,37 @@ export function contentParagraphElements(
     pushIfGood(el);
   });
 
-  return result;
+  // Body text without <p>: page builders and React components often set
+  // copy straight into a <div>. Only leaf blocks (no block-level children)
+  // that read like prose — long enough and with sentence punctuation — so
+  // labels, buttons and card meta lines stay out.
+  scope.root.querySelectorAll(TEXT_BLOCK_TAGS).forEach((el) => {
+    if (el.closest(NOT_BODY_TEXT) || scope.isExcluded(el)) return;
+    if (hasBlockChild(el)) return;
+    const t = readableText(el);
+    if (t.length < DIV_TEXT_MIN_CHARS || !/[.!?…:]/.test(t)) return;
+    pushIfGood(el);
+  });
+
+  // Document order: the first entries are the lead, which the upfront
+  // check reads.
+  return result.sort((a, b) => (follows(a.el, b.el) ? -1 : 1));
+}
+
+const TEXT_BLOCK_TAGS = 'div, section, blockquote';
+// Text inside these is a heading, list item, link, form control or table
+// cell — counted elsewhere or no body text.
+const NOT_BODY_TEXT = 'h1, h2, h3, h4, h5, h6, p, li, a[href], button, label, table, figcaption, form';
+const DIV_TEXT_MIN_CHARS = 80;
+
+let blockChildSelector: string | null = null;
+
+function hasBlockChild(el: Element): boolean {
+  blockChildSelector ??= [...BLOCK_TAGS]
+    .filter((tag) => tag !== 'BR')
+    .map((tag) => tag.toLowerCase())
+    .join(',');
+  return el.querySelector(blockChildSelector) !== null;
 }
 
 export function extractParagraphs(doc: Document = document): string[] {
@@ -1370,7 +1400,21 @@ export async function checkRobotsTxt(
     const url = `${origin}/robots.txt`;
     const response = await fetch(url);
 
-    // 404 / 5xx → per RFC 9309 everything is allowed
+    // RFC 9309 §2.3.1.4: a server error (5xx, and 429 like Google treats
+    // it) makes robots.txt "unreachable" — crawlers must assume a complete
+    // disallow. Any other failure (404, 410, 403 …) means everything is allowed.
+    if (response.status >= 500 || response.status === 429) {
+      return {
+        exists: false,
+        unreachable: true,
+        httpStatus: response.status,
+        url,
+        path,
+        allowedBots: Object.fromEntries(targetBots.map((b) => [b, false])),
+        blockedBots: [...targetBots],
+        totalChecked: targetBots.length,
+      };
+    }
     if (!response.ok) return allAllowed(false);
 
     const content = await response.text();
