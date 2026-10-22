@@ -4,6 +4,7 @@ import { GEO_CONFIG } from '../config/geo-config';
 import { getSourceLinks } from '../utils/source-links';
 import { hasSchemaType } from '../utils/schema-types';
 import { excerpt, excludedLinkEvidence, hostList, matchExcerpt } from './trust-evidence';
+import { findDefinitionSentence } from './answerability';
 
 interface FaqEvaluation {
   score: number;
@@ -183,7 +184,10 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
 
     const hasFaqSchema = pageData.schema.some((s) => hasSchemaType(s, ['FAQPage', 'QAPage']));
 
-    const questionPatterns = [/\?$/, ...GEO_CONFIG.aiCitation.patterns.questions];
+    // Headings count as questions only with a question mark: "Was wir
+    // bieten" is a section title. Accordion items without one come in via
+    // faqQuestions.
+    const questionPatterns = [/[?？]$/];
     const normalize = (q: string) => q.trim().toLowerCase().replace(/\s+/g, ' ').replace(/\s*\?$/, '');
 
     // Detected FAQ/accordion questions plus question-style headings, counted
@@ -369,7 +373,10 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
       evidence.push({ key: 'ev_keyInfoUpfront_meta_missing', params: { points: 15 } });
     }
 
-    const definition = matchExcerpt(first150, GEO_CONFIG.aiCitation.patterns.definitions);
+    // Same anchored, per-sentence test as the answerability check: a bare
+    // "ist der" anywhere ("Hier ist ein Überblick") defines nothing.
+    const definitionSentence = findDefinitionSentence(first150);
+    const definition = definitionSentence ? excerpt(definitionSentence) : null;
     if (definition) {
       score += 0.3;
       evidence.push({ key: 'ev_keyInfoUpfront_definition_ok', params: { text: definition, points: 30 } });

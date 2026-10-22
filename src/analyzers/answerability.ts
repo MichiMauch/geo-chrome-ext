@@ -116,7 +116,6 @@ export class AnswerabilityAnalyzer extends BaseAnalyzer {
     paragraphs: string[],
     questionAnswers: QuestionAnswer[] = []
   ): DefinitionStats {
-    const definitionPatterns = GEO_CONFIG.answerability.patterns.definitions;
     const structuredPatterns = GEO_CONFIG.answerability.patterns.structured;
 
     let definitionCount = 0;
@@ -128,11 +127,7 @@ export class AnswerabilityAnalyzer extends BaseAnalyzer {
       // Definition patterns are anchored at the sentence start, so test each
       // sentence on its own. Questions ("Was ist ein Smart Meter?") ask for
       // a definition rather than give one.
-      const definition = splitSentences(p).find(
-        (sentence) =>
-          !sentence.endsWith('?') &&
-          definitionPatterns.some((pattern) => pattern.test(sentence))
-      );
+      const definition = findDefinitionSentence(p);
       if (definition !== undefined) {
         definitionExample ??= definition;
         definitionCount++;
@@ -271,9 +266,21 @@ export class AnswerabilityAnalyzer extends BaseAnalyzer {
 
 // Splits after ., !, ? or … followed by whitespace. Abbreviations ("z. B.")
 // over-split, which only ever yields extra non-matching fragments.
-function splitSentences(text: string): string[] {
+export function splitSentences(text: string): string[] {
   return text
     .split(/(?<=[.!?…])\s+/)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
+}
+
+/**
+ * The first sentence of `text` that defines a term ("X ist ein …", "Unter X
+ * versteht man …"). Patterns are anchored at the sentence start; questions
+ * ("Was ist ein Smart Meter?") ask for a definition rather than give one.
+ */
+export function findDefinitionSentence(text: string): string | undefined {
+  const patterns = GEO_CONFIG.answerability.patterns.definitions;
+  return splitSentences(text).find(
+    (sentence) => !sentence.endsWith('?') && patterns.some((pattern) => pattern.test(sentence))
+  );
 }

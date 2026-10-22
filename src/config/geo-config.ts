@@ -345,17 +345,6 @@ export const GEO_CONFIG = {
         // Quelle: …, Sources – …
         /(?<![\p{L}])(?:Quellen?|Sources?|Fuentes?|Fontes?)(?![\p{L}])\s*[:\-–]/iu,
       ],
-      // An upfront definition needs a defining construction ("X ist ein …",
-      // "X is a …", "bezeichnet"), not just any "ist"/"es" in the text.
-      definitions: [
-        /(?<![\p{L}])(?:ist|sind)\s+(?:ein|eine|einer|der|die|das|kein|keine)(?![\p{L}])/iu,
-        /(?<![\p{L}])(?:is|are)\s+(?:a|an|the)(?![\p{L}])/iu,
-        /(?<![\p{L}])(?:c'est|est|sont)\s+(?:un|une|le|la|les)(?![\p{L}])/iu,
-        /(?<![\p{L}])(?:es|son)\s+(?:un|una|el|la|los|las)(?![\p{L}])/iu,
-        /(?<![\p{L}])(?:é|são)\s+(?:um|uma|o|a|os|as)(?![\p{L}])/iu,
-        /(?<![\p{L}])è\s+(?:un|una|uno|il|lo|la)(?![\p{L}])/iu,
-        /(?<![\p{L}])(?:bedeutet|bezeichnet|versteht man|definiert als|means|refers to|defined as|signifie|désigne|significa|se refiere a)(?![\p{L}])/iu,
-      ],
     }
   }
 };

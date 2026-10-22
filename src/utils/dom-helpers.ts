@@ -706,8 +706,17 @@ export function countHiddenFaqAnswers(doc: Document = document): number {
 
 const QUESTION_START = GEO_CONFIG.aiCitation.patterns.questions;
 
-function isQuestionText(text: string): boolean {
-  return /[?？]$/.test(text) || QUESTION_START.some((p) => p.test(text));
+// Containers whose headings/triggers are FAQ items even without a '?'.
+const FAQ_CONTEXT =
+  'details, [class*="faq" i], [class*="accordion" i], [itemscope][itemtype*="schema.org/Question" i]';
+
+// A question ends with '?'. A question word alone ("Was wir bieten", "Wie
+// wir arbeiten") only counts inside an accordion or FAQ block — as an
+// ordinary subheading it is a section title, not a question.
+function isQuestionText(text: string, marker: Element, isTrigger: boolean): boolean {
+  if (/[?？]$/.test(text)) return true;
+  if (!QUESTION_START.some((p) => p.test(text))) return false;
+  return isTrigger || accordionItemOf(marker) !== null || marker.closest(FAQ_CONTEXT) !== null;
 }
 
 const follows = (a: Node, b: Node): boolean =>
@@ -726,6 +735,7 @@ export function extractQuestionAnswers(doc: Document = document): QuestionAnswer
   const triggers = accordionTriggers(doc, scope).filter(
     (b) => !b.closest('h1, h2, h3, h4, h5, h6')
   );
+  const triggerSet = new Set<Element>(triggers);
   const markers = [...headings, ...triggers].sort((a, b) => (follows(a, b) ? -1 : 1));
 
   const blocks: { el: Element; text: string }[] = [
@@ -747,7 +757,8 @@ export function extractQuestionAnswers(doc: Document = document): QuestionAnswer
   const pairs: QuestionAnswer[] = [];
   markers.forEach((marker, i) => {
     const question = normalizeText(marker.textContent);
-    if (question.length < 5 || question.length > 300 || !isQuestionText(question)) return;
+    if (question.length < 5 || question.length > 300) return;
+    if (!isQuestionText(question, marker, triggerSet.has(marker))) return;
     const next = markers[i + 1];
     const answer = blocks
       .filter(
@@ -1112,8 +1123,13 @@ function looksLikePersonName(text: string): boolean {
   return words.every((w) => NAME_PARTICLES.has(w.toLowerCase()) || /^\p{Lu}/u.test(w));
 }
 
+// Comment sections: WordPress marks commenters with `comment-author`, which
+// the [class*="author"] selector would otherwise read as the page's author.
+const COMMENT_AREA =
+  '#comments, #respond, [class*="comment" i], [id*="comment" i], [itemtype*="schema.org/Comment" i]';
+
 // Author candidates from DOM bylines, cleaned, in selector priority order.
-// Site navigation and the page footer don't credit anyone.
+// Site navigation, the page footer and comments don't credit anyone.
 function domAuthorCandidates(doc: Document): string[] {
   const authorSelectors = [
     '[rel="author"]',
@@ -1125,6 +1141,7 @@ function domAuthorCandidates(doc: Document): string[] {
   for (const selector of authorSelectors) {
     doc.querySelectorAll(selector).forEach((element) => {
       if (isLandmarkChrome(element) && !element.closest('aside, [role="complementary"]')) return;
+      if (element.closest(COMMENT_AREA)) return;
       const text = normalizeText(element.textContent);
       if (text.length <= 2 || text.length >= 100) return;
       if (GENERIC_AUTHOR_LABEL.test(text)) return;
@@ -1177,11 +1194,24 @@ export function extractAuthorInfo(doc: Document = document): AuthorData | null {
   return null;
 }
 
+// Dates in sidebars, menus, promo boxes or teaser cards belong to other
+// pages ("Neuste News" next to a 2019 article). A page-level footer stays
+// in: "Zuletzt aktualisiert: …" there is about this page.
+function isForeignDate(el: Element, scope: ContentScope): boolean {
+  if (el.closest('a[href]') || el.closest(LANDMARK_CHROME)) return true;
+  if (!scope.isExcluded(el)) return false;
+  const footer = el.closest('footer');
+  return !footer || !isPageLevelHeaderFooter(footer);
+}
+
 export function extractDates(doc: Document = document): DateData[] {
   const dates: DateData[] = [];
+  const scope = getContentScope(doc);
+  const isPageDate = (el: Element) => !isForeignDate(el, scope);
 
   // 1. Time elements
   doc.querySelectorAll('time[datetime]').forEach((time) => {
+    if (!isPageDate(time)) return;
     const datetime = time.getAttribute('datetime');
     if (datetime) {
       try {
@@ -1258,9 +1288,12 @@ export function extractDates(doc: Document = document): DateData[] {
 
   // 4. Visible text dates ("Last updated: August 11, 2026") — no markup, but
   // AI crawlers read them, so a page shouldn't lose the freshness point for it.
-  dates.push(...extractTextDates(doc));
+  dates.push(...extractTextDates(doc, 5, isPageDate));
 
-  return dates;
+  // Future dates (events, deadlines, broken schema) are no publication or
+  // update date; left in, they would also become the "newest" date shown.
+  const latest = Date.now() + 24 * 60 * 60 * 1000;
+  return dates.filter((d) => d.date.getTime() <= latest);
 }
 
 export function extractSemanticElements(doc: Document = document): SemanticElements {
@@ -1275,10 +1308,13 @@ export function extractSemanticElements(doc: Document = document): SemanticEleme
   };
 }
 
+// A date in the future (an event, a deadline) says nothing about how fresh
+// the page is. One day of slack absorbs time-zone offsets.
 export function isWithinLastYear(date: Date): boolean {
-  const oneYearAgo = new Date();
+  const now = Date.now();
+  const oneYearAgo = new Date(now);
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-  return date >= oneYearAgo;
+  return date >= oneYearAgo && date.getTime() <= now + 24 * 60 * 60 * 1000;
 }
 
 // Fetches a plain-text file and rejects the HTML a SPA or a custom 404 page

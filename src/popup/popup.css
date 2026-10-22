@@ -2,6 +2,15 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Tailwind v4 resets buttons to cursor: default — every interactive button
+   in the panel (including ones built in popup.ts) gets the pointer back. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
 /* Custom animations */
 @keyframes spin {
   to {

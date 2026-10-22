@@ -233,13 +233,44 @@ describe('AiCitation — FAQ', () => {
         { level: 1, text: 'Energie-FAQ' },
         { level: 3, text: 'Was kostet Strom?' },
         { level: 3, text: 'Wie viel Strom braucht die Schweiz?' },
-        { level: 3, text: 'Où est la centrale' },
+        { level: 3, text: 'Où est la centrale ?' },
       ],
       faqQuestions: ['Was kostet Strom?', 'Wie viel Strom braucht die Schweiz?'],
       paragraphs: Array(5).fill(LONG),
     });
-    // 3 verschiedene Fragen (Où wird trotz Akzent als Frage erkannt)
+    // 3 verschiedene Fragen (auch mit französischem Leerzeichen vor dem ?)
     expect(detail(page, 'criterion_faq')?.value).toBe('60%');
+  });
+
+  it('zählt Zwischentitel mit Fragewort, aber ohne Fragezeichen nicht als Frage', () => {
+    const page = makePage({
+      headings: [
+        { level: 1, text: 'Unsere Agentur' },
+        { level: 2, text: 'Was wir bieten' },
+        { level: 2, text: 'Wie wir arbeiten' },
+        { level: 2, text: 'Wer wir sind' },
+      ],
+      paragraphs: Array(5).fill(LONG),
+    });
+    expect(detail(page, 'criterion_faq')?.value).toBe('0%');
+  });
+
+  it('wertet eine beliebige "ist der"-Phrase am Anfang nicht als Definition', () => {
+    const page = makePage({
+      headings: [{ level: 1, text: 'Aktion im Oktober' }],
+      paragraphs: ['Hier ist ein Überblick über unser Angebot im Oktober für alle Kundinnen und Kunden.'],
+    });
+    const ev = detail(page, 'criterion_keyInfoUpfront')?.evidence ?? [];
+    expect(JSON.stringify(ev)).not.toContain('definition_ok');
+  });
+
+  it('erkennt eine echte Definition am Anfang', () => {
+    const page = makePage({
+      headings: [{ level: 1, text: 'Was ist ein Smart Meter?' }],
+      paragraphs: ['Ein Smart Meter ist ein digitaler Stromzähler, der den Verbrauch laufend misst und übermittelt.'],
+    });
+    const ev = detail(page, 'criterion_keyInfoUpfront')?.evidence ?? [];
+    expect(JSON.stringify(ev)).toContain('definition_ok');
   });
 
   it('wertet FAQPage-Schema als Bonus, auch in einem @type-Array', () => {

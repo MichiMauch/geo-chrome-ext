@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.7.2] - 2026-10-22
+
+### Fixed
+
+- **Ordinary subheadings counted as FAQ questions:** Headings like "Was wir bieten", "Wie wir arbeiten" or "Who we are" start with a question word and were scored as questions. A plain service page earned FAQ points and "direct answers" for its section titles. Without a question mark, a heading now only counts as a question inside an accordion or FAQ block.
+- **"Key information upfront" accepted almost any sentence as a definition:** The check looked for "ist ein/der/die/das" or "is a/the" anywhere in the first 150 words, so "Hier ist ein Überblick" earned the 30 % definition share. It now uses the same sentence-anchored definition patterns as the answerability check ("Ein Smart Meter ist ein …", "Unter X versteht man …").
+- **Freshness counted dates of other pages:** Every `<time>` element on the page counted, so a 2019 article with a "Latest news" box from yesterday scored as current. Dates in sidebars, navigation, promo blocks and teaser links are now ignored. An update date in the page footer still counts. Dates in the future (events, deadlines) are no longer taken as publication or update dates.
+- **Commenters were recognized as the page author:** The byline detection matched WordPress' `comment-author`. Comment sections are now excluded.
+- **Homepages with a language prefix were not detected:** `/de/`, `/fr`, `/de-ch/` or `/en/index.html` were scored like content pages, including author, date, definition and FAQ checks that don't apply to a homepage. Known language codes are now recognized as language roots.
+- **Panel buttons showed no pointer cursor:** Tailwind v4 resets buttons to the default cursor. All interactive buttons in the panel now show the pointer.
+
 ## [4.7.1] - 2026-10-22
 
 ### Changed

@@ -109,9 +109,14 @@ export function parseDateText(text: string): { date: Date; matched: string } | n
  * Scan the DOM for dates printed as plain text.
  * Only accepts a candidate when a date label ("Last updated: …") is present
  * or the element/ancestor carries a date-ish class or id, so unrelated dates
- * in body copy or teasers don't count.
+ * in body copy or teasers don't count. `include` lets the caller drop
+ * elements outside the page's own content (sidebars, teaser cards).
  */
-export function extractTextDates(doc: Document = document, limit = 5): DateData[] {
+export function extractTextDates(
+  doc: Document = document,
+  limit = 5,
+  include: (el: Element) => boolean = () => true
+): DateData[] {
   const dates: DateData[] = [];
   const seen = new Set<string>();
 
@@ -128,6 +133,7 @@ export function extractTextDates(doc: Document = document, limit = 5): DateData[
 
     const text = el.textContent?.replace(/\s+/g, ' ').trim() ?? '';
     if (!text || text.length > 160) continue;
+    if (!include(el)) continue;
 
     const hasLabel = LABEL_PATTERN.test(text);
     const hasAttrHint =
