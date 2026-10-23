@@ -3,10 +3,15 @@ import { BaseAnalyzer } from './base';
 import { GEO_CONFIG } from '../config/geo-config';
 import { hasSchemaType } from '../utils/schema-types';
 import { ARTICLE_SCHEMA_TYPES } from '../utils/page-type';
+import { pageKey } from '../utils/sitemap-check';
 
 // og:image file names that point at a site-wide default rather than an image
 // for this page (logo, placeholder). Only the last path segment is checked.
 const GENERIC_OG_IMAGE = /(^|[-_.])(logo|default|placeholder|fallback)([-_.]|$)/i;
+
+// Shape of a hreflang value: language (ISO 639), optional script, optional
+// region (ISO 3166 or UN M.49), or x-default. Not a full registry check.
+const HREFLANG_CODE = /^(?:x-default|[a-z]{2,3}(?:-[a-z]{4})?(?:-(?:[a-z]{2}|\d{3}))?)$/i;
 
 // Short text for evidence lines
 function clip(text: string, max = 60): string {
@@ -244,7 +249,24 @@ export class OnPageSeoAnalyzer extends BaseAnalyzer {
     weightedScore += canonicalScore * config.weights.canonical;
     totalWeight += config.weights.canonical;
 
+    // Check 8: hreflang — only on pages that exist in several languages
+    const hreflang = this.evaluateHreflang(pageData);
+    if (hreflang) {
+      details.push({
+        criterionKey: 'criterion_hreflang',
+        found: hreflang.score >= 0.99,
+        value: hreflang.missing ? 'value_notPresent' : hreflang.score >= 0.99 ? 'value_present' : 'value_hreflang_incomplete',
+        weight: config.weights.hreflang,
+        progress: { current: Math.round(hreflang.score * 100), target: 100, unitKey: 'unit_percent' },
+        evidence: hreflang.evidence,
+        ...(hreflang.missing ? {} : hreflang.score < 0.99 ? { fixKey: 'fix_hreflang_incomplete' } : {}),
+      });
+      weightedScore += hreflang.score * config.weights.hreflang;
+      totalWeight += config.weights.hreflang;
+    }
+
     const recommendations: string[] = [];
+    if (hreflang?.missing) recommendations.push('hreflang_missing');
     if (titleLen === 0) recommendations.push('title_missing');
     else if (titleLen < config.thresholds.titleMinLength) recommendations.push('title_too_short');
     else if (titleLen > config.thresholds.titleMaxLength) recommendations.push('title_too_long');
@@ -319,6 +341,41 @@ export class OnPageSeoAnalyzer extends BaseAnalyzer {
       );
     }
     return evidence;
+  }
+
+  // hreflang on a multilingual page: present, names this page itself, has an
+  // x-default, uses valid codes, and the page's own entry matches <html lang>.
+  // Whether the other versions link back cannot be seen from this page.
+  private evaluateHreflang(
+    pageData: PageData
+  ): { score: number; missing: boolean; evidence: EvidenceLine[] } | null {
+    const h = pageData.hreflang;
+    if (!h || (h.alternates.length === 0 && h.languageLinks.length === 0)) return null;
+    if (h.alternates.length === 0) {
+      return {
+        score: 0,
+        missing: true,
+        evidence: [{ key: 'ev_hreflang_missing', params: { count: h.languageLinks.length, example: clip(h.languageLinks[0], 80) } }],
+      };
+    }
+    const own = pageKey(pageData.canonical.href ?? pageData.url);
+    const self = h.alternates.find((a) => pageKey(a.href) === own || pageKey(a.href) === pageKey(pageData.url));
+    const xDefault = h.alternates.some((a) => a.hreflang.toLowerCase() === 'x-default');
+    const invalid = h.alternates.map((a) => a.hreflang).filter((c) => !HREFLANG_CODE.test(c));
+    const pageLang = pageData.lang?.toLowerCase();
+    const selfLang = self?.hreflang.toLowerCase().split('-')[0];
+    const langMatch = !self || !pageLang || selfLang === 'x' || selfLang === pageLang;
+    const score = (self ? 0.4 : 0) + (xDefault ? 0.2 : 0) + (invalid.length === 0 ? 0.2 : 0) + (langMatch ? 0.2 : 0);
+
+    const langs = [...new Set(h.alternates.map((a) => a.hreflang))];
+    const evidence: EvidenceLine[] = [
+      { key: 'ev_hreflang_found', params: { count: langs.length, langs: langs.slice(0, 8).join(', ') } },
+    ];
+    if (!self) evidence.push({ key: 'ev_hreflang_self_missing' });
+    if (!xDefault) evidence.push({ key: 'ev_hreflang_xdefault_missing' });
+    if (invalid.length > 0) evidence.push({ key: 'ev_hreflang_invalid', params: { codes: invalid.slice(0, 5).join(', ') } });
+    if (!langMatch && self) evidence.push({ key: 'ev_hreflang_lang_mismatch', params: { hreflang: self.hreflang, lang: pageLang ?? '' } });
+    return { score, missing: false, evidence };
   }
 
   // Remaining share of the indexability score under snippet limits

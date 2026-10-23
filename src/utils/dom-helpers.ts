@@ -16,10 +16,12 @@ import type {
   RobotsMetaData,
   ViewportData,
   CanonicalData,
+  HreflangData,
   QuestionAnswer,
 } from '../types/analysis';
 import { GEO_CONFIG } from '../config/geo-config';
 import { extractTextDates } from './text-dates';
+import { LANGUAGE_CODES } from './page-type';
 
 // Extracts everything the analyzers need. Defaults work on the live page;
 // the sitemap batch passes a DOMParser document + its URL instead, plus the
@@ -68,6 +70,7 @@ export async function extractPageData(
       robotsMeta: extractRobotsMeta(doc),
       viewport: extractViewport(doc),
       canonical: extractCanonical(doc, pageUrl),
+      hreflang: extractHreflang(doc, pageUrl),
     };
   });
 }
@@ -115,6 +118,43 @@ export function extractCanonical(doc: Document = document, baseUrl: string = win
   } catch {
     return { href: null };
   }
+}
+
+// Labels a language switcher shows: codes and the languages' own names
+const LANGUAGE_LABEL =
+  /^(?:de|en|fr|it|es|pt|nl|rm|deutsch|english|français|francais|italiano|español|espanol|português|portugues|nederlands|rumantsch)$/i;
+
+export function extractHreflang(doc: Document = document, baseUrl: string = window.location.href): HreflangData {
+  const alternates: HreflangData['alternates'] = [];
+  doc.querySelectorAll('link[rel~="alternate" i][hreflang]').forEach((link) => {
+    const hreflang = (link.getAttribute('hreflang') || '').trim();
+    const raw = (link.getAttribute('href') || '').trim();
+    if (!hreflang || !raw) return;
+    try {
+      alternates.push({ hreflang, href: new URL(raw, baseUrl).href });
+    } catch {
+      // unparseable href: skip
+    }
+  });
+
+  const base = new URL(baseUrl);
+  const prefix = (path: string) => path.match(new RegExp(`^/(${LANGUAGE_CODES})(?:[-_][a-z]{2,4})?(?:/|$)`, 'i'))?.[1]?.toLowerCase();
+  const ownPrefix = prefix(base.pathname);
+  const languageLinks = new Set<string>();
+  doc.querySelectorAll('a[href]').forEach((a) => {
+    let url: URL;
+    try {
+      url = new URL(a.getAttribute('href') || '', base.href);
+    } catch {
+      return;
+    }
+    if (url.hostname.replace(/^www\./, '') !== base.hostname.replace(/^www\./, '')) return;
+    const tagged = a.hasAttribute('hreflang') || (a.hasAttribute('lang') && a.getAttribute('lang') !== doc.documentElement.lang);
+    const other = prefix(url.pathname);
+    const labelled = LANGUAGE_LABEL.test(normalizeText(a.textContent));
+    if (tagged || (labelled && other && other !== ownPrefix)) languageLinks.add(url.href);
+  });
+  return { alternates, languageLinks: [...languageLinks].slice(0, 10) };
 }
 
 export function extractViewport(doc: Document = document): ViewportData {

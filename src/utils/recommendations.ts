@@ -52,6 +52,7 @@ const RECOMMENDATION_KEYS: Record<string, { i18nKey: string; priority: number }>
   'images_missing_alts': { i18nKey: 'rec_images_missing_alts', priority: 6 },
   'canonical_mismatch': { i18nKey: 'rec_canonical_mismatch', priority: 7 }, // Wrong canonical ≈ soft deindex of this page
   'canonical_missing': { i18nKey: 'rec_canonical_missing', priority: 6 },
+  'hreflang_missing': { i18nKey: 'rec_hreflang_missing', priority: 5 },
   'social_cards_missing': { i18nKey: 'rec_social_cards_missing', priority: 5 },
   'viewport_missing': { i18nKey: 'rec_viewport_missing', priority: 9 },
   'viewport_misconfigured': { i18nKey: 'rec_viewport_misconfigured', priority: 7 },

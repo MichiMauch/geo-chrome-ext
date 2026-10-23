@@ -212,6 +212,11 @@ function getExplanation(d: CategoryDetail): string {
     return t('explain_viewport_ok');
   }
   // On-Page SEO: Canonical tag
+  if (criterion === t('criterion_hreflang')) {
+    if (value === t('value_notPresent')) return t('explain_hreflang_missing');
+    if (!d.found) return t('explain_hreflang_partial', { current });
+    return t('explain_hreflang_ok');
+  }
   if (criterion === t('criterion_canonical')) {
     if (current === 0 && (value === t('value_notPresent') || !value)) {
       return t('explain_canonical_missing');

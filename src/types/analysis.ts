@@ -126,6 +126,8 @@ export interface PageData {
   robotsMeta: RobotsMetaData;
   viewport: ViewportData;
   canonical: CanonicalData;
+  // Absent in analyses stored before hreflang was checked
+  hreflang?: HreflangData;
   // Only set for a live page analysis. The sitemap batch already works on raw
   // HTML, so there is nothing to compare there, and history/report re-renders
   // don't carry it.
@@ -135,6 +137,16 @@ export interface PageData {
   botAccess?: BotAccessData;
   // Live analyses only: sitemap presence, this page's entry and lastmod
   sitemap?: SitemapData;
+}
+
+// <link rel="alternate" hreflang> of the page plus signs of a language
+// switcher, to tell a multilingual page without hreflang from a one-language
+// site.
+export interface HreflangData {
+  alternates: { hreflang: string; href: string }[];
+  // Same-site links that switch language (a[hreflang]/a[lang], or a
+  // language label pointing to another /xx/ path prefix)
+  languageLinks: string[];
 }
 
 export interface CanonicalData {

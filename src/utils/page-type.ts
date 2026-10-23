@@ -15,7 +15,7 @@ export const ARTICLE_SCHEMA_TYPES = [
 // Language roots of multilingual sites (/de, /fr-ch/, /en/index.html) are
 // homepages too. Only known language codes, so a short slug such as /ai or
 // /go stays an ordinary page.
-const LANGUAGE_CODES =
+export const LANGUAGE_CODES =
   'de|en|fr|it|es|pt|nl|rm|pl|cs|sk|sl|hr|sr|bs|hu|ro|bg|el|tr|ru|uk|sv|da|no|nb|nn|fi|is|et|lv|lt|ga|ca|eu|gl|ja|zh|ko|ar|he|hi|th|vi|id|ms';
 const HOMEPAGE_PATH = new RegExp(
   `^(?:/(?:${LANGUAGE_CODES})(?:[-_][a-z]{2,4})?)?(?:/(?:index|home|start)\\.(?:html?|php))?$`,

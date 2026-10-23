@@ -300,3 +300,38 @@ describe('Bing Webmaster Tools', async () => {
     expect(await detectBingVerification(parse('<body></body>'), 'https://x.ch/a', notFound)).toBeNull();
   });
 });
+
+describe('hreflang', async () => {
+  const { extractHreflang, extractPageData } = await import('../dom-helpers');
+  const { OnPageSeoAnalyzer } = await import('../../analyzers/on-page-seo');
+  const domain = {
+    llmsTxt: { exists: false },
+    robotsTxt: { exists: false, allowedBots: {}, blockedBots: [], totalChecked: 0 },
+  } as never;
+  const detail = async (html: string, url: string) => {
+    const pd = await extractPageData(parse(html), url, domain);
+    const r = new OnPageSeoAnalyzer().analyze(pd);
+    return { d: r.details.find((x) => x.criterionKey === 'criterion_hreflang'), recs: r.recommendations };
+  };
+
+  it('erkennt einen Sprachwechsler ohne hreflang', () => {
+    const doc = parse(`<html lang="de"><body><nav><a href="/fr/article">FR</a><a href="/it/articolo">IT</a><a href="/de/kontakt">Kontakt</a></nav></body></html>`);
+    expect(extractHreflang(doc, 'https://x.ch/de/artikel').languageLinks).toEqual(['https://x.ch/fr/article', 'https://x.ch/it/articolo']);
+    expect(extractHreflang(parse('<body><a href="/it/">IT-Support</a></body>'), 'https://x.ch/').languageLinks).toEqual([]);
+  });
+
+  it('bewertet fehlendes, unvollständiges und vollständiges hreflang', async () => {
+    const missing = await detail(`<body><main><h1>A</h1></main><nav><a href="/fr/a">Français</a></nav></body>`, 'https://x.ch/de/a');
+    expect(missing.d?.value).toBe('value_notPresent');
+    expect(missing.recs).toContain('hreflang_missing');
+
+    const partial = await detail(`<head><link rel="alternate" hreflang="fr-CH" href="https://x.ch/fr/a"><link rel="alternate" hreflang="de_CH" href="https://x.ch/de/a"></head><body></body>`, 'https://x.ch/de/a');
+    expect(partial.d?.progress?.current).toBe(60);
+    expect(partial.d?.evidence?.map((e) => e.key)).toEqual(['ev_hreflang_found', 'ev_hreflang_xdefault_missing', 'ev_hreflang_invalid']);
+
+    const full = await detail(`<html lang="de-CH"><head><link rel="alternate" hreflang="de-CH" href="/de/a"><link rel="alternate" hreflang="fr-CH" href="/fr/a"><link rel="alternate" hreflang="x-default" href="/de/a"></head><body></body></html>`, 'https://www.x.ch/de/a/');
+    expect(full.d?.found).toBe(true);
+
+    expect((await detail('<body><p>Nur Deutsch.</p></body>', 'https://x.ch/a')).d).toBeUndefined();
+  });
+});

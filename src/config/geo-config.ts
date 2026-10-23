@@ -301,6 +301,8 @@ export const GEO_CONFIG = {
       socialCards: 1.0,
       viewport: 1.5,
       canonical: 1.0,
+      // Only scored on multilingual pages (hreflang or a language switcher)
+      hreflang: 1.0,
     },
     thresholds: {
       titleMinLength: 30,
