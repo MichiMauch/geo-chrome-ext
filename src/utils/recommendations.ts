@@ -32,6 +32,8 @@ const RECOMMENDATION_KEYS: Record<string, { i18nKey: string; priority: number }>
   'ai_bots_blocked': { i18nKey: 'rec_ai_bots_blocked', priority: 11 },
   'ai_bots_firewall': { i18nKey: 'rec_ai_bots_firewall', priority: 10 },
   'content_signal_opt_out': { i18nKey: 'rec_content_signal_opt_out', priority: 8 },
+  'no_sitemap': { i18nKey: 'rec_no_sitemap', priority: 6 },
+  'sitemap_page_missing': { i18nKey: 'rec_sitemap_page_missing', priority: 5 },
   // AI Citation
   'no_facts': { i18nKey: 'rec_no_facts', priority: 7 },
   'no_faq': { i18nKey: 'rec_no_faq', priority: 6 },

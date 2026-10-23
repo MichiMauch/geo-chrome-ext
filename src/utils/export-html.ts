@@ -130,9 +130,15 @@ function getExplanation(d: CategoryDetail): string {
     const total = d.progress?.target ?? 0;
     const allowed = d.progress?.current ?? 0;
     const blocked = Math.max(0, total - allowed);
-    if (blocked === 0) return t('explain_robotstxt_ok');
+    if (blocked === 0) return d.found ? t('explain_robotstxt_ok') : t('explain_robotstxt_restricted');
     if (total > 0 && blocked === total) return t('explain_robotstxt_all_blocked');
     return t('explain_robotstxt_partial', { blocked, total });
+  }
+  // XML sitemap
+  if (criterion === t('criterion_sitemap')) {
+    if (value === t('value_noneFound')) return t('explain_sitemap_none');
+    if (!d.found) return t('explain_sitemap_partial', { current });
+    return t('explain_sitemap_ok');
   }
   // AI crawler view — content without JavaScript
   if (criterion === t('criterion_crawlerView')) {

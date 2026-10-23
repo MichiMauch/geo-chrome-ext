@@ -182,6 +182,15 @@ export const GEO_CONFIG = {
       // Only counted when the crawler comparison ran (live analysis) — see
       // MachineReadabilityAnalyzer check 6.
       crawlerView: 2.0,
+      // Live analysis only, like crawlerView
+      sitemap: 1.0,
+    },
+    // Shares of the sitemap score (sum 1.0)
+    sitemapParts: {
+      exists: 0.4,
+      declaredInRobots: 0.2,
+      listed: 0.25,
+      lastmod: 0.15,
     },
     thresholds: {
       // llms-full.txt alone is worth partial credit: the long-form text is

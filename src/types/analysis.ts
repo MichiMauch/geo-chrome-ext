@@ -133,6 +133,8 @@ export interface PageData {
   // Live analyses only, like crawlerView: the page fetched with AI crawler
   // User-Agents, to spot CDN/firewall blocks robots.txt does not show.
   botAccess?: BotAccessData;
+  // Live analyses only: sitemap presence, this page's entry and lastmod
+  sitemap?: SitemapData;
 }
 
 export interface CanonicalData {
@@ -175,6 +177,19 @@ export interface TwitterCardData {
 export interface BotAccessData {
   checked: string[];
   blocked: { bot: string; status: number }[];
+}
+
+// Sitemap check of the live analysis (utils/sitemap-check.ts)
+export interface SitemapData {
+  exists: boolean;
+  declaredInRobots: boolean;
+  // null: the walk hit its cap before finding the page
+  listed: boolean | null;
+  pageLastmod: string | null;
+  entries: number;
+  lastmodShare: number;
+  // Nearly every entry carries the same lastmod day (build time, not edits)
+  lastmodUniform: boolean;
 }
 
 export interface RobotsMetaData {

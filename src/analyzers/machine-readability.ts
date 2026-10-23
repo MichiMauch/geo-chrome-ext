@@ -485,7 +485,35 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
       totalWeight += config.weights.crawlerView;
     }
 
+    // Check 7: XML sitemap — live analysis only (the batch starts from it)
+    const sitemap = pageData.sitemap;
+    if (sitemap) {
+      const parts = config.sitemapParts;
+      const listedOk = sitemap.listed !== false;
+      const lastmodOk = sitemap.listed === true && sitemap.pageLastmod !== null;
+      const sitemapScore = !sitemap.exists
+        ? 0
+        : parts.exists +
+          (sitemap.declaredInRobots ? parts.declaredInRobots : 0) +
+          (listedOk ? parts.listed : 0) +
+          // A lastmod every entry shares says nothing about this page
+          (lastmodOk ? (sitemap.lastmodUniform ? parts.lastmod / 2 : parts.lastmod) : sitemap.listed === null ? parts.lastmod : 0);
+      const sitemapComplete = sitemapScore >= 0.999;
+      details.push({
+        criterionKey: 'criterion_sitemap',
+        found: sitemapComplete,
+        value: !sitemap.exists ? 'value_noneFound' : sitemapComplete ? 'value_sitemapOk' : 'value_sitemapPartial',
+        weight: config.weights.sitemap,
+        progress: { current: Math.round(sitemapScore * 100), target: 100, unitKey: 'unit_percent' },
+        ...this.sitemapEvidence(sitemap),
+      });
+      weightedScore += sitemapScore * config.weights.sitemap;
+      totalWeight += config.weights.sitemap;
+    }
+
     const recommendations: string[] = [];
+    if (sitemap && !sitemap.exists) recommendations.push('no_sitemap');
+    else if (sitemap?.listed === false) recommendations.push('sitemap_page_missing');
     // Also when the type the page type calls for (Article, FAQPage) is missing
     // A page that only lacks FAQPage gets the FAQ template, not the Article one
     const onlyFaqMissing =
@@ -700,6 +728,32 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     if (user) evidence.push({ key: 'ev_robotsTxt_blocked_user', params: { bots: user } });
     if (training) evidence.push({ key: 'ev_robotsTxt_blocked_training', params: { bots: training } });
     return { evidence, ...(!index && !search && !user ? { fixKey: 'fix_robotsTxt_training' } : {}) };
+  }
+
+  private sitemapEvidence(s: NonNullable<PageData['sitemap']>): { evidence: EvidenceLine[]; fixKey?: string } {
+    if (!s.exists) return { evidence: [{ key: s.declaredInRobots ? 'ev_sitemap_broken' : 'ev_sitemap_none' }] };
+    const evidence: EvidenceLine[] = [
+      { key: 'ev_sitemap_found', params: { entries: s.entries, percent: Math.round(s.lastmodShare * 100) } },
+      { key: s.declaredInRobots ? 'ev_sitemap_robots_ok' : 'ev_sitemap_robots_missing' },
+    ];
+    if (s.listed === true) {
+      evidence.push(
+        s.pageLastmod
+          ? { key: 'ev_sitemap_listed', params: { lastmod: s.pageLastmod.slice(0, 10) } }
+          : { key: 'ev_sitemap_listed_no_lastmod' }
+      );
+    } else if (s.listed === false) {
+      evidence.push({ key: 'ev_sitemap_not_listed' });
+    } else {
+      evidence.push({ key: 'ev_sitemap_listed_unknown' });
+    }
+    if (s.lastmodUniform) evidence.push({ key: 'ev_sitemap_lastmod_uniform' });
+
+    let fixKey: string | undefined;
+    if (s.listed === false) fixKey = 'fix_sitemap_listed';
+    else if ((s.listed === true && !s.pageLastmod) || s.lastmodUniform) fixKey = 'fix_sitemap_lastmod';
+    else if (!s.declaredInRobots) fixKey = 'fix_sitemap_robots';
+    return { evidence, ...(fixKey ? { fixKey } : {}) };
   }
 
   // Content-Signal line, quoted as written. An opt-out from AI answers gets

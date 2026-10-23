@@ -226,3 +226,64 @@ describe('Abruf mit Bot-Kennung', async () => {
     }
   });
 });
+
+describe('Sitemap', async () => {
+  const { checkSitemap, pageKey, sitemapsFromRobots } = await import('../sitemap-check');
+  const { MachineReadabilityAnalyzer } = await import('../../analyzers/machine-readability');
+  const files: Record<string, string> = {
+    'https://x.ch/sitemap_index.xml': `<?xml version="1.0"?><sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+      <sitemap><loc>https://x.ch/post-sitemap.xml</loc></sitemap></sitemapindex>`,
+    'https://x.ch/post-sitemap.xml': `<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+      <url><loc>https://www.x.ch/blog/a/</loc><lastmod>2026-09-01T10:00:00+00:00</lastmod></url>
+      <url><loc>https://x.ch/blog/b/</loc></url></urlset>`,
+  };
+  const fetchFn = (async (url: string) =>
+    files[url] ? new Response(files[url], { status: 200 }) : new Response('', { status: 404 })) as unknown as typeof fetch;
+
+  it('liest Sitemap-Zeilen und vergleicht Seiten ohne www. und Schrägstrich', () => {
+    expect(sitemapsFromRobots('User-agent: *\nSitemap: https://x.ch/sitemap_index.xml # yoast\nsitemap: /rel.xml')).toEqual([
+      'https://x.ch/sitemap_index.xml',
+    ]);
+    expect(pageKey('https://www.x.ch/blog/a/')).toBe(pageKey('http://x.ch/blog/a?utm=1'));
+  });
+
+  it('findet die Seite samt lastmod über den Index aus der robots.txt', async () => {
+    const r = await checkSitemap('https://x.ch/blog/a', 'Sitemap: https://x.ch/sitemap_index.xml', fetchFn);
+    expect(r).toMatchObject({ exists: true, declaredInRobots: true, listed: true, pageLastmod: '2026-09-01T10:00:00+00:00', entries: 2 });
+    expect(r.lastmodShare).toBe(0.5);
+  });
+
+  it('meldet eine fehlende Seite und eine fehlende Sitemap', async () => {
+    const missing = await checkSitemap('https://x.ch/blog/c', 'Sitemap: https://x.ch/sitemap_index.xml', fetchFn);
+    expect(missing.listed).toBe(false);
+    const none = await checkSitemap('https://x.ch/blog/a', '', fetchFn);
+    expect(none.exists).toBe(false);
+  });
+
+  it('bewertet die Sitemap als eigenes Kriterium', () => {
+    const page: PageData = {
+      url: 'https://x.ch/blog/a', headings: [], paragraphs: [], lists: [], links: [], schema: [], images: [],
+      meta: { title: '', description: '', author: '', publishDate: null, modifiedDate: null, ogType: null },
+      author: null, dates: [],
+      semanticElements: { hasArticle: false, hasMain: false, hasNav: false, hasAside: false, hasHeader: false, hasFooter: false, hasSection: false },
+      llmsTxt: { exists: false },
+      robotsTxt: { exists: false, allowedBots: {}, blockedBots: [], totalChecked: 0 },
+      robotsMeta: { hasNoIndex: false, hasNoFollow: false, hasNoArchive: false, hasNoSnippet: false, rawContent: null },
+      openGraph: { title: null, description: null, image: null, url: null, type: null },
+      twitterCard: { card: null, title: null, description: null, image: null },
+      viewport: { hasViewport: false, hasDeviceWidth: false, userScalableNo: false, rawContent: null },
+      canonical: { href: null },
+    };
+    const analyzer = new MachineReadabilityAnalyzer();
+    const detail = (p: PageData) => analyzer.analyze(p).details.find((d) => d.criterionKey === 'criterion_sitemap');
+    expect(detail(page)).toBeUndefined();
+    const base = { exists: true, declaredInRobots: true, listed: true, pageLastmod: '2026-09-01', entries: 20, lastmodShare: 1, lastmodUniform: false };
+    expect(detail({ ...page, sitemap: base })?.found).toBe(true);
+    const notListed = analyzer.analyze({ ...page, sitemap: { ...base, listed: false, pageLastmod: null } });
+    const d = notListed.details.find((x) => x.criterionKey === 'criterion_sitemap')!;
+    expect(d.progress?.current).toBe(60);
+    expect(d.fixKey).toBe('fix_sitemap_listed');
+    expect(notListed.recommendations).toContain('sitemap_page_missing');
+    expect(detail({ ...page, sitemap: { ...base, lastmodUniform: true } })?.evidence).toContainEqual({ key: 'ev_sitemap_lastmod_uniform' });
+  });
+});
