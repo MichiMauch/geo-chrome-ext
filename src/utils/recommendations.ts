@@ -30,6 +30,7 @@ const RECOMMENDATION_KEYS: Record<string, { i18nKey: string; priority: number }>
   'weak_internal_links': { i18nKey: 'rec_weak_internal_links', priority: 5 },
   'no_llms_txt': { i18nKey: 'rec_no_llms_txt', priority: 8 },
   'ai_bots_blocked': { i18nKey: 'rec_ai_bots_blocked', priority: 11 },
+  'ai_bots_firewall': { i18nKey: 'rec_ai_bots_firewall', priority: 10 },
   // AI Citation
   'no_facts': { i18nKey: 'rec_no_facts', priority: 7 },
   'no_faq': { i18nKey: 'rec_no_faq', priority: 6 },

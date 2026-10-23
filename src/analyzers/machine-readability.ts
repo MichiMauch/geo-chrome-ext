@@ -42,6 +42,10 @@ const BOT_INFO: Record<string, { owner: string; purpose: BotPurpose }> = {
   CCBot: { owner: 'Common Crawl', purpose: 'training' },
 };
 
+const ROBOTS_ANSWER_BLOCK_KEYS = new Set([
+  'ev_robotsTxt_unreachable', 'ev_robotsTxt_blocked_index', 'ev_robotsTxt_blocked_search', 'ev_robotsTxt_blocked_user',
+]);
+
 // Short text for evidence lines
 function clip(text: string, max = 60): string {
   const t = text.replace(/\s+/g, ' ').trim();
@@ -392,9 +396,19 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     const botWeight = (bot: string) => purposeWeights[BOT_INFO[bot]?.purpose ?? 'training'];
     const checkedBots = Object.keys(robotsTxt?.allowedBots ?? {});
     const blockedBots = robotsTxt?.blockedBots ?? [];
-    const totalBotWeight = checkedBots.reduce((sum, b) => sum + botWeight(b), 0);
-    const blockedBotWeight = blockedBots.reduce((sum, b) => sum + botWeight(b), 0);
-    const robotsScore = totalBotWeight > 0 ? 1 - blockedBotWeight / totalBotWeight : 1;
+    // Bots the server turned away although robots.txt lets them in (CDN or
+    // firewall rule, see utils/bot-access.ts). Our request only imitates the
+    // bot, so such a block counts half.
+    const firewallBlocked = (pageData.botAccess?.blocked ?? [])
+      .map((b) => b.bot)
+      .filter((b) => !blockedBots.includes(b));
+    const totalBotWeight = (checkedBots.length > 0 ? checkedBots : [...config.aiBots])
+      .reduce((sum, b) => sum + botWeight(b), 0);
+    const blockedBotWeight =
+      blockedBots.reduce((sum, b) => sum + botWeight(b), 0) +
+      0.5 * firewallBlocked.reduce((sum, b) => sum + botWeight(b), 0);
+    const robotsScore = totalBotWeight > 0 ? Math.max(0, 1 - blockedBotWeight / totalBotWeight) : 1;
+    const firewallAnswerBlock = firewallBlocked.some((b) => (BOT_INFO[b]?.purpose ?? 'training') !== 'training');
     const allBotsAllowed = blockedCount === 0;
     // Only training crawlers blocked: a deliberate opt-out that keeps the
     // page in AI answers — passes, without a recommendation.
@@ -415,7 +429,7 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
 
     details.push({
       criterionKey: 'criterion_robotsTxt',
-      found: !answerBotsBlocked,
+      found: !answerBotsBlocked && !firewallAnswerBlock,
       value: robotsValue,
       weight: config.weights.robotsTxt,
       progress: {
@@ -423,7 +437,7 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
         target: total,
         unitKey: 'unit_bots',
       },
-      ...this.robotsEvidence(robotsTxt, total),
+      ...this.withFirewallEvidence(this.robotsEvidence(robotsTxt, total), pageData.botAccess, firewallBlocked),
     });
 
     weightedScore += robotsScore * config.weights.robotsTxt;
@@ -478,6 +492,7 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     if (!hasGoodLinking) recommendations.push('weak_internal_links');
     if (!hasLlmsTxt) recommendations.push('no_llms_txt');
     if (hasAnyBlock) recommendations.push('ai_bots_blocked');
+    if (firewallAnswerBlock) recommendations.push('ai_bots_firewall');
     if (jsRenderingIssue) recommendations.push('js_only_content');
 
     return this.createCategory(0, weightedScore, totalWeight, details, recommendations);
@@ -676,6 +691,29 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     if (user) evidence.push({ key: 'ev_robotsTxt_blocked_user', params: { bots: user } });
     if (training) evidence.push({ key: 'ev_robotsTxt_blocked_training', params: { bots: training } });
     return { evidence, ...(!index && !search && !user ? { fixKey: 'fix_robotsTxt_training' } : {}) };
+  }
+
+  // CDN/firewall blocks on top of the robots.txt verdict. The fix switches to
+  // the CDN one when robots.txt itself blocks no search or on-request bot.
+  private withFirewallEvidence(
+    base: { evidence: EvidenceLine[]; fixKey?: string },
+    access: PageData['botAccess'],
+    firewallBlocked: string[]
+  ): { evidence: EvidenceLine[]; fixKey?: string } {
+    if (!access) return base;
+    const evidence = [...base.evidence];
+    if (firewallBlocked.length === 0) {
+      evidence.push({ key: 'ev_robotsTxt_firewall_ok', params: { bots: access.checked.join(', ') } });
+      return { ...base, evidence };
+    }
+    const statuses = [...new Set(access.blocked.filter((b) => firewallBlocked.includes(b.bot)).map((b) => b.status))];
+    evidence.push({
+      key: 'ev_robotsTxt_firewall',
+      params: { bots: firewallBlocked.join(', '), status: statuses.join(', ') },
+    });
+    // robots.txt itself shuts out answer bots: that fix comes first
+    const robotsAnswerBlock = base.evidence.some((e) => ROBOTS_ANSWER_BLOCK_KEYS.has(e.key));
+    return robotsAnswerBlock ? { ...base, evidence } : { evidence, fixKey: 'fix_robotsTxt_firewall' };
   }
 
   private crawlerEvidence(cv: NonNullable<PageData['crawlerView']>): EvidenceLine[] {

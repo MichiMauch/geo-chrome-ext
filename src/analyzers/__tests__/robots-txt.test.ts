@@ -283,6 +283,35 @@ Allow: /`;
     expect(detail?.fixKey).toBeUndefined();
   });
 
+  it('counts a CDN block of a search bot half and switches the fix', () => {
+    const allowed = parseRobotsTxt('', GEO_CONFIG.machineReadability.aiBots, undefined, '/');
+    const open = analyzer.analyze(mockPage(allowed));
+    const page = {
+      ...mockPage(allowed),
+      botAccess: { checked: ['OAI-SearchBot', 'GPTBot'], blocked: [{ bot: 'OAI-SearchBot', status: 403 }] },
+    };
+    const result = analyzer.analyze(page);
+    const detail = result.details.find((d) => d.criterionKey === 'criterion_robotsTxt')!;
+    expect(detail.found).toBe(false);
+    expect(detail.fixKey).toBe('fix_robotsTxt_firewall');
+    expect(detail.evidence).toContainEqual({ key: 'ev_robotsTxt_firewall', params: { bots: 'OAI-SearchBot', status: '403' } });
+    expect(result.recommendations).toContain('ai_bots_firewall');
+    expect(result.recommendations).not.toContain('ai_bots_blocked');
+    expect(result.score).toBeLessThan(open.score);
+    // A robots.txt block of the same bot is the stronger finding
+    const robotsBlocked = { ...allowed, blockedBots: ['OAI-SearchBot'], allowedBots: { ...allowed.allowedBots, 'OAI-SearchBot': false } };
+    const both = analyzer.analyze({ ...page, robotsTxt: robotsBlocked });
+    expect(both.recommendations).not.toContain('ai_bots_firewall');
+  });
+
+  it('confirms open access when the bot requests got the page', () => {
+    const allowed = parseRobotsTxt('', GEO_CONFIG.machineReadability.aiBots, undefined, '/');
+    const result = analyzer.analyze({ ...mockPage(allowed), botAccess: { checked: ['GPTBot', 'ClaudeBot'], blocked: [] } });
+    const detail = result.details.find((d) => d.criterionKey === 'criterion_robotsTxt')!;
+    expect(detail.found).toBe(true);
+    expect(detail.evidence).toContainEqual({ key: 'ev_robotsTxt_firewall_ok', params: { bots: 'GPTBot, ClaudeBot' } });
+  });
+
   it('treats an unreachable robots.txt as fully blocked', () => {
     const result = analyzer.analyze(mockPage({
       exists: false,

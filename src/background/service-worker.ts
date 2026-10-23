@@ -1,4 +1,5 @@
 import { pruneStaleCaches } from '../utils/cache';
+import { PROBE_MARKER_HEADER } from '../utils/bot-access';
 
 const ALARM_PREFIX = 'geo_badge_clear_';
 
@@ -143,4 +144,55 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
   } catch {
     // Ignore
   }
+});
+
+// Bot-access probe (utils/bot-access.ts): the content script asks for a
+// session rule that gives its next fetch of the page an AI crawler's
+// User-Agent. One rule per tab, scoped to that tab, URL and fetch type, so
+// the user's own browsing is untouched; replaced per bot, removed after.
+const PROBE_RULE_BASE = 900_000;
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  const tabId = sender.tab?.id;
+  if (tabId === undefined) return false;
+  const ruleId = PROBE_RULE_BASE + tabId;
+
+  if (message?.action === 'bot-probe-rule' && typeof message.url === 'string') {
+    const url = String(message.url).split('#')[0];
+    chrome.declarativeNetRequest
+      .updateSessionRules({
+        removeRuleIds: [ruleId],
+        addRules: [
+          {
+            id: ruleId,
+            priority: 1,
+            action: {
+              type: chrome.declarativeNetRequest.RuleActionType.MODIFY_HEADERS,
+              requestHeaders: [
+                { header: 'user-agent', operation: chrome.declarativeNetRequest.HeaderOperation.SET, value: String(message.userAgent) },
+              ],
+              responseHeaders: [
+                { header: PROBE_MARKER_HEADER, operation: chrome.declarativeNetRequest.HeaderOperation.SET, value: String(message.bot) },
+              ],
+            },
+            condition: {
+              urlFilter: `|${url}|`,
+              tabIds: [tabId],
+              resourceTypes: [chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST],
+            },
+          },
+        ],
+      })
+      .then(() => sendResponse({ ok: true }))
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+
+  if (message?.action === 'bot-probe-clear') {
+    chrome.declarativeNetRequest
+      .updateSessionRules({ removeRuleIds: [ruleId] })
+      .finally(() => sendResponse({ ok: true }));
+    return true;
+  }
+  return false;
 });

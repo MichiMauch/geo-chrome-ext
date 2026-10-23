@@ -130,6 +130,9 @@ export interface PageData {
   // HTML, so there is nothing to compare there, and history/report re-renders
   // don't carry it.
   crawlerView?: CrawlerViewData;
+  // Live analyses only, like crawlerView: the page fetched with AI crawler
+  // User-Agents, to spot CDN/firewall blocks robots.txt does not show.
+  botAccess?: BotAccessData;
 }
 
 export interface CanonicalData {
@@ -164,6 +167,14 @@ export interface TwitterCardData {
   title: string | null;
   description: string | null;
   image: string | null;
+}
+
+// Result of fetching the page with AI crawler User-Agents (see
+// utils/bot-access.ts). Only bots whose request really carried the header
+// are listed in `checked`.
+export interface BotAccessData {
+  checked: string[];
+  blocked: { bot: string; status: number }[];
 }
 
 export interface RobotsMetaData {

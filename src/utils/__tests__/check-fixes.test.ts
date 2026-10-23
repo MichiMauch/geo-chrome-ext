@@ -189,3 +189,40 @@ describe('Snippet-Einschränkungen', async () => {
     expect(index({ ...base, hasNoIndex: true, hasNoSnippet: true }).recs).not.toContain('snippet_restricted');
   });
 });
+
+describe('Abruf mit Bot-Kennung', async () => {
+  const { probeBotAccess, isBlockedResponse, PROBE_MARKER_HEADER } = await import('../bot-access');
+
+  it('erkennt Sperren an Status und Cloudflare-Challenge', () => {
+    expect(isBlockedResponse(403, new Headers())).toBe(true);
+    expect(isBlockedResponse(200, new Headers({ 'cf-mitigated': 'challenge' }))).toBe(true);
+    expect(isBlockedResponse(200, new Headers())).toBe(false);
+  });
+
+  it('meldet nur Bots, deren Anfrage die Kennung wirklich trug', async () => {
+    let current = '';
+    const g = globalThis as unknown as { chrome: unknown; fetch: typeof fetch };
+    const originalFetch = g.fetch;
+    g.chrome = {
+      runtime: {
+        sendMessage: async (m: { action: string; bot?: string }) => {
+          if (m.action === 'bot-probe-rule') current = m.bot ?? '';
+          return { ok: true };
+        },
+      },
+    };
+    g.fetch = (async () => {
+      // The rule "did not apply" for ClaudeBot: no marker header
+      const headers: Record<string, string> = current === 'ClaudeBot' ? {} : { [PROBE_MARKER_HEADER]: current };
+      return new Response('x', { status: current === 'GPTBot' ? 403 : 200, headers });
+    }) as typeof fetch;
+    try {
+      const r = await probeBotAccess('https://x.ch/a');
+      expect(r?.checked).toEqual(['OAI-SearchBot', 'GPTBot', 'PerplexityBot']);
+      expect(r?.blocked).toEqual([{ bot: 'GPTBot', status: 403 }]);
+    } finally {
+      g.fetch = originalFetch;
+      delete (g as { chrome?: unknown }).chrome;
+    }
+  });
+});

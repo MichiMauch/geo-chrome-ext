@@ -3,7 +3,7 @@
   "name": "Paul AI GEO Analyzer",
   "version": "4.8.1",
   "description": "Analyzes web pages for Generative Engine Optimization (GEO) with score tracking, trend analysis and history - geo.mauch.rocks",
-  "permissions": ["activeTab", "scripting", "storage", "alarms", "sidePanel", "tabs"],
+  "permissions": ["activeTab", "scripting", "storage", "alarms", "sidePanel", "tabs", "declarativeNetRequestWithHostAccess"],
   "background": {
     "service_worker": "background/service-worker.js"
   },

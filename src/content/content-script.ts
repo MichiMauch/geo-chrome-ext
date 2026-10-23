@@ -7,6 +7,7 @@ import { computeHighlightTargets } from '../utils/highlight-targets';
 import { applyHighlights, clearHighlights, scrollToFirst } from '../utils/highlight';
 import { discoverSitemapPages } from '../utils/sitemap';
 import { analyzeCrawlerView } from '../utils/crawler-view';
+import { probeBotAccess } from '../utils/bot-access';
 import { withXRobotsTag } from '../utils/x-robots-tag';
 import { saveAnalysis } from '../utils/history';
 import { reportAnalysis } from '../utils/analytics';
@@ -175,6 +176,11 @@ chrome.runtime.onMessage.addListener(
             analyzeCrawlerView().catch(() => undefined),
           ]);
           pageData.crawlerView = crawlerView;
+          // Only when the normal fetch got the page: a block for the bots
+          // alone is then specific to them.
+          if (crawlerView && crawlerView.status !== 'auth-wall') {
+            pageData.botAccess = await probeBotAccess().catch(() => undefined);
+          }
           // noindex can also come as an HTTP header; only the crawler fetch
           // sees the response headers of the page.
           pageData.robotsMeta = withXRobotsTag(pageData.robotsMeta, crawlerView?.xRobotsTag);

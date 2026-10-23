@@ -264,7 +264,8 @@ export const translations: Record<Lang, Record<string, string>> = {
     rec_few_entities: 'Describe publisher and author as Schema.org entities (name, logo, sameAs profiles), link them via @id and name the topic with about/mentions.',
     rec_weak_semantic_html: 'Use semantic HTML elements like <article>, <main>, <section>.',
     rec_no_llms_txt: 'Create an llms.txt file in the root directory to give LLMs context about your website.',
-    rec_ai_bots_blocked: 'AI crawlers are blocked in robots.txt. Blocked bots will never cite your content — unblock them (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot) for AI visibility.',
+    rec_ai_bots_blocked: 'Search and answer crawlers are blocked in robots.txt (e.g. OAI-SearchBot, Claude-SearchBot, PerplexityBot, Googlebot). While blocked, the page does not appear as a source in AI answers — unblock them; training crawlers such as GPTBot or CCBot may stay blocked.',
+    rec_ai_bots_firewall: 'The server turns AI crawlers away although robots.txt allows them — usually a CDN or firewall rule such as Cloudflare’s “Block AI bots”. Check the bot settings of the CDN/firewall and allow at least the search crawlers.',
 
     // Explanations for robots.txt
     explain_robotstxt_ok: 'All checked AI crawlers (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot) may access the site.',
@@ -630,7 +631,8 @@ export const translations: Record<Lang, Record<string, string>> = {
     rec_few_entities: 'Beschreiben Sie Herausgeber und Autor als Schema.org-Entitäten (Name, Logo, sameAs-Profile), verknüpfen Sie sie über @id und benennen Sie das Thema mit about/mentions.',
     rec_weak_semantic_html: 'Verwenden Sie semantische HTML-Elemente wie <article>, <main>, <section>.',
     rec_no_llms_txt: 'Erstellen Sie eine llms.txt-Datei im Root-Verzeichnis, um LLMs Kontext über Ihre Website zu geben.',
-    rec_ai_bots_blocked: 'AI-Crawler werden in der robots.txt blockiert. Blockierte Bots zitieren Ihre Inhalte nie — geben Sie sie frei (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot) für AI-Sichtbarkeit.',
+    rec_ai_bots_blocked: 'Such- und Abruf-Crawler werden in der robots.txt gesperrt (z.B. OAI-SearchBot, Claude-SearchBot, PerplexityBot, Googlebot). Solange sie gesperrt sind, erscheint die Seite in KI-Antworten nicht als Quelle — geben Sie sie frei; Trainings-Crawler wie GPTBot oder CCBot dürfen gesperrt bleiben.',
+    rec_ai_bots_firewall: 'Der Server weist KI-Crawler ab, obwohl die robots.txt sie erlaubt — meist eine Regel im CDN oder in der Firewall, etwa Cloudflares «Block AI bots». Prüfen Sie die Bot-Einstellungen von CDN/Firewall und lassen Sie mindestens die Such-Crawler durch.',
 
     trend_flat: 'Keine Veränderung seit letzter Analyse',
     trend_since: '{arrow} {sign}{delta} seit {time}',
@@ -988,7 +990,8 @@ export const translations: Record<Lang, Record<string, string>> = {
     rec_few_entities: 'Décrivez l\'éditeur et l\'auteur comme entités Schema.org (nom, logo, profils sameAs), reliez-les via @id et nommez le sujet avec about/mentions.',
     rec_weak_semantic_html: 'Utilisez des éléments HTML sémantiques comme <article>, <main>, <section>.',
     rec_no_llms_txt: 'Créez un fichier llms.txt à la racine pour fournir du contexte aux LLMs sur votre site.',
-    rec_ai_bots_blocked: 'Des crawlers IA sont bloqués dans robots.txt. Les bots bloqués ne citeront jamais votre contenu — débloquez-les (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot) pour la visibilité IA.',
+    rec_ai_bots_blocked: 'Des robots de recherche et de réponse sont bloqués dans robots.txt (p. ex. OAI-SearchBot, Claude-SearchBot, PerplexityBot, Googlebot). Tant qu’ils sont bloqués, la page n’apparaît pas comme source dans les réponses d’IA — débloquez-les ; les robots d’entraînement comme GPTBot ou CCBot peuvent rester bloqués.',
+    rec_ai_bots_firewall: 'Le serveur refuse les robots d’IA alors que robots.txt les autorise — généralement une règle de CDN ou de pare-feu, comme « Block AI bots » de Cloudflare. Vérifiez les réglages des bots du CDN/pare-feu et laissez passer au moins les robots de recherche.',
 
     trend_flat: 'Aucun changement depuis la dernière analyse',
     trend_since: '{arrow} {sign}{delta} depuis {time}',
@@ -1345,7 +1348,8 @@ export const translations: Record<Lang, Record<string, string>> = {
     rec_few_entities: 'Describa editor y autor como entidades Schema.org (nombre, logo, perfiles sameAs), conéctelos mediante @id y nombre el tema con about/mentions.',
     rec_weak_semantic_html: 'Use elementos HTML semánticos como <article>, <main>, <section>.',
     rec_no_llms_txt: 'Cree un archivo llms.txt en el directorio raíz para dar contexto a los LLMs sobre su sitio.',
-    rec_ai_bots_blocked: 'Crawlers IA están bloqueados en robots.txt. Los bots bloqueados nunca citarán su contenido — desbloquéelos (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot) para visibilidad IA.',
+    rec_ai_bots_blocked: 'Hay rastreadores de búsqueda y respuesta bloqueados en robots.txt (p. ej. OAI-SearchBot, Claude-SearchBot, PerplexityBot, Googlebot). Mientras estén bloqueados, la página no aparece como fuente en las respuestas de IA — desbloquéelos; los rastreadores de entrenamiento como GPTBot o CCBot pueden seguir bloqueados.',
+    rec_ai_bots_firewall: 'El servidor rechaza a los rastreadores de IA aunque robots.txt los permite — normalmente una regla de la CDN o del firewall, como «Block AI bots» de Cloudflare. Revise los ajustes de bots de la CDN/firewall y deje pasar al menos a los rastreadores de búsqueda.',
 
     trend_flat: 'Sin cambios desde el último análisis',
     trend_since: '{arrow} {sign}{delta} desde hace {time}',
@@ -1702,7 +1706,8 @@ export const translations: Record<Lang, Record<string, string>> = {
     rec_few_entities: 'Descreva editor e autor como entidades Schema.org (nome, logótipo, perfis sameAs), ligue-os via @id e nomeie o tema com about/mentions.',
     rec_weak_semantic_html: 'Use elementos HTML semânticos como <article>, <main>, <section>.',
     rec_no_llms_txt: 'Crie um arquivo llms.txt no diretório raiz para dar contexto aos LLMs sobre seu site.',
-    rec_ai_bots_blocked: 'Crawlers IA estão bloqueados em robots.txt. Bots bloqueados nunca citarão seu conteúdo — desbloqueie-os (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot) para visibilidade IA.',
+    rec_ai_bots_blocked: 'Há crawlers de pesquisa e resposta bloqueados em robots.txt (p. ex. OAI-SearchBot, Claude-SearchBot, PerplexityBot, Googlebot). Enquanto estiverem bloqueados, a página não aparece como fonte nas respostas de IA — desbloqueie-os; crawlers de treino como GPTBot ou CCBot podem continuar bloqueados.',
+    rec_ai_bots_firewall: 'O servidor recusa crawlers de IA embora o robots.txt os permita — normalmente uma regra da CDN ou da firewall, como o «Block AI bots» da Cloudflare. Verifique as definições de bots da CDN/firewall e deixe passar pelo menos os crawlers de pesquisa.',
 
     trend_flat: 'Sem alterações desde a última análise',
     trend_since: '{arrow} {sign}{delta} desde {time}',
@@ -2059,7 +2064,8 @@ export const translations: Record<Lang, Record<string, string>> = {
     rec_few_entities: 'Descrivete editore e autore come entità Schema.org (nome, logo, profili sameAs), collegateli tramite @id e nominate il tema con about/mentions.',
     rec_weak_semantic_html: 'Usate elementi HTML semantici come <article>, <main>, <section>.',
     rec_no_llms_txt: 'Create un file llms.txt nella directory principale per fornire contesto ai LLM sul vostro sito.',
-    rec_ai_bots_blocked: 'Crawler IA sono bloccati in robots.txt. I bot bloccati non citeranno mai i vostri contenuti — sbloccateli (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot) per la visibilità IA.',
+    rec_ai_bots_blocked: 'Crawler di ricerca e di risposta sono bloccati in robots.txt (es. OAI-SearchBot, Claude-SearchBot, PerplexityBot, Googlebot). Finché sono bloccati, la pagina non compare come fonte nelle risposte IA — sbloccateli; i crawler di addestramento come GPTBot o CCBot possono restare bloccati.',
+    rec_ai_bots_firewall: 'Il server respinge i crawler IA anche se robots.txt li consente — di solito una regola del CDN o del firewall, come «Block AI bots» di Cloudflare. Controllate le impostazioni dei bot di CDN/firewall e lasciate passare almeno i crawler di ricerca.',
 
     trend_flat: 'Nessun cambiamento dall\'ultima analisi',
     trend_since: '{arrow} {sign}{delta} da {time}',
