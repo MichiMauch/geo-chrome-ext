@@ -1,21 +1,22 @@
 import { PageData, PageType, AnalysisCategory, CategoryDetail, SchemaData, EvidenceLine } from '../types/analysis';
 import { BaseAnalyzer } from './base';
 import { GEO_CONFIG } from '../config/geo-config';
-import { schemaTypesOf } from '../utils/schema-types';
+import { LOCAL_BUSINESS_TYPES, schemaTypesOf } from '../utils/schema-types';
 import { ARTICLE_SCHEMA_TYPES, detectPageType } from '../utils/page-type';
 import { visibleQuestions } from '../utils/visible-questions';
+import { normalizePhone } from '../utils/dom-helpers';
 
 // Types the schema check counts. Each distinct type counts once, however many
 // nodes carry it.
 const RELEVANT_SCHEMA_TYPES = new Set<string>([
   ...ARTICLE_SCHEMA_TYPES,
   'FAQPage', 'HowTo', 'Product',
-  'Organization', 'NewsMediaOrganization', 'Corporation', 'LocalBusiness',
+  'Organization', 'NewsMediaOrganization', 'Corporation', ...LOCAL_BUSINESS_TYPES,
   'Person', 'WebPage', 'CollectionPage', 'AboutPage', 'ContactPage', 'BreadcrumbList',
 ]);
 
 const ORGANIZATION_TYPES = new Set<string>([
-  'Organization', 'NewsMediaOrganization', 'Corporation', 'LocalBusiness',
+  'Organization', 'NewsMediaOrganization', 'Corporation', ...LOCAL_BUSINESS_TYPES,
   'NGO', 'EducationalOrganization', 'GovernmentOrganization',
 ]);
 
@@ -543,6 +544,21 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
       if (product.score < 0.7) productIncomplete = true;
     }
 
+    // Check 9: local business data — only for local businesses
+    const local = this.evaluateLocalBusiness(pageData, pageType);
+    if (local) {
+      details.push({
+        criterionKey: 'criterion_localBusiness',
+        found: local.score >= 0.99,
+        value: local.score >= 0.99 ? 'value_present' : local.hasNode ? 'value_localBusiness_partial' : 'value_noneFound',
+        weight: config.weights.localBusiness,
+        progress: { current: Math.round(local.score * 100), target: 100, unitKey: 'unit_percent' },
+        evidence: local.evidence,
+      });
+      weightedScore += local.score * config.weights.localBusiness;
+      totalWeight += config.weights.localBusiness;
+    }
+
     // Check 7: XML sitemap — live analysis only (the batch starts from it)
     const sitemap = pageData.sitemap;
     if (sitemap) {
@@ -571,6 +587,7 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
 
     const recommendations: string[] = [];
     if (productIncomplete) recommendations.push('product_data_incomplete');
+    if (local && local.score < 0.7) recommendations.push('local_business_incomplete');
     if (sitemap && !sitemap.exists) recommendations.push('no_sitemap');
     else if (sitemap?.listed === false) recommendations.push('sitemap_page_missing');
     else if (sitemap && ((sitemap.listed === true && !sitemap.pageLastmod) || sitemap.lastmodUniform)) {
@@ -843,6 +860,71 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     if (missing.length > 0) evidence.push({ key: 'ev_product_missing', params: { fields: missing.map((f) => PRODUCT_FIELD_NAMES[f]).join(', ') } });
     evidence.push({ key: gtin ? 'ev_product_gtin' : sku ? 'ev_product_sku_only' : 'ev_product_no_identifier' });
     return { score: Math.min(1, score), found: true, evidence };
+  }
+
+  // Local business: a LocalBusiness node, or — on the start or a contact
+  // page — a visible address together with opening hours (customers come by;
+  // a company that only prints its address in the footer is not asked for
+  // LocalBusiness markup).
+  private evaluateLocalBusiness(
+    pageData: PageData,
+    pageType: PageType
+  ): { score: number; hasNode: boolean; evidence: EvidenceLine[] } | null {
+    const parts = GEO_CONFIG.machineReadability.localParts;
+    const signals = pageData.local;
+    const byId = indexById(pageData.schema);
+    const isLocal = (n: SchemaNode) => nodeTypes(n).some((t) => LOCAL_BUSINESS_TYPES.includes(t));
+    const nodes = [
+      ...pageData.schema.filter(isLocal),
+      ...pageData.schema.flatMap((s) => resolveNodes(s.publisher, byId)).filter(isLocal),
+    ];
+    let contactPage = false;
+    try {
+      contactPage = /\/(?:[a-z-]*-)?(?:kontakt|contact|contatti|standorte?|filialen?|locations?|anfahrt|oeffnungszeiten|öffnungszeiten)(?:[-_./]|$)/i.test(
+        decodeURIComponent(new URL(pageData.url).pathname)
+      );
+    } catch {
+      // unparseable URL
+    }
+    const pageSignals =
+      !!signals && signals.addresses.length > 0 && signals.hasOpeningHours && (pageType === 'homepage' || contactPage);
+    if (nodes.length === 0 && !pageSignals) return null;
+
+    const evidence: EvidenceLine[] = [];
+    if (nodes.length === 0) {
+      evidence.push({ key: 'ev_local_detected_page', params: { address: clip(signals!.addresses[0], 80) } });
+      evidence.push({ key: 'ev_local_schema_none' });
+      return { score: 0, hasNode: false, evidence };
+    }
+    const node = nodes[0];
+    evidence.push({ key: 'ev_local_detected_schema', params: { type: nodeTypes(node).join(', '), name: nodeName(node) ?? '' } });
+
+    const address = resolveNodes(node.address, byId)[0];
+    const addressFields = ['streetAddress', 'postalCode', 'addressLocality'].filter((k) => address && !isEmptyValue(address[k]));
+    const telephone = typeof node.telephone === 'string' ? node.telephone : null;
+    const hours = !isEmptyValue(node.openingHoursSpecification) || !isEmptyValue(node.openingHours);
+    const geo = !isEmptyValue(node.geo) || !isEmptyValue(node.hasMap);
+
+    // Consistency with the page, only where the page shows something to compare
+    const schemaPostal = address && typeof address.postalCode === 'string' ? address.postalCode.trim() : null;
+    const postalMismatch = !!schemaPostal && !!signals && signals.postalCodes.length > 0 && !signals.postalCodes.includes(schemaPostal);
+    const phoneMismatch = !!telephone && !!signals && signals.phones.length > 0 && !signals.phones.includes(normalizePhone(telephone));
+
+    const score =
+      parts.node +
+      parts.address * (addressFields.length / 3) +
+      (telephone ? parts.telephone : 0) +
+      (hours ? parts.openingHours : 0) +
+      (geo ? parts.geo : 0) +
+      (postalMismatch || phoneMismatch ? 0 : parts.consistent);
+
+    evidence.push({ key: addressFields.length === 3 ? 'ev_local_address_ok' : 'ev_local_address_missing', params: { fields: ['streetAddress', 'postalCode', 'addressLocality'].filter((k) => !addressFields.includes(k)).join(', ') } });
+    evidence.push({ key: telephone ? 'ev_local_phone_ok' : 'ev_local_phone_missing' });
+    evidence.push({ key: hours ? 'ev_local_hours_ok' : 'ev_local_hours_missing' });
+    if (!geo) evidence.push({ key: 'ev_local_geo_missing' });
+    if (postalMismatch) evidence.push({ key: 'ev_local_postal_mismatch', params: { schema: schemaPostal!, page: signals!.postalCodes.join(', ') } });
+    if (phoneMismatch) evidence.push({ key: 'ev_local_phone_mismatch', params: { schema: telephone! } });
+    return { score: Math.min(1, score), hasNode: true, evidence };
   }
 
   private sitemapEvidence(s: NonNullable<PageData['sitemap']>): { evidence: EvidenceLine[]; fixKey?: string } {

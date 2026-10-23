@@ -446,3 +446,53 @@ describe('Produktdaten', async () => {
     expect(detail([]).value).toBe('value_noneFound');
   });
 });
+
+describe('Lokales Geschäft', async () => {
+  const { extractLocalSignals, normalizePhone, extractPageData } = await import('../dom-helpers');
+  const { MachineReadabilityAnalyzer } = await import('../../analyzers/machine-readability');
+  const domain = {
+    llmsTxt: { exists: false },
+    robotsTxt: { exists: false, allowedBots: {}, blockedBots: [], totalChecked: 0 },
+  } as never;
+  const footer = `<footer>Bäckerei Muster · Bahnhofstrasse 12, 6003 Luzern · <a href="tel:+41412101010">041 210 10 10</a>
+    <p>Öffnungszeiten: Mo–Fr 06:30–18:30</p></footer>`;
+  const local = async (html: string, url = 'https://baeckerei.ch/') => {
+    const pd = await extractPageData(parse(html), url, domain);
+    const r = new MachineReadabilityAnalyzer().analyze(pd);
+    return { d: r.details.find((x) => x.criterionKey === 'criterion_localBusiness'), recs: r.recommendations };
+  };
+
+  it('liest Adresse, Telefon und Öffnungszeiten auch aus dem Seitenfuss', () => {
+    expect(normalizePhone('+41 41 210 10 10')).toBe('0412101010');
+    expect(extractLocalSignals(parse(`<body><main><h1>Brot</h1></main>${footer}</body>`))).toEqual({
+      addresses: ['Bahnhofstrasse 12, 6003 Luzern'],
+      postalCodes: ['6003'],
+      phones: ['0412101010'],
+      hasOpeningHours: true,
+    });
+  });
+
+  it('verlangt LocalBusiness nur bei Adresse mit Öffnungszeiten auf Start- oder Kontaktseite', async () => {
+    const page = `<body><main><h1>Brot</h1></main>${footer}</body>`;
+    const none = await local(page);
+    expect(none.d?.evidence?.map((e) => e.key)).toEqual(['ev_local_detected_page', 'ev_local_schema_none']);
+    expect(none.recs).toContain('local_business_incomplete');
+    expect((await local(page, 'https://baeckerei.ch/sortiment/zopf')).d).toBeUndefined();
+    const noHours = `<body><main><h1>Agentur</h1></main><footer>Bahnhofstrasse 12, 6003 Luzern</footer></body>`;
+    expect((await local(noHours)).d).toBeUndefined();
+  });
+
+  it('gleicht PLZ und Telefon des Schemas mit der Seite ab', async () => {
+    const schema = (postal: string, tel: string) => `<script type="application/ld+json">${JSON.stringify({
+      '@type': 'Bakery', name: 'Bäckerei Muster', telephone: tel,
+      address: { '@type': 'PostalAddress', streetAddress: 'Bahnhofstrasse 12', postalCode: postal, addressLocality: 'Luzern' },
+      openingHoursSpecification: [{ '@type': 'OpeningHoursSpecification', dayOfWeek: 'Monday', opens: '06:30', closes: '18:30' }],
+      geo: { '@type': 'GeoCoordinates', latitude: 47.05, longitude: 8.31 },
+    })}</script>`;
+    const ok = await local(`<head>${schema('6003', '+41 41 210 10 10')}</head><body><main><h1>Brot</h1></main>${footer}</body>`);
+    expect(ok.d?.found).toBe(true);
+    const off = await local(`<head>${schema('6004', '+41 41 999 99 99')}</head><body><main><h1>Brot</h1></main>${footer}</body>`);
+    expect(off.d?.progress?.current).toBe(85);
+    expect(off.d?.evidence?.map((e) => e.key)).toEqual(expect.arrayContaining(['ev_local_postal_mismatch', 'ev_local_phone_mismatch']));
+  });
+});

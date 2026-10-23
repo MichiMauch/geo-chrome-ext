@@ -1,5 +1,5 @@
 {
-  "total": 13.7,
+  "total": 18.5,
   "pageType": "homepage",
   "categories": {
     "contentClarity": {
@@ -82,7 +82,7 @@
       ]
     },
     "trustSources": {
-      "score": 1.5,
+      "score": 5,
       "criteria": {
         "criterion_author": {
           "found": true,
@@ -97,11 +97,12 @@
           "evidence": []
         },
         "criterion_publisher": {
-          "found": false,
-          "value": "value_publisher_partial",
-          "progress": "30/100",
+          "found": true,
+          "value": "value_present",
+          "progress": "100/100",
           "evidence": [
-            "ev_publisher_schema_none",
+            "ev_publisher_schema",
+            "ev_publisher_verifiable",
             "ev_publisher_imprint_ok",
             "ev_publisher_contact_ok",
             "ev_publisher_about_ok"
@@ -114,30 +115,30 @@
           "evidence": []
         }
       },
-      "recommendations": [
-        "publisher_unclear"
-      ]
+      "recommendations": []
     },
     "machineReadability": {
-      "score": 1.8,
+      "score": 3.1,
       "criteria": {
         "criterion_schema": {
-          "found": false,
-          "value": "value_noneFound",
-          "progress": "0/2",
+          "found": true,
+          "value": "value_schemaTypes",
+          "progress": "1/2",
           "evidence": [
-            "ev_schema_none",
+            "ev_schema_found",
             "ev_schema_other",
             "ev_schema_target",
             "ev_schema_too_few"
-          ]
+          ],
+          "fix": "fix_schema_more"
         },
         "criterion_entities": {
-          "found": false,
-          "value": "0%",
-          "progress": "0/100",
+          "found": true,
+          "value": "40%",
+          "progress": "40/100",
           "evidence": [
-            "ev_entities_org_none",
+            "ev_entities_org_named",
+            "ev_entities_org_verifiable",
             "ev_entities_person_none",
             "ev_entities_graph_loose",
             "ev_entities_topic_none"
@@ -179,11 +180,20 @@
           "evidence": [
             "ev_robotsTxt_all_allowed"
           ]
+        },
+        "criterion_localBusiness": {
+          "found": false,
+          "value": "value_localBusiness_partial",
+          "progress": "85/100",
+          "evidence": [
+            "ev_local_detected_schema",
+            "ev_local_address_ok",
+            "ev_local_phone_ok",
+            "ev_local_hours_missing"
+          ]
         }
       },
       "recommendations": [
-        "no_schema",
-        "few_entities",
         "weak_internal_links",
         "no_llms_txt"
       ]

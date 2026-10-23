@@ -136,6 +136,8 @@ export interface PageData {
   hreflang?: HreflangData;
   // Absent in analyses stored before tables were read
   tables?: TableData[];
+  // Absent in analyses stored before local business data was checked
+  local?: LocalSignals;
   // Only set for a live page analysis. The sitemap batch already works on raw
   // HTML, so there is nothing to compare there, and history/report re-renders
   // don't carry it.
@@ -155,6 +157,18 @@ export interface HreflangData {
   // Same-site links that switch language (a[hreflang]/a[lang], or a
   // language label pointing to another /xx/ path prefix)
   languageLinks: string[];
+}
+
+// Contact details visible anywhere on the page (footer included), to judge
+// whether it is a local business and whether its structured data matches
+export interface LocalSignals {
+  // "Rämistrasse 4, 8001 Zürich" — street with number followed by postcode
+  addresses: string[];
+  postalCodes: string[];
+  // Digits only, national format (+41 44 … → 044…)
+  phones: string[];
+  // "Öffnungszeiten", "Mo–Fr 08:00–18:00", "opening hours" …
+  hasOpeningHours: boolean;
 }
 
 // A data table in the content (layout tables and one-row/one-column grids

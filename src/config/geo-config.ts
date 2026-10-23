@@ -199,6 +199,18 @@ export const GEO_CONFIG = {
       sitemap: 1.0,
       // Product pages only
       productData: 2.0,
+      // Local businesses only (LocalBusiness schema, or address + opening
+      // hours on the start or contact page)
+      localBusiness: 1.5,
+    },
+    // Shares of the local business check (sum 1.0)
+    localParts: {
+      node: 0.3, // LocalBusiness or a subtype (Restaurant, Dentist …)
+      address: 0.25, // streetAddress, postalCode, addressLocality
+      telephone: 0.1,
+      openingHours: 0.15,
+      geo: 0.05, // geo coordinates or hasMap
+      consistent: 0.15, // postcode and phone match what the page shows
     },
     // Shares of the product data check (sum 1.0): what Google merchant
     // listings and the shopping answers of ChatGPT / Google AI Mode read

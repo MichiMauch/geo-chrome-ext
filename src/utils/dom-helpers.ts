@@ -18,6 +18,7 @@ import type {
   CanonicalData,
   HreflangData,
   TableData,
+  LocalSignals,
   QuestionAnswer,
 } from '../types/analysis';
 import { GEO_CONFIG } from '../config/geo-config';
@@ -73,6 +74,7 @@ export async function extractPageData(
       canonical: extractCanonical(doc, pageUrl),
       hreflang: extractHreflang(doc, pageUrl),
       tables: extractTables(doc),
+      local: extractLocalSignals(doc),
     };
   });
 }
@@ -897,6 +899,59 @@ export function extractLists(doc: Document = document): ListData[] {
     }
   });
   return lists;
+}
+
+// ---------------------------------------------------------------------------
+// Local business signals
+// ---------------------------------------------------------------------------
+
+const STREET =
+  "[A-ZÄÖÜ][\\p{L}.'-]*(?:strasse|straße|str\\.|gasse|weg|platz|allee|ring|quai|rain|halde|matt|graben|markt|rue|via|avenue|chemin)\\s*\\d+[a-z]?";
+const STREET_FIRST = "(?:Rue|Route|Avenue|Chemin|Via|Piazza|Place)\\s[\\p{L} .'-]{2,30}\\s\\d+[a-z]?";
+// Street, then within a few characters a 4- or 5-digit postcode and a place
+const ADDRESS = new RegExp(`(?:${STREET}|${STREET_FIRST})[,\\s]{1,6}(?:CH-|D-|A-)?(\\d{4,5})\\s+[A-ZÄÖÜ][\\p{L}.-]+`, 'gu');
+const PHONE = /(?:\+|00)(?:41|49|43)[\s\d/().-]{8,16}\d|\b0\d{2}[\s/.-]?\d{3}[\s/.-]?\d{2}[\s/.-]?\d{2}\b/g;
+const OPENING_HOURS =
+  /öffnungszeiten|opening hours|horaires|orari|horario|\b(?:mo|di|mi|do|fr|sa|so|mon|tue|wed|thu|fri|sat|sun)\.?\s*(?:[-–]\s*(?:mo|di|mi|do|fr|sa|so|mon|tue|wed|thu|fri|sat|sun)\.?)?\s*:?\s*\d{1,2}[.:]\d{2}\s*[-–]\s*\d{1,2}[.:]\d{2}/i;
+
+/** +41 44 262 99 00 → 0442629900, so schema and page compare by digits. */
+export function normalizePhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  return digits.replace(/^(?:00)?(41|49|43)/, '0');
+}
+
+// Visible text of the whole page, chrome included (addresses live in the
+// footer); scripts, styles and templates left out.
+function visibleText(doc: Document): string {
+  const body = doc.body;
+  if (!body) return '';
+  const parts: string[] = [];
+  const walker = doc.createTreeWalker(body, 4 /* NodeFilter.SHOW_TEXT */);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (n.parentElement?.closest('script, style, noscript, template')) continue;
+    parts.push(n.textContent ?? '');
+  }
+  return parts.join(' ').replace(/\s+/g, ' ');
+}
+
+export function extractLocalSignals(doc: Document = document): LocalSignals {
+  const text = visibleText(doc);
+  const addresses: string[] = [];
+  const postalCodes = new Set<string>();
+  for (const m of text.matchAll(ADDRESS)) {
+    if (addresses.length < 3) addresses.push(m[0].trim());
+    postalCodes.add(m[1]);
+  }
+  const phones = new Set<string>();
+  for (const m of text.match(PHONE) ?? []) phones.add(normalizePhone(m));
+  doc.querySelectorAll('a[href^="tel:" i]').forEach((a) => phones.add(normalizePhone(a.getAttribute('href') ?? '')));
+  phones.delete('');
+  return {
+    addresses,
+    postalCodes: [...postalCodes],
+    phones: [...phones].filter((p) => p.length >= 9).slice(0, 5),
+    hasOpeningHours: OPENING_HOURS.test(text),
+  };
 }
 
 // Data tables in the content. Layout tables (role="presentation", nested

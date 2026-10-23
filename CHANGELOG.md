@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.13.0] - 2026-10-23
+
+### Added
+
+- **Product data on product pages:** A new criterion in Machine Readability checks what shopping answers in ChatGPT, Google AI Mode and Perplexity (and Google’s merchant listings) read from the structured data: price with currency, availability, a global identifier (GTIN/MPN; the shop’s own sku counts half), brand, image, description, ratings and shipping or return details. ProductGroup variants are included, and ratings in a separate block count too.
+- **Location data for local businesses:** For pages with LocalBusiness markup (or a subtype such as Restaurant, Bakery, Dentist), or start and contact pages that show an address together with opening hours, a new criterion checks the LocalBusiness block: address, phone, opening hours, coordinates, and whether postcode and phone match what the page shows. A company that only prints its address in the footer is not asked for LocalBusiness markup.
+
+### Fixed
+
+- **LocalBusiness subtypes were not recognised as organizations:** A `Restaurant` or `Bakery` block did not count as the publisher or as a schema type. About 70 common subtypes are now recognised.
+
 ## [4.12.0] - 2026-10-23
 
 ### Added
