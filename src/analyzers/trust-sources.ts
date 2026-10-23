@@ -206,6 +206,7 @@ export class TrustSourcesAnalyzer extends BaseAnalyzer {
     const recommendations: string[] = [];
     if (!skipAuthorDate && !hasAuthor) recommendations.push('no_author');
     if (!skipAuthorDate && !hasDate) recommendations.push('no_date');
+    else if (!skipAuthorDate && !newestVisible) recommendations.push('date_not_visible');
     if (!hasQualityLinks) recommendations.push('few_sources');
 
     return this.createCategory(0, weightedScore, totalWeight, details, recommendations);

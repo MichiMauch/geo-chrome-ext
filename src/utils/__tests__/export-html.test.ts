@@ -33,7 +33,7 @@ function category(): AnalysisCategory {
   });
 }
 
-function report(): Document {
+function report(topRecommendations: string[] = []): Document {
   const c = category();
   const result = {
     url: 'https://www.example.ch/faq',
@@ -45,7 +45,7 @@ function report(): Document {
       contentClarity: c, answerability: c, trustSources: c,
       machineReadability: c, aiCitation: c, onPageSeo: c,
     },
-    topRecommendations: [],
+    topRecommendations,
   } as unknown as GEOAnalysisResult;
   return new DOMParser().parseFromString(generateHtmlReport(result), 'text/html');
 }
@@ -71,5 +71,15 @@ describe('HTML report layout', () => {
     expect(doc.querySelector('#cat-machineReadability .cat-counts')!.textContent).toBe('1 teilweise · 1 erfüllt');
     expect(doc.querySelectorAll('.overview-item')).toHaveLength(6);
     expect(doc.querySelector('.overview-item')!.getAttribute('href')).toBe('#cat-contentClarity');
+  });
+
+  it('folds recommendations beyond the first five behind "+ N weitere"', () => {
+    const keys = ['no_schema', 'no_h1', 'no_author', 'no_date', 'few_sources', 'sitemap_lastmod', 'date_not_visible'];
+    const doc = report(keys);
+    expect(doc.querySelectorAll('.recs-card > .recs-list > li')).toHaveLength(5);
+    const more = doc.querySelector('details.recs-more')!;
+    expect(more.querySelector('summary')!.textContent).toBe('+ 2 weitere Empfehlungen');
+    expect(more.querySelectorAll('li')).toHaveLength(2);
+    expect(report(keys.slice(0, 5)).querySelector('details.recs-more')).toBeNull();
   });
 });

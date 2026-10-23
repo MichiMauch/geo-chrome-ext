@@ -1,4 +1,5 @@
 import type { GEOAnalysisResult, AnalysisCategory, CategoryDetail, CrawlerViewData } from '../types/analysis';
+import { VISIBLE_RECOMMENDATIONS } from './recommendations';
 import { getCategoryColor } from './scoring';
 import { t, getDateLocale } from './i18n';
 import { getFixSnippet, getSnippetLanguageLabel } from './fix-snippets';
@@ -407,8 +408,16 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
           ${escapeHtml(t('report_recommendations'))}
         </h2>
         <ul class="recs-list">
-          ${result.topRecommendations.map((recKey, i) => renderRecommendationItemHtml(recKey, i)).join('')}
+          ${result.topRecommendations.slice(0, VISIBLE_RECOMMENDATIONS).map((recKey, i) => renderRecommendationItemHtml(recKey, i)).join('')}
         </ul>
+        ${result.topRecommendations.length > VISIBLE_RECOMMENDATIONS
+          ? `<details class="recs-more">
+              <summary>${escapeHtml(t('ui_moreRecommendations', { count: result.topRecommendations.length - VISIBLE_RECOMMENDATIONS }))}</summary>
+              <ul class="recs-list">
+                ${result.topRecommendations.slice(VISIBLE_RECOMMENDATIONS).map((recKey, i) => renderRecommendationItemHtml(recKey, i + VISIBLE_RECOMMENDATIONS)).join('')}
+              </ul>
+            </details>`
+          : ''}
       </div>`
     : '';
 
@@ -604,6 +613,15 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
       border-radius: 10px;
     }
 
+    .recs-more { margin-top: 10px; }
+    .recs-more > summary {
+      cursor: pointer; list-style: none;
+      font-size: 13px; font-weight: 600; color: var(--accent);
+      padding: 8px 14px; border: 1px dashed rgba(43,163,163,0.4); border-radius: 10px;
+    }
+    .recs-more > summary::-webkit-details-marker { display: none; }
+    .recs-more[open] > summary { margin-bottom: 10px; }
+
     /* Fix snippets */
     .snippet-row-header { display: flex; align-items: flex-start; gap: 10px; }
     .snippet-row-text { flex: 1; }
@@ -741,7 +759,8 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
       .crit-block, .crit-block li, .recs-list li { break-inside: avoid; }
       /* Paper can't be clicked open: show every criterion in full. report.ts
          also opens them on beforeprint for browsers without ::details-content */
-      details.crit::details-content { content-visibility: visible; display: block; }
+      details.crit::details-content, details.recs-more::details-content { content-visibility: visible; display: block; }
+      .recs-more > summary { display: none; }
       .crit-teaser { display: none; }
       .toggle-all, .overview-item:hover { background: none; }
       .crit-chevron { display: none; }

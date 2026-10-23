@@ -147,6 +147,9 @@ describe('TrustSourcesAnalyzer — Datum, Report-Belege', () => {
     expect(datumsDetail(visible)?.evidence?.map((e) => e.key)).not.toContain('ev_date_invisible_older');
     const score = (p: typeof schemaOnly) => new TrustSourcesAnalyzer().analyze(p, 'article').score;
     expect(score(schemaOnly)).toBeLessThan(score(visible));
+    const recs = (p: typeof schemaOnly) => new TrustSourcesAnalyzer().analyze(p, 'article').recommendations;
+    expect(recs(schemaOnly)).toContain('date_not_visible');
+    expect(recs(visible)).not.toContain('date_not_visible');
   });
 
   it('meldet fehlendes Datum mit eigenem Beleg', () => {

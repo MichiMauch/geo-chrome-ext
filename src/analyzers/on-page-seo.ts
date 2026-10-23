@@ -267,6 +267,7 @@ export class OnPageSeoAnalyzer extends BaseAnalyzer {
 
     const recommendations: string[] = [];
     if (hreflang?.missing) recommendations.push('hreflang_missing');
+    else if (hreflang && hreflang.score < 0.99) recommendations.push('hreflang_incomplete');
     if (titleLen === 0) recommendations.push('title_missing');
     else if (titleLen < config.thresholds.titleMinLength) recommendations.push('title_too_short');
     else if (titleLen > config.thresholds.titleMaxLength) recommendations.push('title_too_long');

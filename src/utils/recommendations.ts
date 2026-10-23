@@ -20,6 +20,7 @@ const RECOMMENDATION_KEYS: Record<string, { i18nKey: string; priority: number }>
   // Trust & Sources
   'no_author': { i18nKey: 'rec_no_author', priority: 9 },
   'no_date': { i18nKey: 'rec_no_date', priority: 7 },
+  'date_not_visible': { i18nKey: 'rec_date_not_visible', priority: 3 },
   'few_sources': { i18nKey: 'rec_few_sources', priority: 6 },
   // Machine Readability
   'no_schema': { i18nKey: 'rec_no_schema', priority: 10 },
@@ -34,6 +35,8 @@ const RECOMMENDATION_KEYS: Record<string, { i18nKey: string; priority: number }>
   'content_signal_opt_out': { i18nKey: 'rec_content_signal_opt_out', priority: 8 },
   'no_sitemap': { i18nKey: 'rec_no_sitemap', priority: 6 },
   'sitemap_page_missing': { i18nKey: 'rec_sitemap_page_missing', priority: 5 },
+  'sitemap_lastmod': { i18nKey: 'rec_sitemap_lastmod', priority: 3 },
+  'sitemap_not_in_robots': { i18nKey: 'rec_sitemap_not_in_robots', priority: 2 },
   // AI Citation
   'no_facts': { i18nKey: 'rec_no_facts', priority: 7 },
   'no_faq': { i18nKey: 'rec_no_faq', priority: 6 },
@@ -53,6 +56,7 @@ const RECOMMENDATION_KEYS: Record<string, { i18nKey: string; priority: number }>
   'canonical_mismatch': { i18nKey: 'rec_canonical_mismatch', priority: 7 }, // Wrong canonical ≈ soft deindex of this page
   'canonical_missing': { i18nKey: 'rec_canonical_missing', priority: 6 },
   'hreflang_missing': { i18nKey: 'rec_hreflang_missing', priority: 5 },
+  'hreflang_incomplete': { i18nKey: 'rec_hreflang_incomplete', priority: 3 },
   'social_cards_missing': { i18nKey: 'rec_social_cards_missing', priority: 5 },
   'viewport_missing': { i18nKey: 'rec_viewport_missing', priority: 9 },
   'viewport_misconfigured': { i18nKey: 'rec_viewport_misconfigured', priority: 7 },
@@ -66,6 +70,9 @@ export function generateRecommendation(key: string): string | null {
 export function getRecommendationPriority(key: string): number {
   return RECOMMENDATION_KEYS[key]?.priority || 0;
 }
+
+// Recommendations shown before the "+ N more" fold
+export const VISIBLE_RECOMMENDATIONS = 5;
 
 export function collectAllRecommendations(
   categories: Record<string, AnalysisCategory>
@@ -85,12 +92,13 @@ export function collectAllRecommendations(
     });
   });
 
-  // Sort by priority (descending) and take top 5 keys.
+  // All keys, sorted by priority (descending). Panel and report show the
+  // first VISIBLE_RECOMMENDATIONS and fold the rest behind "+ N more", so a
+  // low-priority finding is never silently dropped.
   // We return keys (not translated text) so consumers can re-translate at render
   // time AND look up matching fix-snippets via the same key.
   return recommendations
     .sort((a, b) => b.priority - a.priority)
-    .slice(0, 5)
     .map((r) => r.key);
 }
 

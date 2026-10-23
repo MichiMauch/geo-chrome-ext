@@ -285,6 +285,11 @@ describe('Sitemap', async () => {
     expect(d.fixKey).toBe('fix_sitemap_listed');
     expect(notListed.recommendations).toContain('sitemap_page_missing');
     expect(detail({ ...page, sitemap: { ...base, lastmodUniform: true } })?.evidence).toContainEqual({ key: 'ev_sitemap_lastmod_uniform' });
+    expect(analyzer.analyze({ ...page, sitemap: { ...base, lastmodUniform: true } }).recommendations).toContain('sitemap_lastmod');
+    expect(analyzer.analyze({ ...page, sitemap: { ...base, declaredInRobots: false } }).recommendations).toContain('sitemap_not_in_robots');
+    expect(analyzer.analyze({ ...page, sitemap: base }).recommendations).toEqual(
+      expect.not.arrayContaining(['sitemap_lastmod', 'sitemap_not_in_robots'])
+    );
   });
 });
 
@@ -328,6 +333,7 @@ describe('hreflang', async () => {
     const partial = await detail(`<head><link rel="alternate" hreflang="fr-CH" href="https://x.ch/fr/a"><link rel="alternate" hreflang="de_CH" href="https://x.ch/de/a"></head><body></body>`, 'https://x.ch/de/a');
     expect(partial.d?.progress?.current).toBe(60);
     expect(partial.d?.evidence?.map((e) => e.key)).toEqual(['ev_hreflang_found', 'ev_hreflang_xdefault_missing', 'ev_hreflang_invalid']);
+    expect(partial.recs).toContain('hreflang_incomplete');
 
     const full = await detail(`<html lang="de-CH"><head><link rel="alternate" hreflang="de-CH" href="/de/a"><link rel="alternate" hreflang="fr-CH" href="/fr/a"><link rel="alternate" hreflang="x-default" href="/de/a"></head><body></body></html>`, 'https://www.x.ch/de/a/');
     expect(full.d?.found).toBe(true);
@@ -360,5 +366,19 @@ describe('Tabellen', async () => {
     const d = new AnswerabilityAnalyzer().analyze(page).details.find((x) => x.criterionKey === 'criterion_lists')!;
     expect(d.progress?.current).toBe(1);
     expect(d.evidence?.map((e) => e.key)).toEqual(['ev_tables_found', 'ev_tables_no_header']);
+  });
+});
+
+describe('Empfehlungen ohne Obergrenze', async () => {
+  const { collectAllRecommendations } = await import('../recommendations');
+
+  it('gibt alle Empfehlungen sortiert zurück, auch über fünf hinaus', () => {
+    const cat = (recommendations: string[]) => ({ nameKey: 'x', score: 1, maxScore: 5, details: [], recommendations });
+    const all = collectAllRecommendations({
+      a: cat(['no_schema', 'no_h1', 'no_author', 'sitemap_not_in_robots']),
+      b: cat(['no_date', 'few_sources', 'sitemap_lastmod', 'date_not_visible']),
+    } as never);
+    expect(all).toHaveLength(8);
+    expect(all.slice(-1)).toEqual(['sitemap_not_in_robots']);
   });
 });

@@ -33,12 +33,15 @@ chrome.storage.local.get('geo_report_html', (data) => {
 
     // A PDF needs everything on paper; restore the reader's view afterwards
     let openBeforePrint: boolean[] = [];
+    // Paper shows everything, including the folded recommendations
+    const printable = () =>
+      Array.from(document.querySelectorAll<HTMLDetailsElement>('details.crit, details.recs-more'));
     window.addEventListener('beforeprint', () => {
-      openBeforePrint = criteria().map((d) => d.open);
-      criteria().forEach((d) => (d.open = true));
+      openBeforePrint = printable().map((d) => d.open);
+      printable().forEach((d) => (d.open = true));
     });
     window.addEventListener('afterprint', () => {
-      criteria().forEach((d, i) => (d.open = openBeforePrint[i] ?? false));
+      printable().forEach((d, i) => (d.open = openBeforePrint[i] ?? false));
     });
 
     // Count-up score

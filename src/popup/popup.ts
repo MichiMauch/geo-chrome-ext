@@ -17,7 +17,7 @@ import { generateHtmlReport } from '../utils/export-html';
 import { renderSparkline } from '../utils/sparkline';
 import { loadCache, saveCache, clearCache } from '../utils/cache';
 import { getFixSnippet, getSnippetLanguageLabel } from '../utils/fix-snippets';
-import { getRecommendationPriority } from '../utils/recommendations';
+import { getRecommendationPriority, VISIBLE_RECOMMENDATIONS } from '../utils/recommendations';
 
 // Initialize i18n before anything else
 initI18n();
@@ -316,9 +316,23 @@ function renderResults(result: GEOAnalysisResult) {
   activeHighlightKey = null;
   if (result.topRecommendations.length > 0) {
     recommendationsSectionEl.classList.remove('hidden');
-    recommendationsEl.innerHTML = result.topRecommendations
-      .map((recKey, i) => renderRecommendationItem(recKey, i))
-      .join('');
+    const recs = result.topRecommendations;
+    const hidden = recs.length - VISIBLE_RECOMMENDATIONS;
+    recommendationsEl.innerHTML =
+      recs
+        .map((recKey, i) => renderRecommendationItem(recKey, i, i >= VISIBLE_RECOMMENDATIONS))
+        .join('') +
+      (hidden > 0
+        ? `<li class="list-none"><button type="button" id="recs-more-toggle" aria-expanded="false"
+            class="w-full mt-1 px-3 py-1.5 rounded-md text-xs font-medium text-[#2BA3A3] bg-white/70 dark:bg-gray-800/60 border border-[#33CCCC]/30 hover:border-[#2BA3A3] cursor-pointer">${escapeHtml(t('ui_moreRecommendations', { count: hidden }))}</button></li>`
+        : '');
+    recommendationsEl.querySelector<HTMLButtonElement>('#recs-more-toggle')?.addEventListener('click', (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const open = btn.getAttribute('aria-expanded') !== 'true';
+      recommendationsEl.querySelectorAll('.rec-more').forEach((li) => li.classList.toggle('hidden', !open));
+      btn.setAttribute('aria-expanded', String(open));
+      btn.textContent = open ? t('ui_fewerRecommendations') : t('ui_moreRecommendations', { count: hidden });
+    });
     attachSnippetHandlers(recommendationsEl);
     attachHighlightHandlers(recommendationsEl);
   } else {
@@ -350,7 +364,8 @@ function renderHighlightButton(recKey: string): string {
 
 // Every recommendation renders as one card with a fixed order: text first,
 // optional hint, then the card's action buttons, then the snippet preview.
-function renderRecommendationItem(recKey: string, index: number): string {
+// `folded`: beyond the first VISIBLE_RECOMMENDATIONS, hidden until "+ N more"
+function renderRecommendationItem(recKey: string, index: number, folded = false): string {
   const text = t(`rec_${recKey}`);
   const snippet = getFixSnippet(recKey);
   const snippetId = `snippet-${index}`;
@@ -383,7 +398,7 @@ function renderRecommendationItem(recKey: string, index: number): string {
   const buttons = [highlightBtn, snippetButtons].filter(Boolean).join('\n');
   const actions = buttons ? `<div class="snippet-row-actions">${buttons}</div>` : '';
 
-  return `<li class="recommendation-item">
+  return `<li class="recommendation-item${folded ? ' rec-more hidden' : ''}">
     <div class="snippet-row-text">${escapeHtml(text)}</div>
     ${note}
     ${actions}

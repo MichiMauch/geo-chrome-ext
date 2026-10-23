@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.9.1] - 2026-10-23
+
+### Changed
+
+- **No recommendation is dropped any more:** The panel and the HTML report showed the five highest-priority recommendations and silently discarded the rest. Now all of them are listed: the first five as before, the others behind a “+ N more recommendations” button (a fold in the report, expanded when printing).
+- **Recommendations for findings that were only in the report:** a sitemap without a usable `lastmod` (missing, or the same day on nearly every entry), a sitemap not referenced in robots.txt, a newest date that is only in schema/meta, and incomplete hreflang links now each have their own recommendation, with low priority.
+
 ## [4.9.0] - 2026-10-23
 
 ### Added

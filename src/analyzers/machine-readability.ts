@@ -514,6 +514,10 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     const recommendations: string[] = [];
     if (sitemap && !sitemap.exists) recommendations.push('no_sitemap');
     else if (sitemap?.listed === false) recommendations.push('sitemap_page_missing');
+    else if (sitemap && ((sitemap.listed === true && !sitemap.pageLastmod) || sitemap.lastmodUniform)) {
+      recommendations.push('sitemap_lastmod');
+    }
+    if (sitemap?.exists && !sitemap.declaredInRobots) recommendations.push('sitemap_not_in_robots');
     // Also when the type the page type calls for (Article, FAQPage) is missing
     // A page that only lacks FAQPage gets the FAQ template, not the Article one
     const onlyFaqMissing =
