@@ -1,4 +1,4 @@
-import { PageData, AnalysisCategory, CategoryDetail, EvidenceLine, PageType, QuestionAnswer } from '../types/analysis';
+import { PageData, AnalysisCategory, CategoryDetail, EvidenceLine, PageType, QuestionAnswer, TableData } from '../types/analysis';
 import { BaseAnalyzer } from './base';
 import { GEO_CONFIG } from '../config/geo-config';
 import { missingAnswers, quote, quoteList } from './clarity-evidence';
@@ -56,8 +56,10 @@ export class AnswerabilityAnalyzer extends BaseAnalyzer {
       totalWeight += config.weights.definitions;
     }
 
-    // Check 2: Listen & Aufzählungen
-    const listCount = pageData.lists.length;
+    // Check 2: Listen & Aufzählungen — a data table with header cells counts
+    // like a list: rows and named columns are just as easy to take over.
+    const tables = pageData.tables ?? [];
+    const listCount = pageData.lists.length + tables.filter((t) => t.hasHeader).length;
     const hasLists = listCount >= 1;
     const listScore = Math.min(1, listCount / config.thresholds.listMinCount);
 
@@ -71,7 +73,7 @@ export class AnswerabilityAnalyzer extends BaseAnalyzer {
         target: config.thresholds.listMinCount,
         unitKey: 'unit_lists',
       },
-      evidence: this.listEvidence(pageData.lists),
+      evidence: [...this.listEvidence(pageData.lists, tables), ...this.tableEvidence(tables)],
     });
 
     weightedScore += listScore * config.weights.lists;
@@ -209,9 +211,9 @@ export class AnswerabilityAnalyzer extends BaseAnalyzer {
     return { evidence };
   }
 
-  private listEvidence(lists: PageData['lists']): EvidenceLine[] {
+  private listEvidence(lists: PageData['lists'], tables: TableData[]): EvidenceLine[] {
     const target = GEO_CONFIG.answerability.thresholds.listMinCount;
-    if (lists.length === 0) return [{ key: 'ev_lists_none', params: { target } }];
+    if (lists.length === 0) return tables.length > 0 ? [] : [{ key: 'ev_lists_none', params: { target } }];
     const items = lists.reduce((sum, l) => sum + l.itemCount, 0);
     const firstItems = lists.map((l) => l.items[0]).filter((s): s is string => !!s && s.trim().length > 0);
     return [
@@ -229,6 +231,21 @@ export class AnswerabilityAnalyzer extends BaseAnalyzer {
         ? [{ key: 'ev_lists_examples', params: { examples: quoteList(firstItems, 3) } }]
         : []),
     ];
+  }
+
+  private tableEvidence(tables: TableData[]): EvidenceLine[] {
+    if (tables.length === 0) return [];
+    const withHeader = tables.filter((t) => t.hasHeader);
+    const evidence: EvidenceLine[] = [
+      {
+        key: 'ev_tables_found',
+        params: { count: tables.length, header: withHeader.length, rows: Math.max(...tables.map((t) => t.rows)) },
+      },
+    ];
+    if (withHeader.length < tables.length) {
+      evidence.push({ key: 'ev_tables_no_header', params: { count: tables.length - withHeader.length } });
+    }
+    return evidence;
   }
 
   private sectionEvidence(

@@ -188,7 +188,7 @@ export const translations: Record<Lang, Record<string, string>> = {
 
     // Answerability criteria
     criterion_definitions: 'Direct answers/definitions',
-    criterion_lists: 'Lists & enumerations',
+    criterion_lists: 'Lists, enumerations & tables',
     criterion_sections: 'Structured sections',
 
     // Trust & Sources criteria
@@ -251,7 +251,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     value_externalLinks: '{current}/{target} external links',
     value_sourceLinks: '{count} source links (target: {target})',
     value_faqAnswersHidden: '{hidden} of {total} answers missing from the HTML',
-    value_lists: '{current}/{target} lists',
+    value_lists: '{current}/{target} lists/tables',
     value_subheadings: '{current}/{target} subheadings',
     value_notFound: 'Not found',
     value_llms_both: 'llms.txt + llms-full.txt',
@@ -575,7 +575,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     criterion_readability: 'Lesbarkeit',
 
     criterion_definitions: 'Direkte Antworten/Definitionen',
-    criterion_lists: 'Listen & Aufzählungen',
+    criterion_lists: 'Listen, Aufzählungen & Tabellen',
     criterion_sections: 'Strukturierte Abschnitte',
 
     criterion_author: 'Autor/Organisation erkennbar',
@@ -635,7 +635,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     value_externalLinks: '{current}/{target} externe Links',
     value_sourceLinks: '{count} Quellenlinks (Ziel: {target})',
     value_faqAnswersHidden: '{hidden} von {total} Antworten fehlen im HTML',
-    value_lists: '{current}/{target} Listen',
+    value_lists: '{current}/{target} Listen/Tabellen',
     value_subheadings: '{current}/{target} Unterüberschriften',
     value_notFound: 'Nicht gefunden',
     value_llms_both: 'llms.txt + llms-full.txt',
@@ -952,7 +952,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     criterion_readability: 'Lisibilité',
 
     criterion_definitions: 'Réponses directes/définitions',
-    criterion_lists: 'Listes & énumérations',
+    criterion_lists: 'Listes, énumérations & tableaux',
     criterion_sections: 'Sections structurées',
 
     criterion_author: 'Auteur/organisation identifiable',
@@ -1010,7 +1010,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     value_noDateFound: 'Aucune date trouvée',
     value_olderThanYear: '{date} (plus d\'1 an)',
     value_externalLinks: '{current}/{target} liens externes',
-    value_lists: '{current}/{target} listes',
+    value_lists: '{current}/{target} listes/tableaux',
     value_subheadings: '{current}/{target} sous-titres',
     value_notFound: 'Non trouvé',
     value_llms_both: 'llms.txt + llms-full.txt',
@@ -1326,7 +1326,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     criterion_readability: 'Legibilidad',
 
     criterion_definitions: 'Respuestas directas/definiciones',
-    criterion_lists: 'Listas y enumeraciones',
+    criterion_lists: 'Listas, enumeraciones y tablas',
     criterion_sections: 'Secciones estructuradas',
 
     criterion_author: 'Autor/organización identificable',
@@ -1384,7 +1384,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     value_noDateFound: 'No se encontró fecha',
     value_olderThanYear: '{date} (más de 1 año)',
     value_externalLinks: '{current}/{target} enlaces externos',
-    value_lists: '{current}/{target} listas',
+    value_lists: '{current}/{target} listas/tablas',
     value_subheadings: '{current}/{target} subtítulos',
     value_notFound: 'No encontrado',
     value_llms_both: 'llms.txt + llms-full.txt',
@@ -1700,7 +1700,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     criterion_readability: 'Legibilidade',
 
     criterion_definitions: 'Respostas diretas/definições',
-    criterion_lists: 'Listas e enumerações',
+    criterion_lists: 'Listas, enumerações e tabelas',
     criterion_sections: 'Seções estruturadas',
 
     criterion_author: 'Autor/organização identificável',
@@ -1758,7 +1758,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     value_noDateFound: 'Nenhuma data encontrada',
     value_olderThanYear: '{date} (mais de 1 ano)',
     value_externalLinks: '{current}/{target} links externos',
-    value_lists: '{current}/{target} listas',
+    value_lists: '{current}/{target} listas/tabelas',
     value_subheadings: '{current}/{target} subtítulos',
     value_notFound: 'Não encontrado',
     value_llms_both: 'llms.txt + llms-full.txt',
@@ -2074,7 +2074,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     criterion_readability: 'Leggibilità',
 
     criterion_definitions: 'Risposte dirette/definizioni',
-    criterion_lists: 'Elenchi ed enumerazioni',
+    criterion_lists: 'Elenchi, enumerazioni e tabelle',
     criterion_sections: 'Sezioni strutturate',
 
     criterion_author: 'Autore/organizzazione identificabile',
@@ -2132,7 +2132,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     value_noDateFound: 'Nessuna data trovata',
     value_olderThanYear: '{date} (più di 1 anno)',
     value_externalLinks: '{current}/{target} link esterni',
-    value_lists: '{current}/{target} elenchi',
+    value_lists: '{current}/{target} elenchi/tabelle',
     value_subheadings: '{current}/{target} sottotitoli',
     value_notFound: 'Non trovato',
     value_llms_both: 'llms.txt + llms-full.txt',

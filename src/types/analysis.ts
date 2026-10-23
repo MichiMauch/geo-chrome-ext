@@ -128,6 +128,8 @@ export interface PageData {
   canonical: CanonicalData;
   // Absent in analyses stored before hreflang was checked
   hreflang?: HreflangData;
+  // Absent in analyses stored before tables were read
+  tables?: TableData[];
   // Only set for a live page analysis. The sitemap batch already works on raw
   // HTML, so there is nothing to compare there, and history/report re-renders
   // don't carry it.
@@ -147,6 +149,16 @@ export interface HreflangData {
   // Same-site links that switch language (a[hreflang]/a[lang], or a
   // language label pointing to another /xx/ path prefix)
   languageLinks: string[];
+}
+
+// A data table in the content (layout tables and one-row/one-column grids
+// are left out)
+export interface TableData {
+  rows: number;
+  cols: number;
+  // <th> cells or a <thead>: the columns/rows have names a machine can read
+  hasHeader: boolean;
+  caption: string | null;
 }
 
 export interface CanonicalData {

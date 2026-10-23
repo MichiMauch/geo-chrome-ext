@@ -24,7 +24,9 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_lists_none: 'No bulleted or numbered lists in the content (target: {target}).',
     ev_lists_found: 'Lists: {count} ({ul} bulleted, {ol} numbered) with {items} items in total; target: {target}.',
     ev_lists_examples: 'First items: {examples}',
-    why_lists: 'Lists mark items, steps and options as separate units. AI systems take them over directly, for example as "the 3 steps to …" in an answer. The same content in running text has to be pulled apart first and is quoted less often.',
+    ev_tables_found: 'Tables: {count} ({header} with header cells, up to {rows} rows). A table with header cells counts like a list.',
+    ev_tables_no_header: '{count} table(s) without header cells (<th>): the columns have no names a machine can read, so they do not count.',
+    why_lists: 'Lists mark items, steps and options as separate units. AI systems take them over directly, for example as "the 3 steps to …" in an answer. The same content in running text has to be pulled apart first and is quoted less often. Data tables with header cells count as well: comparisons and figures in rows and named columns are quoted almost word for word.',
     fix_lists: 'Where the text names several items, steps or options, set them as a list with the list button in the CMS editor: bullets for items, numbers for steps. Lines that only start with a dash or a number typed by hand do not count as a list. An example is in the recommendations above.',
 
     // Structured sections
@@ -57,7 +59,9 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_lists_none: 'Keine Aufzählungen oder nummerierten Listen im Inhalt (Ziel: {target}).',
     ev_lists_found: 'Listen: {count} ({ul} Aufzählungen, {ol} nummeriert) mit insgesamt {items} Punkten; Ziel: {target}.',
     ev_lists_examples: 'Erste Punkte: {examples}',
-    why_lists: 'Listen kennzeichnen Punkte, Schritte und Optionen als einzelne Einheiten. KI-Systeme übernehmen sie direkt, etwa als «die 3 Schritte zu …» in einer Antwort. Derselbe Inhalt im Fliesstext muss erst auseinandergenommen werden und wird seltener zitiert.',
+    ev_tables_found: 'Tabellen: {count} ({header} mit Kopfzellen, bis zu {rows} Zeilen). Eine Tabelle mit Kopfzellen zählt wie eine Liste.',
+    ev_tables_no_header: '{count} Tabelle(n) ohne Kopfzellen (<th>): Die Spalten haben keine maschinenlesbaren Namen und zählen deshalb nicht.',
+    why_lists: 'Listen kennzeichnen Punkte, Schritte und Optionen als einzelne Einheiten. KI-Systeme übernehmen sie direkt, etwa als «die 3 Schritte zu …» in einer Antwort. Derselbe Inhalt im Fliesstext muss erst auseinandergenommen werden und wird seltener zitiert. Datentabellen mit Kopfzellen zählen ebenfalls: Vergleiche und Zahlen in Zeilen und benannten Spalten werden fast wörtlich übernommen.',
     fix_lists: 'Wo der Text mehrere Punkte, Schritte oder Optionen aufzählt, setzen Sie sie mit der Listen-Schaltfläche im CMS-Editor als Liste: Aufzählungszeichen für Punkte, Nummern für Schritte. Zeilen, die nur mit einem von Hand getippten Strich oder einer Zahl beginnen, zählen nicht als Liste. Ein Beispiel finden Sie oben bei den Empfehlungen.',
 
     ev_sections_count: 'Zwischenüberschriften (H2–H6): {count} (Ziel: {target}), z. B. {examples}.',
@@ -89,7 +93,9 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_lists_none: 'Aucune liste à puces ou numérotée dans le contenu (objectif : {target}).',
     ev_lists_found: 'Listes : {count} ({ul} à puces, {ol} numérotées) avec {items} éléments au total ; objectif : {target}.',
     ev_lists_examples: 'Premiers éléments : {examples}',
-    why_lists: 'Les listes présentent les éléments, étapes et options comme des unités séparées. Les systèmes d’IA les reprennent directement, par exemple sous la forme « les 3 étapes pour … » dans une réponse. Le même contenu en texte courant doit d’abord être décomposé et il est moins souvent cité.',
+    ev_tables_found: 'Tableaux : {count} ({header} avec cellules d’en-tête, jusqu’à {rows} lignes). Un tableau avec en-têtes compte comme une liste.',
+    ev_tables_no_header: '{count} tableau(x) sans cellules d’en-tête (<th>) : les colonnes n’ont pas de nom lisible par une machine et ne comptent donc pas.',
+    why_lists: 'Les listes présentent les éléments, étapes et options comme des unités séparées. Les systèmes d’IA les reprennent directement, par exemple sous la forme « les 3 étapes pour … » dans une réponse. Le même contenu en texte courant doit d’abord être décomposé et il est moins souvent cité. Les tableaux de données avec en-têtes comptent aussi : comparaisons et chiffres en lignes et colonnes nommées sont repris presque mot pour mot.',
     fix_lists: 'Lorsque le texte énumère plusieurs éléments, étapes ou options, mettez-les en liste avec le bouton de liste de l’éditeur du CMS : puces pour les éléments, numéros pour les étapes. Les lignes qui commencent simplement par un tiret ou un chiffre tapé à la main ne comptent pas comme une liste. Un exemple figure dans les recommandations ci-dessus.',
 
     ev_sections_count: 'Sous-titres (H2–H6) : {count} (objectif : {target}), p. ex. {examples}.',
@@ -121,7 +127,9 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_lists_none: 'Ninguna lista con viñetas o numerada en el contenido (objetivo: {target}).',
     ev_lists_found: 'Listas: {count} ({ul} con viñetas, {ol} numeradas) con {items} elementos en total; objetivo: {target}.',
     ev_lists_examples: 'Primeros elementos: {examples}',
-    why_lists: 'Las listas marcan elementos, pasos y opciones como unidades separadas. Los sistemas de IA las toman directamente, por ejemplo como «los 3 pasos para …» en una respuesta. El mismo contenido en texto corrido tiene que desmontarse primero y se cita menos.',
+    ev_tables_found: 'Tablas: {count} ({header} con celdas de encabezado, hasta {rows} filas). Una tabla con encabezados cuenta como una lista.',
+    ev_tables_no_header: '{count} tabla(s) sin celdas de encabezado (<th>): las columnas no tienen nombres legibles por máquina y por eso no cuentan.',
+    why_lists: 'Las listas marcan elementos, pasos y opciones como unidades separadas. Los sistemas de IA las toman directamente, por ejemplo como «los 3 pasos para …» en una respuesta. El mismo contenido en texto corrido tiene que desmontarse primero y se cita menos. Las tablas de datos con encabezados también cuentan: comparaciones y cifras en filas y columnas con nombre se retoman casi literalmente.',
     fix_lists: 'Cuando el texto enumere varios elementos, pasos u opciones, póngalos como lista con el botón de lista del editor del CMS: viñetas para elementos, números para pasos. Las líneas que solo empiezan con un guion o un número escrito a mano no cuentan como lista. Encontrará un ejemplo en las recomendaciones de arriba.',
 
     ev_sections_count: 'Subtítulos (H2–H6): {count} (objetivo: {target}), p. ej. {examples}.',
@@ -153,7 +161,9 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_lists_none: 'Nenhuma lista com marcadores ou numerada no conteúdo (objetivo: {target}).',
     ev_lists_found: 'Listas: {count} ({ul} com marcadores, {ol} numeradas) com {items} itens no total; objetivo: {target}.',
     ev_lists_examples: 'Primeiros itens: {examples}',
-    why_lists: 'As listas marcam itens, passos e opções como unidades separadas. Os sistemas de IA aproveitam-nas diretamente, por exemplo como «os 3 passos para …» numa resposta. O mesmo conteúdo em texto corrido tem de ser desmontado primeiro e é citado com menos frequência.',
+    ev_tables_found: 'Tabelas: {count} ({header} com células de cabeçalho, até {rows} linhas). Uma tabela com cabeçalhos conta como uma lista.',
+    ev_tables_no_header: '{count} tabela(s) sem células de cabeçalho (<th>): as colunas não têm nomes legíveis por máquina e por isso não contam.',
+    why_lists: 'As listas marcam itens, passos e opções como unidades separadas. Os sistemas de IA aproveitam-nas diretamente, por exemplo como «os 3 passos para …» numa resposta. O mesmo conteúdo em texto corrido tem de ser desmontado primeiro e é citado com menos frequência. As tabelas de dados com cabeçalhos também contam: comparações e números em linhas e colunas com nome são retomados quase palavra por palavra.',
     fix_lists: 'Quando o texto enumera vários itens, passos ou opções, formate-os como lista com o botão de lista do editor do CMS: marcadores para itens, números para passos. Linhas que apenas começam com um travessão ou um número escrito à mão não contam como lista. Encontra um exemplo nas recomendações acima.',
 
     ev_sections_count: 'Subtítulos (H2–H6): {count} (objetivo: {target}), p. ex. {examples}.',
@@ -185,7 +195,9 @@ export const reportTexts: Record<Lang, Record<string, string>> = {
     ev_lists_none: 'Nessun elenco puntato o numerato nel contenuto (obiettivo: {target}).',
     ev_lists_found: 'Elenchi: {count} ({ul} puntati, {ol} numerati) con {items} voci in totale; obiettivo: {target}.',
     ev_lists_examples: 'Prime voci: {examples}',
-    why_lists: 'Gli elenchi presentano voci, passaggi e opzioni come unità separate. I sistemi di IA li riprendono direttamente, per esempio come «i 3 passaggi per …» in una risposta. Lo stesso contenuto in testo continuo va prima scomposto e viene citato meno spesso.',
+    ev_tables_found: 'Tabelle: {count} ({header} con celle di intestazione, fino a {rows} righe). Una tabella con intestazioni conta come un elenco.',
+    ev_tables_no_header: '{count} tabella/e senza celle di intestazione (<th>): le colonne non hanno nomi leggibili da una macchina e quindi non contano.',
+    why_lists: 'Gli elenchi presentano voci, passaggi e opzioni come unità separate. I sistemi di IA li riprendono direttamente, per esempio come «i 3 passaggi per …» in una risposta. Lo stesso contenuto in testo continuo va prima scomposto e viene citato meno spesso. Contano anche le tabelle di dati con intestazioni: confronti e cifre in righe e colonne con un nome vengono ripresi quasi alla lettera.',
     fix_lists: 'Dove il testo elenca più voci, passaggi o opzioni, impostateli come elenco con il pulsante elenco dell’editor del CMS: punti per le voci, numeri per i passaggi. Le righe che iniziano solo con un trattino o un numero digitato a mano non contano come elenco. Trovate un esempio nelle raccomandazioni qui sopra.',
 
     ev_sections_count: 'Sottotitoli (H2–H6): {count} (obiettivo: {target}), p. es. {examples}.',

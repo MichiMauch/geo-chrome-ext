@@ -335,3 +335,30 @@ describe('hreflang', async () => {
     expect((await detail('<body><p>Nur Deutsch.</p></body>', 'https://x.ch/a')).d).toBeUndefined();
   });
 });
+
+describe('Tabellen', async () => {
+  const { extractTables } = await import('../dom-helpers');
+  const { AnswerabilityAnalyzer } = await import('../../analyzers/answerability');
+
+  it('liest Datentabellen und lässt Layout-Tabellen weg', () => {
+    const doc = parse(`<body><main><h1>Vergleich</h1>
+      <table><thead><tr><th>Haus</th><th>Fläche</th></tr></thead><tbody><tr><td>Tiny</td><td>36 m²</td></tr></tbody></table>
+      <table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>
+      <table role="presentation"><tr><td>x</td><td>y</td></tr><tr><td>x</td><td>y</td></tr></table>
+      <table><tr><td>nur eine Zeile</td><td>z</td></tr></table></main></body>`);
+    expect(extractTables(doc)).toEqual([
+      { rows: 2, cols: 2, hasHeader: true, caption: null },
+      { rows: 2, cols: 2, hasHeader: false, caption: null },
+    ]);
+  });
+
+  it('zählt eine Tabelle mit Kopfzellen wie eine Liste', () => {
+    const page = {
+      url: 'https://x.ch/a', headings: [], paragraphs: [], lists: [], links: [], schema: [], meta: {},
+      tables: [{ rows: 5, cols: 3, hasHeader: true, caption: null }, { rows: 4, cols: 2, hasHeader: false, caption: null }],
+    } as unknown as PageData;
+    const d = new AnswerabilityAnalyzer().analyze(page).details.find((x) => x.criterionKey === 'criterion_lists')!;
+    expect(d.progress?.current).toBe(1);
+    expect(d.evidence?.map((e) => e.key)).toEqual(['ev_tables_found', 'ev_tables_no_header']);
+  });
+});

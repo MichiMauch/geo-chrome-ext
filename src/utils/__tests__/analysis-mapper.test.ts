@@ -22,7 +22,7 @@ describe('mapAnalysisResult — value placeholders', () => {
 
   // Every value key with placeholders, in the shape its analyzer emits it
   const cases: [string, Partial<CategoryDetail>, string][] = [
-    ['value_lists', { progress: { current: 2, target: 3 } }, '2/3 lists'],
+    ['value_lists', { progress: { current: 2, target: 3 } }, '2/3 lists/tables'],
     ['value_subheadings', { progress: { current: 3, target: 3 } }, '3/3 subheadings'],
     ['value_externalLinks', { progress: { current: 1, target: 2 } }, '1/2 external links'],
     [
@@ -50,7 +50,7 @@ describe('mapAnalysisResult — value placeholders', () => {
   it('explicit valueParams win over progress', () => {
     expect(
       mapValue({ value: 'value_lists', progress: { current: 3, target: 3 }, valueParams: { current: '7' } })
-    ).toBe('7/3 lists');
+    ).toBe('7/3 lists/tables');
   });
 
   it('leaves already formatted values untouched', () => {

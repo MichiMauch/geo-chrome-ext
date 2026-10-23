@@ -17,6 +17,7 @@ import type {
   ViewportData,
   CanonicalData,
   HreflangData,
+  TableData,
   QuestionAnswer,
 } from '../types/analysis';
 import { GEO_CONFIG } from '../config/geo-config';
@@ -71,6 +72,7 @@ export async function extractPageData(
       viewport: extractViewport(doc),
       canonical: extractCanonical(doc, pageUrl),
       hreflang: extractHreflang(doc, pageUrl),
+      tables: extractTables(doc),
     };
   });
 }
@@ -895,6 +897,24 @@ export function extractLists(doc: Document = document): ListData[] {
     }
   });
   return lists;
+}
+
+// Data tables in the content. Layout tables (role="presentation", nested
+// tables, a single row or column) are no tables a reader compares.
+export function extractTables(doc: Document = document): TableData[] {
+  const scope = getContentScope(doc);
+  const tables: TableData[] = [];
+  scope.root.querySelectorAll('table').forEach((table) => {
+    if (scope.isExcluded(table) || table.querySelector('table') || table.parentElement?.closest('table')) return;
+    const role = table.getAttribute('role')?.toLowerCase();
+    if (role === 'presentation' || role === 'none') return;
+    const rows = Array.from(table.querySelectorAll('tr')).filter((tr) => tr.closest('table') === table);
+    const cols = Math.max(0, ...rows.map((tr) => tr.querySelectorAll(':scope > td, :scope > th').length));
+    if (rows.length < 2 || cols < 2) return;
+    const caption = normalizeText(table.querySelector(':scope > caption')?.textContent) || null;
+    tables.push({ rows: rows.length, cols, hasHeader: !!table.querySelector('th, thead'), caption });
+  });
+  return tables;
 }
 
 // ---------------------------------------------------------------------------
