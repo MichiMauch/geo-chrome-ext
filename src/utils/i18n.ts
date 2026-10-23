@@ -266,6 +266,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     rec_no_llms_txt: 'Create an llms.txt file in the root directory to give LLMs context about your website.',
     rec_ai_bots_blocked: 'Search and answer crawlers are blocked in robots.txt (e.g. OAI-SearchBot, Claude-SearchBot, PerplexityBot, Googlebot). While blocked, the page does not appear as a source in AI answers — unblock them; training crawlers such as GPTBot or CCBot may stay blocked.',
     rec_ai_bots_firewall: 'The server turns AI crawlers away although robots.txt allows them — usually a CDN or firewall rule such as Cloudflare’s “Block AI bots”. Check the bot settings of the CDN/firewall and allow at least the search crawlers.',
+    rec_content_signal_opt_out: 'robots.txt carries a Content-Signal that asks AI systems not to use the page for answers (ai-input=no) or search (search=no). It is often set automatically by Cloudflare. If you want to be cited in AI answers, set ai-input=yes and search=yes; ai-train=no can stay.',
 
     // Explanations for robots.txt
     explain_robotstxt_ok: 'All checked AI crawlers (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot) may access the site.',
@@ -633,6 +634,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     rec_no_llms_txt: 'Erstellen Sie eine llms.txt-Datei im Root-Verzeichnis, um LLMs Kontext über Ihre Website zu geben.',
     rec_ai_bots_blocked: 'Such- und Abruf-Crawler werden in der robots.txt gesperrt (z.B. OAI-SearchBot, Claude-SearchBot, PerplexityBot, Googlebot). Solange sie gesperrt sind, erscheint die Seite in KI-Antworten nicht als Quelle — geben Sie sie frei; Trainings-Crawler wie GPTBot oder CCBot dürfen gesperrt bleiben.',
     rec_ai_bots_firewall: 'Der Server weist KI-Crawler ab, obwohl die robots.txt sie erlaubt — meist eine Regel im CDN oder in der Firewall, etwa Cloudflares «Block AI bots». Prüfen Sie die Bot-Einstellungen von CDN/Firewall und lassen Sie mindestens die Such-Crawler durch.',
+    rec_content_signal_opt_out: 'Die robots.txt enthält ein Content-Signal, das KI-Systeme bittet, die Seite nicht für Antworten (ai-input=no) oder die Suche (search=no) zu verwenden. Oft setzt Cloudflare es automatisch. Wenn Sie in KI-Antworten zitiert werden möchten, setzen Sie ai-input=yes und search=yes; ai-train=no kann bleiben.',
 
     trend_flat: 'Keine Veränderung seit letzter Analyse',
     trend_since: '{arrow} {sign}{delta} seit {time}',
@@ -992,6 +994,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     rec_no_llms_txt: 'Créez un fichier llms.txt à la racine pour fournir du contexte aux LLMs sur votre site.',
     rec_ai_bots_blocked: 'Des robots de recherche et de réponse sont bloqués dans robots.txt (p. ex. OAI-SearchBot, Claude-SearchBot, PerplexityBot, Googlebot). Tant qu’ils sont bloqués, la page n’apparaît pas comme source dans les réponses d’IA — débloquez-les ; les robots d’entraînement comme GPTBot ou CCBot peuvent rester bloqués.',
     rec_ai_bots_firewall: 'Le serveur refuse les robots d’IA alors que robots.txt les autorise — généralement une règle de CDN ou de pare-feu, comme « Block AI bots » de Cloudflare. Vérifiez les réglages des bots du CDN/pare-feu et laissez passer au moins les robots de recherche.',
+    rec_content_signal_opt_out: 'Le robots.txt contient un Content-Signal qui demande aux systèmes d’IA de ne pas utiliser la page pour leurs réponses (ai-input=no) ou la recherche (search=no). Cloudflare le définit souvent automatiquement. Pour être cité dans les réponses d’IA, mettez ai-input=yes et search=yes ; ai-train=no peut rester.',
 
     trend_flat: 'Aucun changement depuis la dernière analyse',
     trend_since: '{arrow} {sign}{delta} depuis {time}',
@@ -1350,6 +1353,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     rec_no_llms_txt: 'Cree un archivo llms.txt en el directorio raíz para dar contexto a los LLMs sobre su sitio.',
     rec_ai_bots_blocked: 'Hay rastreadores de búsqueda y respuesta bloqueados en robots.txt (p. ej. OAI-SearchBot, Claude-SearchBot, PerplexityBot, Googlebot). Mientras estén bloqueados, la página no aparece como fuente en las respuestas de IA — desbloquéelos; los rastreadores de entrenamiento como GPTBot o CCBot pueden seguir bloqueados.',
     rec_ai_bots_firewall: 'El servidor rechaza a los rastreadores de IA aunque robots.txt los permite — normalmente una regla de la CDN o del firewall, como «Block AI bots» de Cloudflare. Revise los ajustes de bots de la CDN/firewall y deje pasar al menos a los rastreadores de búsqueda.',
+    rec_content_signal_opt_out: 'El robots.txt contiene un Content-Signal que pide a los sistemas de IA no usar la página para respuestas (ai-input=no) o búsqueda (search=no). Cloudflare lo suele poner automáticamente. Si quiere que le citen en respuestas de IA, ponga ai-input=yes y search=yes; ai-train=no puede quedarse.',
 
     trend_flat: 'Sin cambios desde el último análisis',
     trend_since: '{arrow} {sign}{delta} desde hace {time}',
@@ -1708,6 +1712,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     rec_no_llms_txt: 'Crie um arquivo llms.txt no diretório raiz para dar contexto aos LLMs sobre seu site.',
     rec_ai_bots_blocked: 'Há crawlers de pesquisa e resposta bloqueados em robots.txt (p. ex. OAI-SearchBot, Claude-SearchBot, PerplexityBot, Googlebot). Enquanto estiverem bloqueados, a página não aparece como fonte nas respostas de IA — desbloqueie-os; crawlers de treino como GPTBot ou CCBot podem continuar bloqueados.',
     rec_ai_bots_firewall: 'O servidor recusa crawlers de IA embora o robots.txt os permita — normalmente uma regra da CDN ou da firewall, como o «Block AI bots» da Cloudflare. Verifique as definições de bots da CDN/firewall e deixe passar pelo menos os crawlers de pesquisa.',
+    rec_content_signal_opt_out: 'O robots.txt contém um Content-Signal que pede aos sistemas de IA que não usem a página para respostas (ai-input=no) ou pesquisa (search=no). A Cloudflare costuma defini-lo automaticamente. Se quer ser citado em respostas de IA, defina ai-input=yes e search=yes; ai-train=no pode ficar.',
 
     trend_flat: 'Sem alterações desde a última análise',
     trend_since: '{arrow} {sign}{delta} desde {time}',
@@ -2066,6 +2071,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     rec_no_llms_txt: 'Create un file llms.txt nella directory principale per fornire contesto ai LLM sul vostro sito.',
     rec_ai_bots_blocked: 'Crawler di ricerca e di risposta sono bloccati in robots.txt (es. OAI-SearchBot, Claude-SearchBot, PerplexityBot, Googlebot). Finché sono bloccati, la pagina non compare come fonte nelle risposte IA — sbloccateli; i crawler di addestramento come GPTBot o CCBot possono restare bloccati.',
     rec_ai_bots_firewall: 'Il server respinge i crawler IA anche se robots.txt li consente — di solito una regola del CDN o del firewall, come «Block AI bots» di Cloudflare. Controllate le impostazioni dei bot di CDN/firewall e lasciate passare almeno i crawler di ricerca.',
+    rec_content_signal_opt_out: 'Il robots.txt contiene un Content-Signal che chiede ai sistemi IA di non usare la pagina per le risposte (ai-input=no) o la ricerca (search=no). Spesso lo imposta automaticamente Cloudflare. Se volete essere citati nelle risposte IA, impostate ai-input=yes e search=yes; ai-train=no può restare.',
 
     trend_flat: 'Nessun cambiamento dall\'ultima analisi',
     trend_since: '{arrow} {sign}{delta} da {time}',

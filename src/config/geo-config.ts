@@ -221,6 +221,10 @@ export const GEO_CONFIG = {
     // or on-request bot removes the page from AI answers; blocking a training
     // crawler only keeps it out of future models — a legitimate choice that
     // costs a little but still passes.
+    // Content-Signal "ai-input=no" / "search=no": the site asks AI systems not
+    // to use the page for answers (or search). A request, not a lock, so it
+    // keeps this share of the robots.txt score. "ai-train=no" costs nothing.
+    contentSignalOptOutScore: 0.6,
     botPurposeWeights: {
       index: 3,
       search: 3,

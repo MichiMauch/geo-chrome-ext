@@ -407,7 +407,11 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     const blockedBotWeight =
       blockedBots.reduce((sum, b) => sum + botWeight(b), 0) +
       0.5 * firewallBlocked.reduce((sum, b) => sum + botWeight(b), 0);
-    const robotsScore = totalBotWeight > 0 ? Math.max(0, 1 - blockedBotWeight / totalBotWeight) : 1;
+    const signals = robotsTxt?.contentSignals ?? {};
+    const signalOptOut = signals['ai-input'] === 'no' || signals['search'] === 'no';
+    const robotsScore =
+      (totalBotWeight > 0 ? Math.max(0, 1 - blockedBotWeight / totalBotWeight) : 1) *
+      (signalOptOut ? config.contentSignalOptOutScore : 1);
     const firewallAnswerBlock = firewallBlocked.some((b) => (BOT_INFO[b]?.purpose ?? 'training') !== 'training');
     const allBotsAllowed = blockedCount === 0;
     // Only training crawlers blocked: a deliberate opt-out that keeps the
@@ -429,7 +433,7 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
 
     details.push({
       criterionKey: 'criterion_robotsTxt',
-      found: !answerBotsBlocked && !firewallAnswerBlock,
+      found: !answerBotsBlocked && !firewallAnswerBlock && !signalOptOut,
       value: robotsValue,
       weight: config.weights.robotsTxt,
       progress: {
@@ -437,7 +441,11 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
         target: total,
         unitKey: 'unit_bots',
       },
-      ...this.withFirewallEvidence(this.robotsEvidence(robotsTxt, total), pageData.botAccess, firewallBlocked),
+      ...this.withSignalEvidence(
+        this.withFirewallEvidence(this.robotsEvidence(robotsTxt, total), pageData.botAccess, firewallBlocked),
+        signals,
+        signalOptOut
+      ),
     });
 
     weightedScore += robotsScore * config.weights.robotsTxt;
@@ -493,6 +501,7 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     if (!hasLlmsTxt) recommendations.push('no_llms_txt');
     if (hasAnyBlock) recommendations.push('ai_bots_blocked');
     if (firewallAnswerBlock) recommendations.push('ai_bots_firewall');
+    if (signalOptOut) recommendations.push('content_signal_opt_out');
     if (jsRenderingIssue) recommendations.push('js_only_content');
 
     return this.createCategory(0, weightedScore, totalWeight, details, recommendations);
@@ -691,6 +700,21 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     if (user) evidence.push({ key: 'ev_robotsTxt_blocked_user', params: { bots: user } });
     if (training) evidence.push({ key: 'ev_robotsTxt_blocked_training', params: { bots: training } });
     return { evidence, ...(!index && !search && !user ? { fixKey: 'fix_robotsTxt_training' } : {}) };
+  }
+
+  // Content-Signal line, quoted as written. An opt-out from AI answers gets
+  // its own fix unless a harder block already has one.
+  private withSignalEvidence(
+    base: { evidence: EvidenceLine[]; fixKey?: string },
+    signals: Record<string, string>,
+    optOut: boolean
+  ): { evidence: EvidenceLine[]; fixKey?: string } {
+    const entries = Object.entries(signals);
+    if (entries.length === 0) return base;
+    const raw = entries.map(([k, v]) => `${k}=${v}`).join(', ');
+    const evidence = [...base.evidence, { key: optOut ? 'ev_robotsTxt_signal_optout' : 'ev_robotsTxt_signal', params: { raw } }];
+    const harderBlock = base.evidence.some((e) => ROBOTS_ANSWER_BLOCK_KEYS.has(e.key) || e.key === 'ev_robotsTxt_firewall');
+    return optOut && !harderBlock ? { evidence, fixKey: 'fix_robotsTxt_signal' } : { ...base, evidence };
   }
 
   // CDN/firewall blocks on top of the robots.txt verdict. The fix switches to

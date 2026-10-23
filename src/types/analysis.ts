@@ -319,6 +319,9 @@ export interface RobotsTxtData {
   // bot must assume a complete disallow, so all checked bots are blocked.
   unreachable?: boolean;
   httpStatus?: number;
+  // Content-Signal line (contentsignals.org, written by Cloudflare's managed
+  // robots.txt): search / ai-input / ai-train → 'yes' | 'no', lowercased.
+  contentSignals?: Record<string, string>;
 }
 
 // Domain dashboard: one row per analyzed URL of a domain

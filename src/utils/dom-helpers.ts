@@ -1529,6 +1529,11 @@ export function parseRobotsTxt(
     if (!allowed) blockedBots.push(bot);
   }
 
+  // The signals of the * group apply to everyone; a file that only sets
+  // them for specific bots still says what the site wants.
+  const signalBlock = blocks.find((b) => b.signals && b.agents.includes('*')) ?? blocks.find((b) => b.signals);
+  const contentSignals = signalBlock?.signals && Object.keys(signalBlock.signals).length > 0 ? signalBlock.signals : undefined;
+
   return {
     exists: true,
     url,
@@ -1537,7 +1542,18 @@ export function parseRobotsTxt(
     allowedBots,
     blockedBots,
     totalChecked: bots.length,
+    ...(contentSignals ? { contentSignals } : {}),
   };
+}
+
+// "search=yes, ai-input=no, ai-train=no" → { search: 'yes', … }
+function parseContentSignal(value: string): Record<string, string> {
+  const signals: Record<string, string> = {};
+  for (const part of value.split(',')) {
+    const m = part.trim().toLowerCase().match(/^([a-z-]+)\s*=\s*(yes|no)$/);
+    if (m) signals[m[1]] = m[2];
+  }
+  return signals;
 }
 
 interface RobotsRule {
@@ -1548,6 +1564,7 @@ interface RobotsRule {
 interface RobotsBlock {
   agents: string[]; // lowercased user-agent names
   rules: RobotsRule[];
+  signals?: Record<string, string>;
 }
 
 // RFC 9309 groups: one or more User-agent lines followed by their rules. A
@@ -1582,6 +1599,8 @@ function parseBlocks(content: string): RobotsBlock[] {
         current.rules.push({ type: field, path: value });
         groupHasRules = true;
       }
+    } else if (field === 'content-signal' && current) {
+      current.signals = { ...current.signals, ...parseContentSignal(value) };
     }
   }
   if (current) blocks.push(current);

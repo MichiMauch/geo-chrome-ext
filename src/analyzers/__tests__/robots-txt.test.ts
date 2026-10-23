@@ -312,6 +312,24 @@ Allow: /`;
     expect(detail.evidence).toContainEqual({ key: 'ev_robotsTxt_firewall_ok', params: { bots: 'GPTBot, ClaudeBot' } });
   });
 
+  it('reads Content-Signal and docks points only for an opt-out from answers', () => {
+    const bots = GEO_CONFIG.machineReadability.aiBots;
+    const train = parseRobotsTxt('User-Agent: *\nContent-Signal: search=yes,ai-train=no\nAllow: /', bots, undefined, '/');
+    expect(train.contentSignals).toEqual({ search: 'yes', 'ai-train': 'no' });
+    const trainResult = analyzer.analyze(mockPage(train));
+    const trainDetail = trainResult.details.find((d) => d.criterionKey === 'criterion_robotsTxt')!;
+    expect(trainDetail.found).toBe(true);
+    expect(trainDetail.evidence).toContainEqual({ key: 'ev_robotsTxt_signal', params: { raw: 'search=yes, ai-train=no' } });
+
+    const input = parseRobotsTxt('User-Agent: *\nContent-Signal: search=yes, ai-input=no, ai-train=no\nAllow: /', bots, undefined, '/');
+    const inputResult = analyzer.analyze(mockPage(input));
+    const inputDetail = inputResult.details.find((d) => d.criterionKey === 'criterion_robotsTxt')!;
+    expect(inputDetail.found).toBe(false);
+    expect(inputDetail.fixKey).toBe('fix_robotsTxt_signal');
+    expect(inputResult.recommendations).toContain('content_signal_opt_out');
+    expect(inputResult.score).toBeLessThan(trainResult.score);
+  });
+
   it('treats an unreachable robots.txt as fully blocked', () => {
     const result = analyzer.analyze(mockPage({
       exists: false,
