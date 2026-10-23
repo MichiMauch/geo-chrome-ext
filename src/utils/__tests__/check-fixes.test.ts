@@ -73,15 +73,24 @@ describe('Startseite mit Sprachpräfix', () => {
   const type = (url: string) =>
     detectPageType({ url, schema: [], openGraph: {}, meta: {} } as unknown as PageData);
 
-  it.each(['https://x.ch/', 'https://x.ch/de/', 'https://x.ch/fr', 'https://x.ch/de-ch/', 'https://x.ch/en/index.html'])(
+  it.each([
+    'https://x.ch/', 'https://x.ch/de/', 'https://x.ch/fr', 'https://x.ch/de-ch/', 'https://x.ch/en/index.html',
+    'https://x.ch/de.html', 'https://x.ch/gov/de/start.html', 'https://x.ch/eda/de/home.html',
+  ])(
     '%s ist eine Startseite',
     (url) => expect(type(url)).toBe('homepage')
   );
 
-  it.each(['https://x.ch/ai', 'https://x.ch/de/artikel', 'https://x.ch/deutsch'])(
+  it.each(['https://x.ch/ai', 'https://x.ch/de/artikel', 'https://x.ch/deutsch', 'https://x.ch/blog/de/beitrag.html'])(
     '%s ist keine Startseite',
     (url) => expect(type(url)).toBe('other')
   );
+
+  it('og:type article macht eine Startseite nicht zum Artikel', () => {
+    const page = { url: 'https://x.ch/de/', schema: [], openGraph: { type: 'article' }, meta: {} } as unknown as PageData;
+    expect(detectPageType(page)).toBe('homepage');
+    expect(detectPageType({ ...page, url: 'https://x.ch/de/news/a' })).toBe('article');
+  });
 });
 
 describe('Fliesstext ohne <p>', () => {

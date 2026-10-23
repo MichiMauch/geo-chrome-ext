@@ -1,6 +1,6 @@
 {
-  "total": 9.1,
-  "pageType": "other",
+  "total": 8.8,
+  "pageType": "homepage",
   "categories": {
     "contentClarity": {
       "score": 2.9,
@@ -51,18 +51,13 @@
       ]
     },
     "answerability": {
-      "score": 0.3,
+      "score": 0.4,
       "criteria": {
         "criterion_definitions": {
-          "found": false,
-          "value": "0%",
-          "progress": "0/100",
-          "evidence": [
-            "ev_definitions_sentences_none",
-            "ev_definitions_no_questions",
-            "ev_definitions_total",
-            "ev_definitions_structured"
-          ]
+          "found": true,
+          "value": "value_notApplicable",
+          "progress": "1/1",
+          "evidence": []
         },
         "criterion_lists": {
           "found": false,
@@ -83,7 +78,6 @@
         }
       },
       "recommendations": [
-        "no_definitions",
         "no_lists",
         "few_sections"
       ]
@@ -92,21 +86,16 @@
       "score": 0,
       "criteria": {
         "criterion_author": {
-          "found": false,
-          "value": "value_notRecognizable",
-          "progress": "0/1",
-          "evidence": [
-            "ev_author_none"
-          ]
+          "found": true,
+          "value": "value_notApplicable",
+          "progress": "1/1",
+          "evidence": []
         },
         "criterion_date": {
-          "found": false,
-          "value": "value_noDateFound",
-          "progress": "0/1",
-          "evidence": [
-            "ev_date_none"
-          ],
-          "fix": "fix_date"
+          "found": true,
+          "value": "value_notApplicable",
+          "progress": "1/1",
+          "evidence": []
         },
         "criterion_sources": {
           "found": false,
@@ -118,8 +107,6 @@
         }
       },
       "recommendations": [
-        "no_author",
-        "no_date",
         "few_sources"
       ]
     },
@@ -195,7 +182,7 @@
       ]
     },
     "aiCitation": {
-      "score": 0.4,
+      "score": 0,
       "criteria": {
         "criterion_facts": {
           "found": false,
@@ -206,14 +193,10 @@
           ]
         },
         "criterion_faq": {
-          "found": false,
-          "value": "0%",
-          "progress": "0/100",
-          "evidence": [
-            "ev_faq_none",
-            "ev_faq_schema_no"
-          ],
-          "fix": "fix_faq"
+          "found": true,
+          "value": "value_notApplicable",
+          "progress": "1/1",
+          "evidence": []
         },
         "criterion_sourcedClaims": {
           "found": false,
@@ -225,24 +208,15 @@
           ]
         },
         "criterion_keyInfoUpfront": {
-          "found": false,
-          "value": "35%",
-          "progress": "35/100",
-          "evidence": [
-            "ev_keyInfoUpfront_lead",
-            "ev_keyInfoUpfront_h1_ok",
-            "ev_keyInfoUpfront_short_long",
-            "ev_keyInfoUpfront_meta_ok",
-            "ev_keyInfoUpfront_definition_missing",
-            "ev_keyInfoUpfront_number_missing"
-          ]
+          "found": true,
+          "value": "value_notApplicable",
+          "progress": "1/1",
+          "evidence": []
         }
       },
       "recommendations": [
         "no_facts",
-        "no_faq",
-        "no_sourced_claims",
-        "no_key_info_upfront"
+        "no_sourced_claims"
       ]
     },
     "onPageSeo": {

@@ -1,8 +1,9 @@
 import type { PageData, PageType } from '../types/analysis';
 import { schemaTypesOf } from './schema-types';
 
-// Conservative page-type detection. Explicit author signals (Schema.org,
-// og:type) beat URL heuristics; anything uncertain stays 'other' so the
+// Conservative page-type detection. Schema.org beats the URL; the URL beats
+// og:type, which many CMS set to "article" on every page, start page
+// included (admin.ch, ch.ch, spruengli.ch). Anything uncertain stays 'other' so the
 // scoring behaves exactly as before detection existed. Only confident
 // homepage/product/article detections may relax check expectations.
 
@@ -17,8 +18,16 @@ export const ARTICLE_SCHEMA_TYPES = [
 // /go stays an ordinary page.
 export const LANGUAGE_CODES =
   'de|en|fr|it|es|pt|nl|rm|pl|cs|sk|sl|hr|sr|bs|hu|ro|bg|el|tr|ru|uk|sv|da|no|nb|nn|fi|is|et|lv|lt|ga|ca|eu|gl|ja|zh|ko|ar|he|hi|th|vi|id|ms';
+const LANG = `(?:${LANGUAGE_CODES})(?:[-_][a-z]{2,4})?`;
 const HOMEPAGE_PATH = new RegExp(
-  `^(?:/(?:${LANGUAGE_CODES})(?:[-_][a-z]{2,4})?)?(?:/(?:index|home|start)\\.(?:html?|php))?$`,
+  [
+    // /, /de, /de-ch/, /de/index.html
+    `^(?:/${LANG})?(?:/(?:index|home|start)\\.(?:html?|php))?$`,
+    // /de.html (AEM language roots: uzh.ch, stadt-zuerich.ch)
+    `^/${LANG}\\.html?$`,
+    // /gov/de/start.html, /eda/de/home.html (AEM site roots)
+    `^/[a-z0-9-]+/${LANG}/(?:index|home|start)\\.html?$`,
+  ].join('|'),
   'i'
 );
 
@@ -29,10 +38,6 @@ export function detectPageType(pageData: PageData): PageType {
   if (schemaTypes.has('Product')) return 'product';
   if (ARTICLE_SCHEMA_TYPES.some((t) => schemaTypes.has(t))) return 'article';
 
-  const ogType = (pageData.openGraph.type || pageData.meta.ogType || '').toLowerCase();
-  if (ogType === 'article') return 'article';
-  if (ogType.startsWith('product')) return 'product';
-
   try {
     const path = new URL(pageData.url).pathname.replace(/\/+$/, '') || '/';
     if (path === '/' || HOMEPAGE_PATH.test(path)) {
@@ -41,6 +46,10 @@ export function detectPageType(pageData: PageData): PageType {
   } catch {
     // unparseable URL — stay conservative
   }
+
+  const ogType = (pageData.openGraph.type || pageData.meta.ogType || '').toLowerCase();
+  if (ogType === 'article') return 'article';
+  if (ogType.startsWith('product')) return 'product';
 
   return 'other';
 }

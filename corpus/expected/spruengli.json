@@ -1,6 +1,6 @@
 {
-  "total": 15.3,
-  "pageType": "article",
+  "total": 16.8,
+  "pageType": "homepage",
   "categories": {
     "contentClarity": {
       "score": 2.9,
@@ -54,19 +54,13 @@
       ]
     },
     "answerability": {
-      "score": 3,
+      "score": 4.2,
       "criteria": {
         "criterion_definitions": {
-          "found": false,
-          "value": "23%",
-          "progress": "23/100",
-          "evidence": [
-            "ev_definitions_sentences",
-            "ev_definitions_no_questions",
-            "ev_definitions_total",
-            "ev_definitions_structured"
-          ],
-          "fix": "fix_definitions_hidden"
+          "found": true,
+          "value": "value_notApplicable",
+          "progress": "1/1",
+          "evidence": []
         },
         "criterion_lists": {
           "found": true,
@@ -87,29 +81,22 @@
           ]
         }
       },
-      "recommendations": [
-        "no_definitions"
-      ]
+      "recommendations": []
     },
     "trustSources": {
       "score": 0,
       "criteria": {
         "criterion_author": {
-          "found": false,
-          "value": "value_notRecognizable",
-          "progress": "0/1",
-          "evidence": [
-            "ev_author_none"
-          ]
+          "found": true,
+          "value": "value_notApplicable",
+          "progress": "1/1",
+          "evidence": []
         },
         "criterion_date": {
-          "found": false,
-          "value": "value_noDateFound",
-          "progress": "0/1",
-          "evidence": [
-            "ev_date_none"
-          ],
-          "fix": "fix_date"
+          "found": true,
+          "value": "value_notApplicable",
+          "progress": "1/1",
+          "evidence": []
         },
         "criterion_sources": {
           "found": false,
@@ -122,8 +109,6 @@
         }
       },
       "recommendations": [
-        "no_author",
-        "no_date",
         "few_sources"
       ]
     },
@@ -137,11 +122,10 @@
           "evidence": [
             "ev_schema_found",
             "ev_schema_other",
-            "ev_schema_missing_article",
             "ev_schema_missing_faq",
             "ev_schema_target"
           ],
-          "fix": "fix_schema_article"
+          "fix": "fix_schema_faq"
         },
         "criterion_schema_completeness": {
           "found": true,
@@ -206,13 +190,13 @@
         }
       },
       "recommendations": [
-        "no_schema",
+        "no_faq_schema",
         "weak_semantic_html",
         "no_llms_txt"
       ]
     },
     "aiCitation": {
-      "score": 1.5,
+      "score": 1.8,
       "criteria": {
         "criterion_facts": {
           "found": false,
@@ -226,17 +210,10 @@
           "fix": "fix_facts_hidden"
         },
         "criterion_faq": {
-          "found": false,
-          "value": "value_faqAnswersHidden",
-          "progress": "0/100",
-          "evidence": [
-            "ev_faq_questions",
-            "ev_faq_hidden",
-            "ev_faq_example",
-            "ev_faq_example",
-            "ev_faq_schema_no"
-          ],
-          "fix": "fix_faq_hidden"
+          "found": true,
+          "value": "value_notApplicable",
+          "progress": "1/1",
+          "evidence": []
         },
         "criterion_sourcedClaims": {
           "found": true,
@@ -251,23 +228,14 @@
           ]
         },
         "criterion_keyInfoUpfront": {
-          "found": false,
-          "value": "50%",
-          "progress": "50/100",
-          "evidence": [
-            "ev_keyInfoUpfront_lead",
-            "ev_keyInfoUpfront_h1_ok",
-            "ev_keyInfoUpfront_short_ok",
-            "ev_keyInfoUpfront_meta_ok",
-            "ev_keyInfoUpfront_definition_missing",
-            "ev_keyInfoUpfront_number_missing"
-          ]
+          "found": true,
+          "value": "value_notApplicable",
+          "progress": "1/1",
+          "evidence": []
         }
       },
       "recommendations": [
-        "no_facts",
-        "faq_answers_hidden",
-        "no_key_info_upfront"
+        "no_facts"
       ]
     },
     "onPageSeo": {
