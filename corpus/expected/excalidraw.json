@@ -238,7 +238,7 @@
         "criterion_image_alts": {
           "found": true,
           "value": "value_noImages",
-          "progress": "0/1",
+          "progress": "1/1",
           "evidence": [
             "ev_image_alts_none"
           ],

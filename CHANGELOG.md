@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.13.1] - 2026-10-23
+
+### Added
+
+- **End-to-end test in a real browser:** `npm run test:e2e` builds the extension and runs it in Chromium (Playwright) against a local test site. It covers the content script, crawler view, sitemap check and the bot-access probe, and confirms that the `declarativeNetRequest` rule really sends the crawler User-Agent and leaves the page’s own requests alone. The test manifest adds host permissions, since activeTab is only granted on a real toolbar click.
+
+### Fixed
+
+- **“Image alt texts” showed ✗ on pages without images:** The criterion passed and scored full, but its progress read 0/1, so the panel showed a cross and the new per-criterion history would have counted it as failing. Found with a screenshot from the end-to-end test.
+
 ## [4.13.0] - 2026-10-23
 
 ### Added

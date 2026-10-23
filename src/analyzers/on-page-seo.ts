@@ -119,8 +119,9 @@ export class OnPageSeoAnalyzer extends BaseAnalyzer {
           ? 'value_noImages'
           : `${altResult.withAlt}/${altResult.totalImages}`,
       weight: config.weights.imageAlts,
+      // No images: nothing to fail, so the bar is full (it showed 0/1 and an ✗)
       progress: {
-        current: altResult.withAlt,
+        current: altResult.totalImages === 0 ? 1 : altResult.withAlt,
         target: Math.max(altResult.totalImages, 1),
         unitKey: 'unit_images',
       },

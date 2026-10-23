@@ -204,7 +204,7 @@ function getExplanation(d: CategoryDetail): string {
   }
   // On-Page SEO: Image alts
   if (criterion === t('criterion_image_alts')) {
-    if (target === 1 && current === 0) return t('explain_images_none');
+    if (value === t('value_noImages') || (target === 1 && current === 0)) return t('explain_images_none');
     if (!d.found) return t('explain_image_alts_bad', { current, target });
     return t('explain_image_alts_ok', { current, target });
   }
