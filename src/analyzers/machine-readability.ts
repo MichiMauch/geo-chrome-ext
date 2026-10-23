@@ -463,15 +463,18 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
       blockedBots.some((b) => (BOT_INFO[b]?.purpose ?? 'training') !== 'training');
     const hasAnyBlock = answerBotsBlocked;
 
+    // "All AI bots allowed" must not stand next to a CDN block or an opt-out
     const robotsValue = robotsTxt?.unreachable
       ? 'value_allBotsBlocked'
-      : !robotsTxt?.exists
-      ? 'value_allBotsAllowed'
-      : allBotsAllowed
-        ? 'value_allBotsAllowed'
-        : blockedCount === total
+      : robotsTxt?.exists && !allBotsAllowed
+        ? blockedCount === total
           ? 'value_allBotsBlocked'
-          : 'value_someBotsBlocked';
+          : 'value_someBotsBlocked'
+        : firewallAnswerBlock
+          ? 'value_botsBlockedByServer'
+          : signalOptOut
+            ? 'value_botsOptOut'
+            : 'value_allBotsAllowed';
 
     details.push({
       criterionKey: 'criterion_robotsTxt',

@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.14.1] - 2026-10-23
+
+### Fixed
+
+- **“All AI bots allowed” next to a CDN block:** When robots.txt allowed every crawler but the server turned them away (or a Content-Signal opted out of AI answers), the robots.txt criterion still read “All AI bots allowed”. It now reads “Blocked by the server/CDN” or “Opted out of AI answers”.
+- **Test runs no longer count in the usage statistics:** The end-to-end test and the store screenshot capture switch anonymous statistics off before analysing.
+
+### Added
+
+- **Store screenshots from the real extension:** `store/capture.mjs` and `store/compose.mjs` produce the five Chrome Web Store screenshots from a local demo article.
+
 ## [4.14.0] - 2026-10-23
 
 ### Added

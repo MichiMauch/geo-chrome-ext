@@ -301,6 +301,8 @@ export const translations: Record<Lang, Record<string, string>> = {
     value_llms_fullOnly: 'Only llms-full.txt',
     value_allBotsAllowed: 'All AI bots allowed',
     value_someBotsBlocked: 'Some AI bots blocked',
+    value_botsBlockedByServer: 'Blocked by the server/CDN',
+    value_botsOptOut: 'Opted out of AI answers',
     value_allBotsBlocked: 'All AI bots blocked',
     unit_bots: 'bots',
 
@@ -727,6 +729,8 @@ export const translations: Record<Lang, Record<string, string>> = {
     value_llms_fullOnly: 'Nur llms-full.txt',
     value_allBotsAllowed: 'Alle AI-Bots erlaubt',
     value_someBotsBlocked: 'Einige AI-Bots blockiert',
+    value_botsBlockedByServer: 'Vom Server/CDN gesperrt',
+    value_botsOptOut: 'Von KI-Antworten abgemeldet',
     value_allBotsBlocked: 'Alle AI-Bots blockiert',
     unit_bots: 'Bots',
 
@@ -1144,6 +1148,8 @@ export const translations: Record<Lang, Record<string, string>> = {
     value_llms_fullOnly: 'Seulement llms-full.txt',
     value_allBotsAllowed: 'Tous les bots IA autorisés',
     value_someBotsBlocked: 'Certains bots IA bloqués',
+    value_botsBlockedByServer: 'Bloqués par le serveur/CDN',
+    value_botsOptOut: 'Exclus des réponses d’IA',
     value_allBotsBlocked: 'Tous les bots IA bloqués',
     unit_bots: 'bots',
 
@@ -1560,6 +1566,8 @@ export const translations: Record<Lang, Record<string, string>> = {
     value_llms_fullOnly: 'Solo llms-full.txt',
     value_allBotsAllowed: 'Todos los bots IA permitidos',
     value_someBotsBlocked: 'Algunos bots IA bloqueados',
+    value_botsBlockedByServer: 'Bloqueados por el servidor/CDN',
+    value_botsOptOut: 'Excluidos de las respuestas de IA',
     value_allBotsBlocked: 'Todos los bots IA bloqueados',
     unit_bots: 'bots',
 
@@ -1976,6 +1984,8 @@ export const translations: Record<Lang, Record<string, string>> = {
     value_llms_fullOnly: 'Apenas llms-full.txt',
     value_allBotsAllowed: 'Todos os bots IA permitidos',
     value_someBotsBlocked: 'Alguns bots IA bloqueados',
+    value_botsBlockedByServer: 'Bloqueados pelo servidor/CDN',
+    value_botsOptOut: 'Excluídos das respostas de IA',
     value_allBotsBlocked: 'Todos os bots IA bloqueados',
     unit_bots: 'bots',
 
@@ -2392,6 +2402,8 @@ export const translations: Record<Lang, Record<string, string>> = {
     value_llms_fullOnly: 'Solo llms-full.txt',
     value_allBotsAllowed: 'Tutti i bot IA consentiti',
     value_someBotsBlocked: 'Alcuni bot IA bloccati',
+    value_botsBlockedByServer: 'Bloccati dal server/CDN',
+    value_botsOptOut: 'Esclusi dalle risposte IA',
     value_allBotsBlocked: 'Tutti i bot IA bloccati',
     unit_bots: 'bot',
 

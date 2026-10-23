@@ -78,6 +78,8 @@ test.beforeAll(async () => {
     args: [`--disable-extensions-except=${extensionDir}`, `--load-extension=${extensionDir}`],
   });
   worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
+  // Test runs must not show up in the anonymous usage statistics
+  await worker.evaluate(() => chrome.storage.local.set({ geo_analytics_enabled: false, geo_analytics_notice_seen: true }));
 });
 
 test.afterAll(async () => {
