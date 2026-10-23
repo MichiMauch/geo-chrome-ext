@@ -11,6 +11,7 @@ export function mapAnalysisResult(category: AnalysisCategory): AnalysisCategory 
     nameKey: t(category.nameKey), // Translate the category name
     details: category.details.map((detail) => ({
       ...detail,
+      id: detail.id ?? detail.criterionKey,
       criterionKey: t(detail.criterionKey), // Translate criterion
       value: translateDetailValue(detail), // Translate dynamic values
       ...translateReportTexts(detail),

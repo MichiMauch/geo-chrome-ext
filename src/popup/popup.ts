@@ -9,7 +9,7 @@ import {
   isNoticeSeen,
   markNoticeSeen,
 } from '../utils/analytics';
-import { formatTrendLabel } from '../utils/trend';
+import { formatCriterionList, formatTrendLabel } from '../utils/trend';
 import { setBadgeForTab } from '../utils/badge';
 import { initI18n, t, getDateLocale, setLang, getLang } from '../utils/i18n';
 import type { Lang } from '../utils/i18n';
@@ -67,6 +67,7 @@ const scoreBadgeEl = document.getElementById('score-badge')!;
 const scoreBarEl = document.getElementById('score-bar')!;
 const pageUrlEl = document.getElementById('page-url')!;
 const scoreTrendEl = document.getElementById('score-trend')!;
+const scoreChangesEl = document.getElementById('score-changes')!;
 const categoriesEl = document.getElementById('categories')!;
 const recommendationsSectionEl = document.getElementById('recommendations-section')!;
 const recommendationsEl = document.getElementById('recommendations')!;
@@ -171,6 +172,7 @@ function showState(state: 'loading' | 'results' | 'error' | 'not-supported' | 'n
 function renderTrend(trend: TrendInfo | null) {
   if (!trend) {
     scoreTrendEl.classList.add('hidden');
+    renderChanges(null);
     return;
   }
 
@@ -184,6 +186,22 @@ function renderTrend(trend: TrendInfo | null) {
   scoreTrendEl.className = `mt-1 text-xs font-medium ${colorClass}`;
   scoreTrendEl.textContent = formatTrendLabel(trend);
   scoreTrendEl.classList.remove('hidden');
+  renderChanges(trend);
+}
+
+// Which criteria were fixed or broke since the previous analysis
+function renderChanges(trend: TrendInfo | null | undefined) {
+  const fixed = trend?.fixed ?? [];
+  const regressed = trend?.regressed ?? [];
+  scoreChangesEl.innerHTML = [
+    fixed.length > 0
+      ? `<p class="text-green-700 dark:text-green-400">✓ ${escapeHtml(t('ui_changes_fixed', { list: formatCriterionList(fixed) }))}</p>`
+      : '',
+    regressed.length > 0
+      ? `<p class="text-red-600 dark:text-red-400">✗ ${escapeHtml(t('ui_changes_new', { list: formatCriterionList(regressed) }))}</p>`
+      : '',
+  ].join('');
+  scoreChangesEl.classList.toggle('hidden', fixed.length === 0 && regressed.length === 0);
 }
 
 // Render history panel
@@ -765,6 +783,7 @@ async function startAnalysis() {
           historyToggleEl.classList.remove('hidden');
           historyClearEl.classList.remove('hidden');
           renderResults(cached.result);
+          renderTrend(cached.result.changes ?? null);
           renderHistoryList(cached.result.url);
           updateDomainOverviewButton();
           if (!batchRunning) setBatchEnabled(true);
@@ -854,6 +873,8 @@ async function startAnalysis() {
         // Storage error — continue without history/trend
       }
 
+      // The report and cache carry the comparison too
+      if (trend) response.result.changes = trend;
       // Store for later (in case user activates toggle after analysis)
       lastResult = response.result;
       analyzedUrl = tab.url;

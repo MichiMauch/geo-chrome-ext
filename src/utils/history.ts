@@ -5,7 +5,7 @@ import type {
   TrendInfo,
   DomainPageSummary,
 } from '../types/analysis';
-import { computeTrend } from './trend';
+import { computeTrend, criterionChecks } from './trend';
 
 const STORAGE_PREFIX = 'geo_history:';
 const MAX_ENTRIES = 50;
@@ -43,11 +43,13 @@ export async function saveAnalysis(result: GEOAnalysisResult): Promise<TrendInfo
   const existing = await loadHistory(result.url);
 
   // Compute trend BEFORE saving — entries[0] is the most recent previous result
-  const trend = computeTrend(result.totalScore, existing);
+  const checks = criterionChecks(result);
+  const trend = computeTrend(result.totalScore, existing, checks);
 
   const entry: HistoryEntry = {
     timestamp: result.timestamp,
     totalScore: result.totalScore,
+    checks,
     ratingLevel: result.rating.level,
     ratingLabel: result.rating.label,
     ratingColor: result.rating.color,

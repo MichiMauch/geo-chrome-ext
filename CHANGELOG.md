@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.11.0] - 2026-10-23
+
+### Added
+
+- **Fixed and new findings since the last check:** The history kept only the total score, so after a round of fixes you saw “+1.4” but not what changed. Each history entry now stores which criteria passed, and a new analysis of the same page lists below the trend which criteria were fixed and which newly fail. The HTML report shows the same comparison above the recommendations. Only criteria checked both times are compared; entries saved by earlier versions have no per-criterion data, so the comparison starts with the next analysis.
+
 ## [4.10.0] - 2026-10-23
 
 ### Added

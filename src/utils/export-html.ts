@@ -331,6 +331,25 @@ function renderCriterionHtml(d: CategoryDetail, status: CriterionStatus): string
 }
 
 // Score per category at a glance, linking to the category below
+// Fixed / newly failing criteria since the previous analysis of this URL
+function renderChangesHtml(result: GEOAnalysisResult): string {
+  const fixed = result.changes?.fixed ?? [];
+  const regressed = result.changes?.regressed ?? [];
+  if (fixed.length === 0 && regressed.length === 0) return '';
+  const date = new Date(result.changes!.previousTimestamp).toLocaleDateString(getDateLocale());
+  const list = (keys: string[], cls: string, label: string) =>
+    keys.length === 0
+      ? ''
+      : `<div class="changes-row ${cls}"><span class="changes-label">${escapeHtml(label)}</span>${keys
+          .map((k) => `<span class="changes-item">${escapeHtml(t(k))}</span>`)
+          .join('')}</div>`;
+  return `<div class="card changes-card">
+      <h2 class="card-title">${escapeHtml(t('report_changes_title', { date }))}</h2>
+      ${list(fixed, 'changes-fixed', t('report_changes_fixed'))}
+      ${list(regressed, 'changes-new', t('report_changes_new'))}
+    </div>`;
+}
+
 function renderOverviewHtml(result: GEOAnalysisResult, order: (keyof GEOAnalysisResult['categories'])[]): string {
   return `<div class="overview">${order
     .map((key) => {
@@ -618,6 +637,14 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
       border-radius: 10px;
     }
 
+    .changes-card { margin-bottom: 24px; }
+    .changes-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; }
+    .changes-label { font-weight: 700; margin-right: 4px; }
+    .changes-item { padding: 3px 10px; border-radius: 999px; }
+    .changes-fixed .changes-label { color: #15803d; }
+    .changes-fixed .changes-item { background: rgba(34,197,94,0.1); color: #166534; }
+    .changes-new .changes-label { color: #b91c1c; }
+    .changes-new .changes-item { background: rgba(239,68,68,0.1); color: #991b1b; }
     .recs-more { margin-top: 10px; }
     .recs-more > summary {
       cursor: pointer; list-style: none;
@@ -797,6 +824,7 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
   </div>
 
   <div class="container">
+    ${renderChangesHtml(result)}
     ${recommendationsHtml}
 
     <div class="details-bar">

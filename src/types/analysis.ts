@@ -14,6 +14,9 @@ export interface EvidenceLine {
 
 export interface CategoryDetail {
   criterionKey: string; // Translation key
+  // The untranslated criterionKey, kept by mapAnalysisResult so history and
+  // comparisons don't depend on the UI language
+  id?: string;
   found: boolean;
   value?: string | number;
   // Placeholders for `value` when it is a translation key like
@@ -64,6 +67,9 @@ export interface GEOAnalysisResult {
   };
   topRecommendations: string[];
   pageType?: PageType;
+  // Comparison with the previous analysis of this URL, set when the result
+  // is saved to history (panel and report show it).
+  changes?: TrendInfo;
   // Recommendation key → affected page elements, computed in the content
   // script at analysis time. Only keys with visible DOM targets are present;
   // consumed by the "show on page" buttons in the panel. Labels are localized
@@ -382,6 +388,9 @@ export interface DomainPageSummary {
 export interface HistoryEntry {
   timestamp: string;
   totalScore: number;
+  // Criterion key → met, for "fixed / new since last check". Not-applicable
+  // criteria are left out. Absent in entries saved before 4.11.
+  checks?: Record<string, boolean>;
   ratingLevel: 'excellent' | 'good' | 'moderate' | 'poor';
   ratingLabel: string;
   ratingColor: string;
@@ -397,6 +406,11 @@ export interface TrendInfo {
   delta: number; // absolute value
   previousScore: number;
   previousTimestamp: string;
+  // Criteria (untranslated keys) that pass now but failed last time, and the
+  // other way round. Only criteria checked both times; absent when the
+  // previous entry predates per-criterion history.
+  fixed?: string[];
+  regressed?: string[];
 }
 
 // Message Types
