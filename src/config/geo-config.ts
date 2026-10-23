@@ -296,6 +296,18 @@ export const GEO_CONFIG = {
       descriptionMaxLength: 160,
       imageAltCoverageMin: 0.8, // 80% of images need alt
     },
+    // Snippet limits keep an indexed page from being quoted: Google uses the
+    // same snippet rules for AI Overviews and AI Mode. Share of the
+    // indexability score that remains per limit.
+    snippetLimits: {
+      noSnippet: 0.25, // nosnippet or max-snippet:0
+      shortMaxSnippet: 50, // max-snippet below this many characters …
+      shortScore: 0.6, // … keeps this share
+      hiddenMajorShare: 0.5, // data-nosnippet over half the content text
+      hiddenMajorScore: 0.5,
+      hiddenPartShare: 0.2,
+      hiddenPartScore: 0.8,
+    },
   },
   aiCitation: {
     weights: {

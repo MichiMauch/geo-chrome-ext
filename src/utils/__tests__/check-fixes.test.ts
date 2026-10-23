@@ -144,3 +144,48 @@ describe('robots.txt mit Serverfehler', () => {
     }
   });
 });
+
+describe('Snippet-Einschränkungen', async () => {
+  const { extractRobotsMeta } = await import('../dom-helpers');
+  const { withXRobotsTag } = await import('../x-robots-tag');
+  const { OnPageSeoAnalyzer } = await import('../../analyzers/on-page-seo');
+  const index = (robotsMeta: PageData['robotsMeta']) => {
+    const page = {
+      url: 'https://x.ch/a', headings: [], paragraphs: [], lists: [], links: [], schema: [], images: [],
+      meta: { title: '', description: '' }, openGraph: {}, twitterCard: {}, robotsMeta,
+      viewport: { hasViewport: true, hasDeviceWidth: true, userScalableNo: false, rawContent: '' },
+      canonical: { href: null },
+    } as unknown as PageData;
+    const r = new OnPageSeoAnalyzer().analyze(page);
+    return { d: r.details.find((x) => x.criterionKey === 'criterion_indexability')!, recs: r.recommendations };
+  };
+
+  it('liest max-snippet aus Meta-Tag und Header, die strengere Grenze gilt', () => {
+    const doc = parse(`<head><meta name="robots" content="index, max-snippet:120"></head><body><p>${TEXT}</p></body>`);
+    const meta = extractRobotsMeta(doc);
+    expect(meta.maxSnippet).toBe(120);
+    expect(withXRobotsTag(meta, 'max-snippet: 30').maxSnippet).toBe(30);
+    expect(extractRobotsMeta(parse(`<head><meta name="robots" content="max-snippet:-1"></head>`)).maxSnippet).toBe(-1);
+  });
+
+  it('misst data-nosnippet am Inhalt, nicht am Cookie-Banner', () => {
+    const banner = parse(`<body><div data-nosnippet>Cookies akzeptieren</div><main><h1>T</h1><p>${TEXT}</p></main></body>`);
+    expect(extractRobotsMeta(banner).noSnippetShare).toBeUndefined();
+    const body = parse(`<body><main><h1>T</h1><div data-nosnippet><p>${TEXT}</p></div></main></body>`);
+    expect(extractRobotsMeta(body).noSnippetShare).toBeGreaterThan(0.9);
+  });
+
+  it('wertet nosnippet, kleines max-snippet und data-nosnippet ab', () => {
+    const base = { hasNoIndex: false, hasNoFollow: false, hasNoArchive: false, hasNoSnippet: false, rawContent: null };
+    expect(index(base).d.found).toBe(true);
+    const nos = index({ ...base, hasNoSnippet: true });
+    expect(nos.d.value).toBe('value_snippetLimited');
+    expect(nos.d.fixKey).toBe('fix_indexability_snippet');
+    expect(nos.recs).toContain('snippet_restricted');
+    expect(index({ ...base, maxSnippet: 20 }).d.evidence).toContainEqual({ key: 'ev_indexability_max_snippet', params: { limit: 20 } });
+    expect(index({ ...base, maxSnippet: 160 }).d.found).toBe(true);
+    expect(index({ ...base, noSnippetShare: 0.7 }).d.evidence).toContainEqual({ key: 'ev_indexability_data_nosnippet', params: { percent: 70 } });
+    // noindex stays the headline problem
+    expect(index({ ...base, hasNoIndex: true, hasNoSnippet: true }).recs).not.toContain('snippet_restricted');
+  });
+});

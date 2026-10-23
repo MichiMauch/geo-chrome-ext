@@ -38,6 +38,7 @@ const RECOMMENDATION_KEYS: Record<string, { i18nKey: string; priority: number }>
   'no_key_info_upfront': { i18nKey: 'rec_no_key_info_upfront', priority: 5 },
   // On-Page SEO
   'page_is_noindex': { i18nKey: 'rec_page_is_noindex', priority: 12 }, // Critical: page hidden from search
+  'snippet_restricted': { i18nKey: 'rec_snippet_restricted', priority: 9 }, // Indexed, but not quotable
   'title_missing': { i18nKey: 'rec_title_missing', priority: 11 },
   'description_missing': { i18nKey: 'rec_description_missing', priority: 10 },
   'title_too_short': { i18nKey: 'rec_title_too_short', priority: 7 },

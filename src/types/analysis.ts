@@ -175,6 +175,10 @@ export interface RobotsMetaData {
   // X-Robots-Tag HTTP header of the page, when it was read (live crawler
   // fetch, sitemap batch). Its noindex/nosnippet count like the meta tag's.
   headerContent?: string | null;
+  // Smallest max-snippet:N from meta tag and header (-1 = no limit), when set
+  maxSnippet?: number;
+  // Share (0–1) of the content text inside data-nosnippet elements
+  noSnippetShare?: number;
 }
 
 export interface HeadingData {

@@ -196,13 +196,45 @@ export function extractRobotsMeta(doc: Document = document): RobotsMetaData {
         .forEach((t) => tokens.push(t));
     });
 
+  const maxSnippet = parseMaxSnippet(tokens);
+  const noSnippetShare = dataNoSnippetShare(doc);
   return {
     hasNoIndex: tokens.includes('noindex') || tokens.includes('none'),
     hasNoFollow: tokens.includes('nofollow') || tokens.includes('none'),
     hasNoArchive: tokens.includes('noarchive'),
     hasNoSnippet: tokens.includes('nosnippet'),
     rawContent,
+    ...(maxSnippet !== undefined ? { maxSnippet } : {}),
+    ...(noSnippetShare > 0 ? { noSnippetShare } : {}),
   };
+}
+
+/** Smallest max-snippet:N among robots tokens; -1 means no limit. */
+export function parseMaxSnippet(tokens: string[]): number | undefined {
+  const limits = tokens
+    .map((t) => t.match(/^max-snippet\s*:\s*(-?\d+)$/i))
+    .filter((m): m is RegExpMatchArray => m !== null)
+    .map((m) => Number(m[1]));
+  if (limits.length === 0) return undefined;
+  const bounded = limits.filter((n) => n >= 0);
+  return bounded.length > 0 ? Math.min(...bounded) : -1;
+}
+
+// Google leaves text inside data-nosnippet out of snippets and AI Overviews.
+// Measured against the content root, so a cookie banner marked that way
+// does not count.
+function dataNoSnippetShare(doc: Document): number {
+  const marked = doc.querySelectorAll('[data-nosnippet]');
+  if (marked.length === 0) return 0;
+  const { root } = getContentScope(doc);
+  const total = normalizeText(root.textContent).length;
+  if (total === 0) return 0;
+  let hidden = 0;
+  marked.forEach((el) => {
+    if (el.parentElement?.closest('[data-nosnippet]') || !root.contains(el)) return;
+    hidden += normalizeText(el.textContent).length;
+  });
+  return Math.min(1, hidden / total);
 }
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 import type { RobotsMetaData } from '../types/analysis';
 import { GEO_CONFIG } from '../config/geo-config';
+import { parseMaxSnippet } from './dom-helpers';
 
 // X-Robots-Tag: the HTTP-header twin of <meta name="robots">. A server (or a
 // CDN rule) can set "noindex" there without any trace in the HTML, so the
@@ -47,6 +48,10 @@ export function withXRobotsTag(meta: RobotsMetaData, header: string | null | und
   const value = header?.trim();
   if (!value) return meta;
   const tokens = parseXRobotsTag(value);
+  const headerLimit = parseMaxSnippet(tokens);
+  const limits = [meta.maxSnippet, headerLimit].filter((n): n is number => n !== undefined);
+  const bounded = limits.filter((n) => n >= 0);
+  const maxSnippet = limits.length === 0 ? undefined : bounded.length > 0 ? Math.min(...bounded) : -1;
   return {
     ...meta,
     hasNoIndex: meta.hasNoIndex || tokens.includes('noindex') || tokens.includes('none'),
@@ -54,5 +59,6 @@ export function withXRobotsTag(meta: RobotsMetaData, header: string | null | und
     hasNoArchive: meta.hasNoArchive || tokens.includes('noarchive'),
     hasNoSnippet: meta.hasNoSnippet || tokens.includes('nosnippet'),
     headerContent: value,
+    ...(maxSnippet !== undefined ? { maxSnippet } : {}),
   };
 }

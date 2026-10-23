@@ -186,6 +186,7 @@ function getExplanation(d: CategoryDetail): string {
   }
   // On-Page SEO: Indexability
   if (criterion === t('criterion_indexability')) {
+    if (d.value === t('value_snippetLimited')) return t('explain_indexability_snippet');
     if (!d.found) return t('explain_indexability_bad');
     return t('explain_indexability_ok');
   }

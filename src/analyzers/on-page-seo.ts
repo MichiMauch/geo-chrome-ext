@@ -131,19 +131,23 @@ export class OnPageSeoAnalyzer extends BaseAnalyzer {
     // Check 4: Indexability (robots-meta / noindex)
     const robots = pageData.robotsMeta;
     const indexable = !robots.hasNoIndex;
+    const snippetScore = this.snippetScore(robots);
+    const indexScore = indexable ? snippetScore : 0;
+    const snippetLimited = indexable && snippetScore < 1;
     details.push({
       criterionKey: 'criterion_indexability',
-      found: indexable,
-      value: indexable ? 'value_indexable' : 'value_noindex',
+      found: indexable && !snippetLimited,
+      value: !indexable ? 'value_noindex' : snippetLimited ? 'value_snippetLimited' : 'value_indexable',
       weight: config.weights.indexability,
       progress: {
-        current: indexable ? 1 : 0,
+        current: indexable && !snippetLimited ? 1 : 0,
         target: 1,
         unitKey: 'unit_status',
       },
       evidence: this.indexEvidence(robots),
+      ...(snippetLimited ? { fixKey: 'fix_indexability_snippet' } : {}),
     });
-    weightedScore += (indexable ? 1 : 0) * config.weights.indexability;
+    weightedScore += indexScore * config.weights.indexability;
     totalWeight += config.weights.indexability;
 
     // Check 5: Mobile viewport
@@ -255,6 +259,7 @@ export class OnPageSeoAnalyzer extends BaseAnalyzer {
       recommendations.push('images_missing_alts');
     }
     if (!indexable) recommendations.push('page_is_noindex');
+    else if (snippetLimited) recommendations.push('snippet_restricted');
     if (!vp.hasViewport) recommendations.push('viewport_missing');
     else if (!vp.hasDeviceWidth) recommendations.push('viewport_misconfigured');
     if (!socialGood) recommendations.push('social_cards_missing');
@@ -316,6 +321,20 @@ export class OnPageSeoAnalyzer extends BaseAnalyzer {
     return evidence;
   }
 
+  // Remaining share of the indexability score under snippet limits
+  // (GEO_CONFIG.onPageSeo.snippetLimits); the strictest limit wins.
+  private snippetScore(robots: PageData['robotsMeta']): number {
+    const l = GEO_CONFIG.onPageSeo.snippetLimits;
+    const max = robots.maxSnippet;
+    const share = robots.noSnippetShare ?? 0;
+    const scores = [1];
+    if (robots.hasNoSnippet || max === 0) scores.push(l.noSnippet);
+    else if (max !== undefined && max > 0 && max < l.shortMaxSnippet) scores.push(l.shortScore);
+    if (share >= l.hiddenMajorShare) scores.push(l.hiddenMajorScore);
+    else if (share >= l.hiddenPartShare) scores.push(l.hiddenPartScore);
+    return Math.min(...scores);
+  }
+
   private indexEvidence(robots: PageData['robotsMeta']): EvidenceLine[] {
     const meta = robots.rawContent?.trim();
     const header = robots.headerContent?.trim();
@@ -329,7 +348,15 @@ export class OnPageSeoAnalyzer extends BaseAnalyzer {
     if (header && !(robots.hasNoIndex && raw?.startsWith('X-Robots-Tag'))) {
       evidence.push({ key: 'ev_indexability_header', params: { raw: clip(header) } });
     }
-    if (robots.hasNoSnippet) evidence.push({ key: 'ev_indexability_nosnippet' });
+    if (robots.hasNoSnippet || robots.maxSnippet === 0) {
+      evidence.push({ key: 'ev_indexability_nosnippet' });
+    } else if (robots.maxSnippet !== undefined && robots.maxSnippet > 0) {
+      evidence.push({ key: 'ev_indexability_max_snippet', params: { limit: robots.maxSnippet } });
+    }
+    const share = robots.noSnippetShare ?? 0;
+    if (share >= GEO_CONFIG.onPageSeo.snippetLimits.hiddenPartShare) {
+      evidence.push({ key: 'ev_indexability_data_nosnippet', params: { percent: Math.round(share * 100) } });
+    }
     return evidence;
   }
 
