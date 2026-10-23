@@ -157,6 +157,10 @@ export const GEO_CONFIG = {
     },
     thresholds: {
       datePartialCredit: 0.75,
+      // Share of the date score kept when the newest date sits only in
+      // schema/meta: readers (and AI answers quoting the page) see an older
+      // date or none, and search engines trust a visible update date more.
+      dateInvisibleFactor: 0.7, // why_date names it (70 %)
       sourcePartialCredit: 0.5,
       // Source links (see utils/source-links.ts) needed for full credit
       sourceLinksTarget: 2,

@@ -34,6 +34,15 @@ function dateKind(found: DateData, pageData: PageData): 'modified' | 'published'
   return 'visible';
 }
 
+const VISIBLE_SOURCES = new Set<DateData['source']>(['time-element', 'text']);
+
+// Whether the newest date can be read on the page, not only in markup.
+// Same calendar day counts: visible dates rarely carry a time.
+function isNewestVisible(pageData: PageData, newest: DateData): boolean {
+  const day = isoDay(newest.date);
+  return pageData.dates.some((d) => VISIBLE_SOURCES.has(d.source) && isoDay(d.date) === day);
+}
+
 function dateEvidence(pageData: PageData, newest: DateData | null, recent: boolean): EvidenceLine[] {
   if (!newest) return [{ key: 'ev_date_none' }];
   const lines: EvidenceLine[] = [];
@@ -54,6 +63,15 @@ function dateEvidence(pageData: PageData, newest: DateData | null, recent: boole
     lines.push({ key: 'ev_date_also_published', params: { date: isoDay(published.date) } });
   } else if (kind === 'published') {
     lines.push({ key: 'ev_date_no_modified' });
+  }
+  if (!isNewestVisible(pageData, newest)) {
+    const visible = pageData.dates.filter((d) => VISIBLE_SOURCES.has(d.source));
+    const shown = visible.length > 0 ? visible.reduce((a, b) => (b.date > a.date ? b : a)) : null;
+    lines.push(
+      shown
+        ? { key: 'ev_date_invisible_older', params: { date: isoDay(newest.date), shown: isoDay(shown.date) } }
+        : { key: 'ev_date_invisible', params: { date: isoDay(newest.date) } }
+    );
   }
   return lines;
 }
@@ -107,6 +125,8 @@ export class TrustSourcesAnalyzer extends BaseAnalyzer {
       ? pageData.dates.reduce((a, b) => (b.date > a.date ? b : a))
       : null;
 
+    const newestVisible = !neustesDatum || isNewestVisible(pageData, neustesDatum);
+
     let dateValue: string;
     let dateParams: Record<string, string> | undefined;
     if (!neustesDatum) {
@@ -131,7 +151,7 @@ export class TrustSourcesAnalyzer extends BaseAnalyzer {
       valueParams: dateParams,
       weight: config.weights.date,
       evidence: dateEvidence(pageData, neustesDatum, hasRecentDate),
-      fixKey: hasDate ? 'fix_date_old' : 'fix_date',
+      fixKey: !hasDate ? 'fix_date' : !hasRecentDate ? 'fix_date_old' : newestVisible ? 'fix_date_old' : 'fix_date_visible',
       progress: {
         current: hasRecentDate ? 1 : (hasDate ? 0.5 : 0),
         target: 1,
@@ -140,10 +160,11 @@ export class TrustSourcesAnalyzer extends BaseAnalyzer {
     });
 
     if (!skipAuthorDate) {
+      const visibility = newestVisible ? 1 : config.thresholds.dateInvisibleFactor;
       if (hasRecentDate) {
-        weightedScore += config.weights.date;
+        weightedScore += config.weights.date * visibility;
       } else if (hasDate) {
-        weightedScore += config.thresholds.datePartialCredit;
+        weightedScore += config.thresholds.datePartialCredit * visibility;
       }
       totalWeight += config.weights.date;
     }

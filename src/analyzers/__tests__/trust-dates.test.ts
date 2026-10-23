@@ -101,6 +101,8 @@ describe('TrustSourcesAnalyzer — Datum, Report-Belege', () => {
       { key: 'ev_date_newest_modified', params: { date: tag(geaendert) } },
       { key: 'ev_date_age_days', params: { days: 42 } },
       { key: 'ev_date_also_published', params: { date: tag(publiziert) } },
+      // Both dates only in the schema
+      { key: 'ev_date_invisible', params: { date: tag(geaendert) } },
     ]);
   });
 
@@ -115,6 +117,7 @@ describe('TrustSourcesAnalyzer — Datum, Report-Belege', () => {
       { key: 'ev_date_age_years', params: { years: 2 } },
       { key: 'ev_date_stale' },
       { key: 'ev_date_no_modified' },
+      { key: 'ev_date_invisible', params: { date: tag(alt) } },
     ]);
     expect(detail?.fixKey).toBe('fix_date_old');
 
@@ -125,6 +128,25 @@ describe('TrustSourcesAnalyzer — Datum, Report-Belege', () => {
     expect(text).toContain('rund 2 Jahre her');
     expect(text).not.toMatch(/\{\w+\}/);
     expect(mapped?.fixText).toContain('Änderungsdatum');
+  });
+
+  it('wertet ein Datum nur im Seitencode schwächer als ein sichtbares', () => {
+    const neu = tageZurueck(10);
+    const alt = tageZurueck(400);
+    const schemaOnly = {
+      ...makePage([
+        { date: neu, formatted: neu.toISOString(), source: 'schema' as const },
+        { date: alt, formatted: alt.toISOString(), source: 'time-element' as const },
+      ]),
+      schema: [{ '@type': 'Article', dateModified: neu.toISOString() }],
+    };
+    const visible = { ...schemaOnly, dates: [...schemaOnly.dates, { date: neu, formatted: '', source: 'text' as const }] };
+    const d = datumsDetail(schemaOnly);
+    expect(d?.evidence).toContainEqual({ key: 'ev_date_invisible_older', params: { date: tag(neu), shown: tag(alt) } });
+    expect(d?.fixKey).toBe('fix_date_visible');
+    expect(datumsDetail(visible)?.evidence?.map((e) => e.key)).not.toContain('ev_date_invisible_older');
+    const score = (p: typeof schemaOnly) => new TrustSourcesAnalyzer().analyze(p, 'article').score;
+    expect(score(schemaOnly)).toBeLessThan(score(visible));
   });
 
   it('meldet fehlendes Datum mit eigenem Beleg', () => {
