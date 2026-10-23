@@ -21,3 +21,5 @@ dist/
 # Skills lock (per-machine)
 skills-lock.json
 corpus/snapshots/
+test-results/
+playwright-report/

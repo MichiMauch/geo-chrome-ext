@@ -5,10 +5,13 @@
       "chrome",
       "node"
     ],
-    "noEmit": true
+    "noEmit": true,
+    "rootDir": "."
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "e2e/**/*",
+    "playwright.config.ts"
   ],
   "exclude": [
     "node_modules",
