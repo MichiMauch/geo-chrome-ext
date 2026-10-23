@@ -81,9 +81,28 @@ const analyze = async () => {
   await panel.locator('#recommendations-section').waitFor({ state: 'visible', timeout: 45000 });
   await panel.waitForTimeout(1500); // score count-up and bars
 };
+// The analysis result as the panel cached it: scores per category, for the
+// promo video's count-ups
+const saveResult = async (name) => {
+  const result = await worker.evaluate(async () => {
+    const all = await chrome.storage.local.get(null);
+    return Object.values(all).find((v) => v && v.result)?.result;
+  });
+  writeFileSync(join(RAW, name), JSON.stringify({
+    total: result.totalScore,
+    rating: result.rating.label,
+    categories: Object.fromEntries(Object.entries(result.categories).map(([k, c]) => [k, { name: c.nameKey, score: c.score }])),
+    recommendations: result.topRecommendations,
+    changes: result.changes ?? null,
+  }, null, 2));
+};
 
 // 1) Before: highlight problems on the page
 await analyze();
+await saveResult('result-before.json');
+await panel.screenshot({ path: join(RAW, 'panel-before-top.png') });
+await page.bringToFront();
+await page.screenshot({ path: join(RAW, 'page-before.png') });
 // Unfold all recommendations, then mark the wall-of-text lead paragraph
 await panel.locator('#recs-more-toggle').click().catch(() => {});
 const toggle = panel.locator('.highlight-toggle[data-rec-key="low_scanability"], .highlight-toggle[data-rec-key="low_readability"]').first();
@@ -105,6 +124,7 @@ version = 2;
 await page.reload();
 await page.waitForTimeout(500);
 await analyze();
+await saveResult('result-after.json');
 await page.evaluate(() => window.scrollTo(0, 0));
 await page.screenshot({ path: join(RAW, 'page-after.png') });
 await panel.screenshot({ path: join(RAW, 'panel-after.png') });
