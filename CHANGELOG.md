@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.12.0] - 2026-10-23
+
+### Added
+
+- **Who fixes what, and how long it takes:** Every recommendation now carries an owner — the editorial team (text and CMS fields of the page) or the web agency / development (template, server, configuration) — and a rough effort (≈ 15 min, ≈ 1–2 h, project). The panel shows both as tags on each recommendation. The HTML report splits the recommendations into two lists, “For the editorial team” and “For the web agency / development”, each in priority order and folded after five, so each audience gets the part it can act on.
+
+### Fixed
+
+- **“Content only with JavaScript” was never recommended:** The analyzer fired `js_only_content`, but the key was missing from the recommendation table, so the panel and report dropped it — on single-page apps the most important finding. A test now checks that every recommendation an analyzer can fire has an entry.
+
 ## [4.11.0] - 2026-10-23
 
 ### Added

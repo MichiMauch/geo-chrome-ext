@@ -391,3 +391,14 @@ describe('Empfehlungen ohne Obergrenze', async () => {
     expect(all.slice(-1)).toEqual(['sitemap_not_in_robots']);
   });
 });
+
+describe('Zuständigkeit und Aufwand', async () => {
+  const { recommendationMeta, collectAllRecommendations } = await import('../recommendations');
+
+
+  it('zeigt js_only_content wieder an', () => {
+    const cat = { nameKey: 'x', score: 1, maxScore: 5, details: [], recommendations: ['js_only_content'] };
+    expect(collectAllRecommendations({ a: cat } as never)).toEqual(['js_only_content']);
+    expect(recommendationMeta('js_only_content')).toEqual({ owner: 'dev', effort: 'project' });
+  });
+});

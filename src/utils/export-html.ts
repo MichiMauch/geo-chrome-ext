@@ -1,5 +1,5 @@
 import type { GEOAnalysisResult, AnalysisCategory, CategoryDetail, CrawlerViewData } from '../types/analysis';
-import { VISIBLE_RECOMMENDATIONS } from './recommendations';
+import { VISIBLE_RECOMMENDATIONS, recommendationMeta, type RecommendationOwner } from './recommendations';
 import { getCategoryColor } from './scoring';
 import { t, getDateLocale } from './i18n';
 import { getFixSnippet, getSnippetLanguageLabel } from './fix-snippets';
@@ -368,13 +368,16 @@ function renderRecommendationItemHtml(recKey: string, index: number): string {
   const text = t(`rec_${recKey}`);
   const snippet = getFixSnippet(recKey);
   const snippetId = `snippet-${index}`;
+  const meta = recommendationMeta(recKey);
+  // Effort per item; the owner is the group heading
+  const tags = meta ? `<div class="rec-tags"><span class="rec-effort">${escapeHtml(t(`effort_${meta.effort}`))}</span></div>` : '';
 
   if (!snippet) {
-    return `<li>${escapeHtml(text)}</li>`;
+    return `<li>${tags}${escapeHtml(text)}</li>`;
   }
 
   if (snippet.type === 'no-snippet') {
-    return `<li>
+    return `<li>${tags}
       <div>${escapeHtml(text)}</div>
       <div class="snippet-none">${escapeHtml(snippet.note)}</div>
     </li>`;
@@ -385,7 +388,7 @@ function renderRecommendationItemHtml(recKey: string, index: number): string {
   const hideLabel = escapeHtml(t('snippet_label_hide'));
   const copyLabel = escapeHtml(t('snippet_label_copy'));
   const copiedLabel = escapeHtml(t('snippet_label_copied'));
-  return `<li>
+  return `<li>${tags}
     <div class="snippet-row-header">
       <div class="snippet-row-text">${escapeHtml(text)}</div>
       <div class="snippet-row-actions no-print">
@@ -423,6 +426,28 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
     .map((key, i) => renderCategoryHtml(result.categories[key], key, i * 80))
     .join('');
 
+  // Two lists, one per owner: the editorial team cannot change the template,
+  // the agency should not rewrite the copy. Each keeps the priority order and
+  // folds after VISIBLE_RECOMMENDATIONS.
+  let recIndex = 0;
+  const recGroup = (owner: RecommendationOwner, keys: string[]) => {
+    if (keys.length === 0) return '';
+    const item = (k: string) => renderRecommendationItemHtml(k, recIndex++);
+    const visible = keys.slice(0, VISIBLE_RECOMMENDATIONS).map(item).join('');
+    const rest = keys.slice(VISIBLE_RECOMMENDATIONS);
+    return `<div class="recs-group recs-group-${owner}">
+        <h3 class="recs-group-title">${escapeHtml(t(`report_recs_${owner}`))} <span>${keys.length}</span></h3>
+        <p class="recs-group-hint">${escapeHtml(t(`report_recs_${owner}_hint`))}</p>
+        <ul class="recs-list">${visible}</ul>
+        ${rest.length > 0
+          ? `<details class="recs-more">
+              <summary>${escapeHtml(t('ui_moreRecommendations', { count: rest.length }))}</summary>
+              <ul class="recs-list">${rest.map(item).join('')}</ul>
+            </details>`
+          : ''}
+      </div>`;
+  };
+  const ownerOf = (k: string) => recommendationMeta(k)?.owner ?? 'dev';
   const recommendationsHtml = result.topRecommendations.length > 0
     ? `<div class="card recs-card">
         <h2 class="card-title" style="display:flex;align-items:center;gap:10px">
@@ -431,17 +456,8 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
           </div>
           ${escapeHtml(t('report_recommendations'))}
         </h2>
-        <ul class="recs-list">
-          ${result.topRecommendations.slice(0, VISIBLE_RECOMMENDATIONS).map((recKey, i) => renderRecommendationItemHtml(recKey, i)).join('')}
-        </ul>
-        ${result.topRecommendations.length > VISIBLE_RECOMMENDATIONS
-          ? `<details class="recs-more">
-              <summary>${escapeHtml(t('ui_moreRecommendations', { count: result.topRecommendations.length - VISIBLE_RECOMMENDATIONS }))}</summary>
-              <ul class="recs-list">
-                ${result.topRecommendations.slice(VISIBLE_RECOMMENDATIONS).map((recKey, i) => renderRecommendationItemHtml(recKey, i + VISIBLE_RECOMMENDATIONS)).join('')}
-              </ul>
-            </details>`
-          : ''}
+        ${recGroup('editorial', result.topRecommendations.filter((k) => ownerOf(k) === 'editorial'))}
+        ${recGroup('dev', result.topRecommendations.filter((k) => ownerOf(k) === 'dev'))}
       </div>`
     : '';
 
@@ -645,6 +661,12 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
     .changes-fixed .changes-item { background: rgba(34,197,94,0.1); color: #166534; }
     .changes-new .changes-label { color: #b91c1c; }
     .changes-new .changes-item { background: rgba(239,68,68,0.1); color: #991b1b; }
+    .recs-group + .recs-group { margin-top: 22px; }
+    .recs-group-title { font-size: 14px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+    .recs-group-title span { font-size: 11px; font-weight: 700; color: var(--accent); background: rgba(51,204,204,0.12); border-radius: 999px; padding: 1px 8px; }
+    .recs-group-hint { font-size: 12px; color: var(--muted); margin: 2px 0 10px; }
+    .rec-tags { margin-bottom: 4px; }
+    .rec-effort { font-size: 11px; font-weight: 600; color: var(--muted); }
     .recs-more { margin-top: 10px; }
     .recs-more > summary {
       cursor: pointer; list-style: none;

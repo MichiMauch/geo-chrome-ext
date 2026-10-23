@@ -73,13 +73,23 @@ describe('HTML report layout', () => {
     expect(doc.querySelector('.overview-item')!.getAttribute('href')).toBe('#cat-contentClarity');
   });
 
-  it('folds recommendations beyond the first five behind "+ N weitere"', () => {
-    const keys = ['no_schema', 'no_h1', 'no_author', 'no_date', 'few_sources', 'sitemap_lastmod', 'date_not_visible'];
-    const doc = report(keys);
-    expect(doc.querySelectorAll('.recs-card > .recs-list > li')).toHaveLength(5);
-    const more = doc.querySelector('details.recs-more')!;
-    expect(more.querySelector('summary')!.textContent).toBe('+ 2 weitere Empfehlungen');
-    expect(more.querySelectorAll('li')).toHaveLength(2);
-    expect(report(keys.slice(0, 5)).querySelector('details.recs-more')).toBeNull();
+  it('splits recommendations by owner and folds each list after five', () => {
+    const editorial = ['no_h1', 'no_author', 'no_date', 'few_sources', 'no_definitions', 'no_lists', 'no_facts'];
+    const dev = ['no_schema', 'sitemap_lastmod'];
+    const doc = report([...editorial, ...dev]);
+    const groups = doc.querySelectorAll('.recs-group');
+    expect(Array.from(groups).map((g) => g.querySelector('.recs-group-title')!.textContent)).toEqual([
+      'Für die Redaktion 7',
+      'Für Web-Agentur / Entwicklung 2',
+    ]);
+    const ed = doc.querySelector('.recs-group-editorial')!;
+    expect(ed.querySelectorAll(':scope > .recs-list > li')).toHaveLength(5);
+    expect(ed.querySelector('details.recs-more summary')!.textContent).toBe('+ 2 weitere Empfehlungen');
+    expect(doc.querySelector('.recs-group-dev details.recs-more')).toBeNull();
+    expect(ed.querySelector('.rec-effort')!.textContent).toBe('≈ 15 Min.');
+    // Snippet ids stay unique across both lists
+    const ids = Array.from(doc.querySelectorAll('.snippet-preview')).map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(report(editorial.slice(0, 2)).querySelector('.recs-group-dev')).toBeNull();
   });
 });

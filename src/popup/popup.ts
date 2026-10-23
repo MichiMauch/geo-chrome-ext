@@ -17,7 +17,7 @@ import { generateHtmlReport } from '../utils/export-html';
 import { renderSparkline } from '../utils/sparkline';
 import { loadCache, saveCache, clearCache } from '../utils/cache';
 import { getFixSnippet, getSnippetLanguageLabel } from '../utils/fix-snippets';
-import { getRecommendationPriority, VISIBLE_RECOMMENDATIONS } from '../utils/recommendations';
+import { getRecommendationPriority, recommendationMeta, VISIBLE_RECOMMENDATIONS } from '../utils/recommendations';
 
 // Initialize i18n before anything else
 initI18n();
@@ -414,9 +414,14 @@ function renderRecommendationItem(recKey: string, index: number, folded = false)
   }
 
   const buttons = [highlightBtn, snippetButtons].filter(Boolean).join('\n');
+  const meta = recommendationMeta(recKey);
+  const tags = meta
+    ? `<div class="rec-tags"><span class="rec-owner rec-owner-${meta.owner}">${escapeHtml(t(`owner_${meta.owner}`))}</span><span class="rec-effort">${escapeHtml(t(`effort_${meta.effort}`))}</span></div>`
+    : '';
   const actions = buttons ? `<div class="snippet-row-actions">${buttons}</div>` : '';
 
   return `<li class="recommendation-item${folded ? ' rec-more hidden' : ''}">
+    ${tags}
     <div class="snippet-row-text">${escapeHtml(text)}</div>
     ${note}
     ${actions}
