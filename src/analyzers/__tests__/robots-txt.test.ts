@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { parseRobotsTxt, robotsForPath, robotsPathFromUrl } from '../../utils/dom-helpers';
 import { MachineReadabilityAnalyzer } from '../machine-readability';
 import type { PageData, RobotsTxtData } from '../../types/analysis';
+import { GEO_CONFIG } from '../../config/geo-config';
 
 const BOTS = ['GPTBot', 'ClaudeBot', 'PerplexityBot', 'Google-Extended', 'CCBot'] as const;
 
@@ -264,6 +265,22 @@ describe('MachineReadabilityAnalyzer robots.txt scoring', () => {
       exists: true, allowedBots: { ...bots, 'OAI-SearchBot': false }, blockedBots: ['OAI-SearchBot'], totalChecked: 4,
     }));
     expect(search.score).toBeLessThan(training.score);
+  });
+
+  it('flags a blocked Googlebot as a search engine index block', () => {
+    const txt = `User-agent: Googlebot
+Disallow: /
+
+User-agent: *
+Allow: /`;
+    const robots = parseRobotsTxt(txt, GEO_CONFIG.machineReadability.aiBots, undefined, '/');
+    expect(robots.blockedBots).toEqual(['Googlebot']);
+    const result = analyzer.analyze(mockPage(robots));
+    expect(result.recommendations).toContain('ai_bots_blocked');
+    const detail = result.details.find((d) => d.criterionKey === 'criterion_robotsTxt');
+    expect(detail?.found).toBe(false);
+    expect(detail?.evidence).toContainEqual({ key: 'ev_robotsTxt_blocked_index', params: { bots: 'Googlebot (Google)' } });
+    expect(detail?.fixKey).toBeUndefined();
   });
 
   it('treats an unreachable robots.txt as fully blocked', () => {

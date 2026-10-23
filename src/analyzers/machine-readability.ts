@@ -24,8 +24,10 @@ type SchemaNode = Record<string, unknown>;
 // What each checked AI crawler is for, for the report: blocking a search or
 // user-fetch bot removes the site from AI answers, blocking a training bot
 // mainly keeps the content out of future model training.
-type BotPurpose = 'search' | 'user' | 'training';
+type BotPurpose = 'index' | 'search' | 'user' | 'training';
 const BOT_INFO: Record<string, { owner: string; purpose: BotPurpose }> = {
+  Googlebot: { owner: 'Google', purpose: 'index' },
+  Bingbot: { owner: 'Microsoft', purpose: 'index' },
   GPTBot: { owner: 'OpenAI', purpose: 'training' },
   'OAI-SearchBot': { owner: 'OpenAI', purpose: 'search' },
   'ChatGPT-User': { owner: 'OpenAI', purpose: 'user' },
@@ -665,13 +667,15 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     const evidence: EvidenceLine[] = [
       { key: 'ev_robotsTxt_blocked_count', params: { blocked: blocked.length, total, path } },
     ];
+    const index = byPurpose('index');
     const search = byPurpose('search');
     const user = byPurpose('user');
     const training = byPurpose('training');
+    if (index) evidence.push({ key: 'ev_robotsTxt_blocked_index', params: { bots: index } });
     if (search) evidence.push({ key: 'ev_robotsTxt_blocked_search', params: { bots: search } });
     if (user) evidence.push({ key: 'ev_robotsTxt_blocked_user', params: { bots: user } });
     if (training) evidence.push({ key: 'ev_robotsTxt_blocked_training', params: { bots: training } });
-    return { evidence, ...(!search && !user ? { fixKey: 'fix_robotsTxt_training' } : {}) };
+    return { evidence, ...(!index && !search && !user ? { fixKey: 'fix_robotsTxt_training' } : {}) };
   }
 
   private crawlerEvidence(cv: NonNullable<PageData['crawlerView']>): EvidenceLine[] {

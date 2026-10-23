@@ -1,3 +1,4 @@
+import { GEO_CONFIG } from '../config/geo-config';
 import { t } from './i18n';
 
 export type SnippetLanguage = 'html' | 'json-ld' | 'txt' | 'robots';
@@ -144,27 +145,9 @@ function llmsTxtTemplate(): string {
 }
 
 function robotsAllowAiBots(): string {
+  const groups = GEO_CONFIG.machineReadability.aiBots.map((bot) => `User-agent: ${bot}\nAllow: /`).join('\n\n');
   return `# ${t('snippet_comment_robots')}
-User-agent: GPTBot
-Allow: /
-
-User-agent: ClaudeBot
-Allow: /
-
-User-agent: PerplexityBot
-Allow: /
-
-User-agent: Google-Extended
-Allow: /
-
-User-agent: CCBot
-Allow: /
-
-User-agent: anthropic-ai
-Allow: /
-
-User-agent: cohere-ai
-Allow: /
+${groups}
 
 # ${t('snippet_comment_robots_sitemap')}
 Sitemap: {{SITEMAP_URL}}`;

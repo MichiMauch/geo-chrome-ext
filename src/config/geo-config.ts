@@ -200,7 +200,12 @@ export const GEO_CONFIG = {
     // AI crawlers checked against robots.txt. Training crawlers plus the
     // search/retrieval agents that fetch pages for live answers — blocking the
     // latter removes a site from ChatGPT/Claude/Perplexity answers directly.
+    // Checked crawlers. Googlebot and Bingbot are classic search crawlers,
+    // but their index is what Google AI Overviews / AI Mode and Copilot /
+    // ChatGPT Search answer from.
     aiBots: [
+      // Search engine indexes behind AI answers
+      'Googlebot', 'Bingbot',
       // OpenAI: training, search index, user-triggered fetches
       'GPTBot', 'OAI-SearchBot', 'ChatGPT-User',
       // Anthropic
@@ -217,6 +222,7 @@ export const GEO_CONFIG = {
     // crawler only keeps it out of future models — a legitimate choice that
     // costs a little but still passes.
     botPurposeWeights: {
+      index: 3,
       search: 3,
       user: 2,
       training: 1,
