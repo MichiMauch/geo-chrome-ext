@@ -1,5 +1,21 @@
 # Changelog
 
+## [4.9.0] - 2026-10-23
+
+### Added
+
+- **Googlebot and Bingbot in the robots.txt check:** Google AI Overviews and AI Mode answer from the Googlebot index, Copilot and parts of ChatGPT Search from Bing. A robots.txt that blocks either used to pass with full marks. Both now count like search crawlers, and the report names them as search engine crawlers. The allow-all robots.txt template lists every checked crawler.
+- **Snippet limits are scored:** `nosnippet`, `max-snippet` (meta tag or X-Robots-Tag header) and `data-nosnippet` on the main text keep an indexed page from being quoted, and Google applies them to AI Overviews and AI Mode as well. Indexability now loses most of its points for `nosnippet`/`max-snippet:0`, part of them for a limit below 50 characters or for content marked `data-nosnippet`, with its own recommendation.
+- **CDN and firewall blocks:** robots.txt can allow every bot while Cloudflare’s “Block AI bots” or a WAF rule answers them with 403. The live analysis now fetches the page once each as OAI-SearchBot, GPTBot, ClaudeBot and PerplexityBot. A short-lived `declarativeNetRequest` session rule, scoped to the tab and URL, sets the User-Agent, and a response marker confirms the swap really happened; without it nothing is reported. Since the request only imitates the bot (CDNs may verify real crawlers by IP), such a block counts half and the report says to verify it. New permission `declarativeNetRequestWithHostAccess`, which shows no install warning.
+- **Content-Signal in robots.txt:** The `Content-Signal` line (contentsignals.org, often added by Cloudflare’s managed robots.txt) is read and quoted. `ai-input=no` or `search=no` asks AI systems not to use the page for answers and costs part of the robots.txt score; `ai-train=no` costs nothing.
+- **XML sitemap check (live analysis):** whether a sitemap exists, robots.txt points to it, this page is listed and carries a `lastmod`. Flags sitemaps where nearly all entries share one `lastmod` day (build time instead of content changes). Also notes whether the site is verified with Bing Webmaster Tools (`msvalidate.01` or `BingSiteAuth.xml`), the usual way to switch on IndexNow; information only, since IndexNow keys cannot be discovered from outside.
+- **hreflang on multilingual pages:** scored only when the page has hreflang links or a language switcher. Checks the page’s own entry, `x-default`, valid codes and the match with `<html lang>`.
+- **Data tables:** tables with header cells now count like lists in “Lists, enumerations & tables”; tables without `<th>` are named in the report.
+
+### Changed
+
+- **Visible update date:** When the newest date is only in schema or meta tags and not visible on the page, the date check keeps 70 % of its points, and the report shows which (older) date readers see instead.
+
 ## [4.8.1] - 2026-10-23
 
 ### Fixed
