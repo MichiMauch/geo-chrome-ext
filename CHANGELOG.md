@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.14.0] - 2026-10-23
+
+### Added
+
+- **PDF export with its own layout:** “Save as PDF” used to print the web page: score 0.0 and empty bars (both are animated on screen), faded cards, half-empty pages, no page numbers. The report now has a dedicated A4 print layout:
+  - a full-bleed title page with the checked URL, date, the score as a ring, the six categories as bars, the number of criteria not met / partly met / met, the recommendations per owner, and what changed since the last check;
+  - the recommendations next, with their code snippets printed as light, wrapped code blocks; the criteria in detail from a fresh page;
+  - on every page after the title, a footer with “Paul AI GEO Analyzer · domain” and “Page X of Y” (CSS page margin boxes, Chrome 131+);
+  - colours kept on paper, no animations, headings kept with what follows them, long criteria allowed to continue on the next page instead of leaving empty ones.
+  All in the active UI language. No new dependency.
+
 ## [4.13.1] - 2026-10-23
 
 ### Added

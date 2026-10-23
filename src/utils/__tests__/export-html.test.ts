@@ -92,4 +92,21 @@ describe('HTML report layout', () => {
     expect(new Set(ids).size).toBe(ids.length);
     expect(report(editorial.slice(0, 2)).querySelector('.recs-group-dev')).toBeNull();
   });
+
+  it('prints a title page and a footer with domain and page numbers', () => {
+    const doc = report(['no_h1', 'no_schema']);
+    const cover = doc.querySelector('.print-cover')!;
+    expect(cover.querySelector('.cover-url')!.textContent).toBe('https://www.example.ch/faq');
+    expect(cover.querySelector('.cover-ring-value')!.textContent).toBe('15.0/30');
+    expect(cover.querySelectorAll('.cover-cat')).toHaveLength(6);
+    // One editorial and one development recommendation
+    const facts = Array.from(cover.querySelectorAll('.cover-fact strong')).map((e) => e.textContent);
+    expect(facts.slice(3)).toEqual(['1', '1']);
+    const css = doc.querySelector('style')!.textContent!;
+    expect(css).toContain('@bottom-left { content: "Paul AI GEO Analyzer · www.example.ch"');
+    expect(css).toContain('content: "Seite " counter(page) " von " counter(pages)');
+    // Bars carry their final width for paper, the score its final value
+    expect(doc.querySelector('.hero-bar')!.getAttribute('style')).toContain('--w:50%');
+    expect(doc.querySelector('.count-up')!.textContent).toBe('15.0');
+  });
 });

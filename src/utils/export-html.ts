@@ -299,7 +299,7 @@ function renderCategoryHtml(category: AnalysisCategory, iconKey: string, delay: 
         </div>
         <div class="cat-score" style="color:${color}">${category.score.toFixed(1)}<span>/5</span></div>
       </div>
-      <div class="progress-track"><div class="progress-bar" data-target="${percentage}" style="background:${color}"></div></div>
+      <div class="progress-track"><div class="progress-bar" data-target="${percentage}" style="background:${color};--w:${percentage}%"></div></div>
       <div class="crit-list">
         ${rows.map(({ d, status }) => renderCriterionHtml(d, status)).join('')}
       </div>
@@ -370,7 +370,7 @@ function renderOverviewHtml(result: GEOAnalysisResult, order: (keyof GEOAnalysis
       return `<a class="overview-item" href="#cat-${key}">
         <span class="overview-name">${escapeHtml(c.nameKey)}</span>
         <span class="overview-score" style="color:${color}">${c.score.toFixed(1)}<span>/5</span></span>
-        <span class="progress-track"><span class="progress-bar" data-target="${(c.score / 5) * 100}" style="background:${color};display:block"></span></span>
+        <span class="progress-track"><span class="progress-bar" data-target="${(c.score / 5) * 100}" style="background:${color};display:block;--w:${(c.score / 5) * 100}%"></span></span>
       </a>`;
     })
     .join('')}</div>`;
@@ -420,6 +420,101 @@ function renderRecommendationItemHtml(recKey: string, index: number): string {
       <pre class="snippet-code" id="${snippetId}-code"><code>${escapeHtml(snippet.code)}</code></pre>
     </div>
   </li>`;
+}
+
+// Title page of the printed report (hidden on screen): what was checked,
+// the score as a ring, the six categories, the status counts and what
+// changed since the last check. Static values only — no animation on paper.
+function renderPrintCoverHtml(
+  result: GEOAnalysisResult,
+  order: (keyof GEOAnalysisResult['categories'])[],
+  dateFormatted: string
+): string {
+  const ratio = Math.max(0, Math.min(1, result.totalScore / result.maxTotalScore));
+  const r = 54;
+  const circumference = 2 * Math.PI * r;
+  const ring = `<svg class="cover-ring" viewBox="0 0 140 140" aria-hidden="true">
+      <circle cx="70" cy="70" r="${r}" fill="none" stroke="#e2e8f0" stroke-width="12"/>
+      <circle cx="70" cy="70" r="${r}" fill="none" stroke="${result.rating.color}" stroke-width="12" stroke-linecap="round"
+        stroke-dasharray="${(circumference * ratio).toFixed(1)} ${circumference.toFixed(1)}" transform="rotate(-90 70 70)"/>
+    </svg>`;
+
+  const counts = { fail: 0, partial: 0, ok: 0 };
+  for (const key of order) {
+    for (const d of result.categories[key].details) {
+      if (d.weight === 0 || d.value === t('value_notApplicable')) continue;
+      counts[criterionStatus(d)]++;
+    }
+  }
+  const owners = { editorial: 0, dev: 0 };
+  for (const k of result.topRecommendations) owners[recommendationMeta(k)?.owner ?? 'dev']++;
+
+  const bars = order
+    .map((key) => {
+      const c = result.categories[key];
+      const color = getCategoryColor(c.score);
+      return `<div class="cover-cat">
+          <span class="cover-cat-name">${escapeHtml(c.nameKey)}</span>
+          <span class="cover-cat-score" style="color:${color}">${c.score.toFixed(1)}<span>/5</span></span>
+          <span class="cover-cat-track"><span style="width:${(c.score / 5) * 100}%;background:${color}"></span></span>
+        </div>`;
+    })
+    .join('');
+
+  const fixed = result.changes?.fixed ?? [];
+  const regressed = result.changes?.regressed ?? [];
+  const since = result.changes ? new Date(result.changes.previousTimestamp).toLocaleDateString(getDateLocale()) : '';
+  const changes =
+    fixed.length + regressed.length > 0
+      ? `<div class="cover-changes">
+          <h3>${escapeHtml(t('report_changes_title', { date: since }))}</h3>
+          ${fixed.length > 0 ? `<p class="cover-fixed">✓ ${escapeHtml(t('report_changes_fixed'))}: ${escapeHtml(fixed.map((k) => t(k)).join(', '))}</p>` : ''}
+          ${regressed.length > 0 ? `<p class="cover-new">✗ ${escapeHtml(t('report_changes_new'))}: ${escapeHtml(regressed.map((k) => t(k)).join(', '))}</p>` : ''}
+        </div>`
+      : '';
+
+  return `<section class="print-cover">
+      <div class="cover-band">
+        <div class="cover-brand">Paul AI GEO Analyzer</div>
+        <h1 class="cover-title">${escapeHtml(t('report_title'))}</h1>
+        <div class="cover-url">${escapeHtml(result.url)}</div>
+        <div class="cover-date">${escapeHtml(dateFormatted)}</div>
+      </div>
+      <div class="cover-body">
+        <div class="cover-score">
+          <div class="cover-ring-wrap">
+            ${ring}
+            <div class="cover-ring-value">${result.totalScore.toFixed(1)}<span>/${result.maxTotalScore}</span></div>
+          </div>
+          <span class="cover-badge" style="background:${result.rating.color}">${escapeHtml(result.rating.label)}</span>
+        </div>
+        <div class="cover-cats">${bars}</div>
+      </div>
+      <div class="cover-facts">
+        <div class="cover-fact cover-fact-fail"><strong>${counts.fail}</strong><span>${escapeHtml(t('report_cover_fail'))}</span></div>
+        <div class="cover-fact cover-fact-partial"><strong>${counts.partial}</strong><span>${escapeHtml(t('report_cover_partial'))}</span></div>
+        <div class="cover-fact cover-fact-ok"><strong>${counts.ok}</strong><span>${escapeHtml(t('report_cover_ok'))}</span></div>
+        <div class="cover-fact"><strong>${owners.editorial}</strong><span>${escapeHtml(t('report_recs_editorial'))}</span></div>
+        <div class="cover-fact"><strong>${owners.dev}</strong><span>${escapeHtml(t('report_recs_dev'))}</span></div>
+      </div>
+      ${changes}
+      <div class="cover-foot">${escapeHtml(t('report_generatedBy'))}</div>
+    </section>`;
+}
+
+// Text inside a CSS string ("…"): quotes, backslashes and line breaks out
+function cssString(text: string): string {
+  return text.replace(/["\\\n\r]/g, '');
+}
+
+// @page footer: "Seite {page} von {pages}" as CSS content with counters
+function pageCounterContent(): string {
+  const quote = (s: string) => `"${s.replace(/["\\]/g, '')}"`;
+  return t('report_page_of')
+    .split(/(\{page\}|\{pages\})/)
+    .filter(Boolean)
+    .map((part) => (part === '{page}' ? 'counter(page)' : part === '{pages}' ? 'counter(pages)' : quote(part)))
+    .join(' ');
 }
 
 export function generateHtmlReport(result: GEOAnalysisResult): string {
@@ -812,36 +907,126 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
       .hero-score-value { font-size: 40px; }
     }
 
+    /* Title page: print only */
+    .print-cover { display: none; }
+
+    /* ---------- Print / PDF ----------
+       A4 with a full-bleed title page, a footer with domain and page number
+       on every following page, colours kept, nothing animated. */
+    @page {
+      size: A4;
+      margin: 16mm 15mm 18mm;
+      @bottom-left { content: "Paul AI GEO Analyzer · ${cssString(hostname)}"; font: 500 8pt Inter, sans-serif; color: #94a3b8; }
+      @bottom-right { content: ${pageCounterContent()}; font: 500 8pt Inter, sans-serif; color: #94a3b8; }
+    }
+    @page cover {
+      margin: 0;
+      @bottom-left { content: none; }
+      @bottom-right { content: none; }
+    }
     @media print {
-      body { background: #fff; }
-      .card { box-shadow: none; border: 1px solid #e5e7eb; break-inside: avoid; }
-      .hero { background: #2BA3A3 !important; }
-      .no-print { display: none; }
-      .snippet-preview { display: none !important; }
-      /* Break between blocks, never inside one: a whole expanded criterion
-         per page left half pages empty */
-      .crit { break-inside: auto; background: none; border: 1px solid #e5e7eb; }
-      .crit-head { break-after: avoid; }
-      .crit-block, .crit-block li, .recs-list li { break-inside: avoid; }
-      /* Paper can't be clicked open: show every criterion in full. report.ts
-         also opens them on beforeprint for browsers without ::details-content */
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      html, body { background: #fff; }
+      body { font-size: 10pt; min-height: 0; }
+      .hero, .changes-card, .no-print, .toggle-all, .print-wrap, .crit-teaser, .crit-chevron, .recs-more > summary { display: none !important; }
+      .card, .card * { animation: none !important; }
+      .progress-bar, .hero-bar { width: var(--w) !important; transition: none !important; }
+      .container { max-width: none; padding: 0; }
+
+      /* Title page */
+      .print-cover {
+        display: flex; flex-direction: column;
+        page: cover; break-after: page;
+        width: 210mm; height: 297mm; overflow: hidden;
+        background: #fff;
+      }
+      .cover-band {
+        padding: 28mm 20mm 16mm;
+        color: #fff;
+        background:
+          radial-gradient(ellipse 60% 80% at 15% 20%, rgba(51,204,204,0.35), transparent 60%),
+          radial-gradient(ellipse 50% 70% at 85% 40%, rgba(16,185,129,0.25), transparent 60%),
+          linear-gradient(135deg, #0f766e 0%, #2BA3A3 55%, #33CCCC 100%);
+      }
+      .cover-brand { font-size: 11pt; font-weight: 700; letter-spacing: 0.02em; opacity: 0.9; }
+      .cover-title { font-size: 30pt; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; margin-top: 10mm; }
+      .cover-url { font-size: 11pt; font-weight: 600; margin-top: 5mm; word-break: break-all; }
+      .cover-date { font-size: 10pt; opacity: 0.85; margin-top: 1mm; }
+      .cover-body { display: grid; grid-template-columns: 62mm 1fr; gap: 12mm; align-items: center; padding: 14mm 20mm 6mm; }
+      .cover-score { display: flex; flex-direction: column; align-items: center; gap: 4mm; }
+      .cover-ring-wrap { position: relative; width: 56mm; height: 56mm; }
+      .cover-ring { width: 100%; height: 100%; }
+      .cover-ring-value { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 26pt; font-weight: 800; letter-spacing: -0.03em; color: #0f172a; }
+      .cover-ring-value span { font-size: 11pt; color: #94a3b8; font-weight: 600; margin-left: 1mm; align-self: center; padding-top: 3mm; }
+      .cover-badge { padding: 1.5mm 5mm; border-radius: 999px; color: #fff; font-size: 10pt; font-weight: 700; }
+      .cover-cats { display: grid; gap: 4.5mm; }
+      .cover-cat { display: grid; grid-template-columns: 1fr auto; gap: 1.5mm 4mm; align-items: baseline; }
+      .cover-cat-name { font-size: 10pt; font-weight: 600; color: #334155; }
+      .cover-cat-score { font-size: 11pt; font-weight: 800; }
+      .cover-cat-score span { font-size: 8pt; color: #94a3b8; font-weight: 600; }
+      .cover-cat-track { grid-column: 1 / -1; height: 2.2mm; background: #eef2f6; border-radius: 999px; overflow: hidden; display: block; }
+      .cover-cat-track span { display: block; height: 100%; border-radius: 999px; }
+      .cover-facts { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3mm; margin: 6mm 20mm 0; }
+      .cover-fact { border: 1px solid #e2e8f0; border-radius: 3mm; padding: 3.5mm 3mm; text-align: center; }
+      .cover-fact strong { display: block; font-size: 18pt; font-weight: 800; color: #0f172a; line-height: 1.1; }
+      .cover-fact span { display: block; font-size: 7.5pt; color: #64748b; margin-top: 1mm; line-height: 1.25; }
+      .cover-fact-fail strong { color: #dc2626; }
+      .cover-fact-partial strong { color: #d97706; }
+      .cover-fact-ok strong { color: #16a34a; }
+      .cover-changes { margin: 7mm 20mm 0; padding: 4mm 5mm; border-radius: 3mm; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 9pt; }
+      .cover-changes h3 { font-size: 10pt; font-weight: 700; margin-bottom: 1.5mm; }
+      .cover-fixed { color: #15803d; }
+      .cover-new { color: #b91c1c; }
+      .cover-foot { margin-top: auto; padding: 0 20mm 14mm; font-size: 8.5pt; color: #94a3b8; }
+
+      /* Content pages */
+      .card { box-shadow: none; border: 1px solid #e2e8f0; border-radius: 3mm; padding: 5mm; }
+      .card-title { font-size: 14pt; }
+      .recs-card { margin-bottom: 0; break-after: page; }
+      .recs-group { break-inside: auto; }
+      .recs-group-title { break-after: avoid; font-size: 11.5pt; }
+      .recs-group-hint { break-after: avoid; }
+      /* Short items stay whole; a long snippet may continue on the next page,
+         but never leaves its recommendation text behind */
+      .recs-list li { break-inside: auto; font-size: 9.5pt; padding: 3mm 4mm; }
+      .rec-tags, .snippet-row-header, .snippet-preview-header { break-after: avoid; }
+      .recs-list li > div:first-child { break-inside: avoid; }
       details.crit::details-content, details.recs-more::details-content { content-visibility: visible; display: block; }
-      .recs-more > summary { display: none; }
-      .crit-teaser { display: none; }
-      .toggle-all, .overview-item:hover { background: none; }
-      .crit-chevron { display: none; }
-      .category-card { break-inside: auto; }
+
+      /* Snippets are part of the fix: always printed, wrapped, light */
+      .snippet-preview, .snippet-preview[hidden] { display: block !important; background: #f8fafc; border: 1px solid #e2e8f0; margin-top: 2.5mm; }
+      .snippet-preview-header { background: #eef2f6; color: #475569; }
+      .snippet-lang-tag { background: #ccfbf1; color: #0f766e; }
+      .snippet-note { color: #64748b; }
+      .snippet-code { color: #0f172a; white-space: pre-wrap; word-break: break-word; overflow: visible; max-height: none; font-size: 7.5pt; }
+
+      .details-bar { margin: 0 0 4mm; }
+      .details-bar h2 { font-size: 14pt; }
+      .category-card { break-inside: auto; margin-bottom: 5mm; }
+      /* The category heading travels with its bar and first criterion */
+      .cat-header, .category-card > .progress-track { break-after: avoid; }
+      .crit-list > .crit:first-child { break-before: avoid; }
+      /* A criterion may run over a page break (a long one would otherwise
+         leave a near-empty page); its heading and each block stay whole */
+      .crit { break-inside: auto; background: none; border: 1px solid #e2e8f0; }
+      .crit-head { break-after: avoid; }
+      .crit-block, .crit-block li { break-inside: avoid; }
+      .overview-item:hover { background: none; }
+
+      footer { padding: 6mm 0 0; break-inside: avoid; }
+      .cta-card { max-width: none; }
     }
   </style>
 </head>
 <body>
+  ${renderPrintCoverHtml(result, categoryOrder, dateFormatted)}
   <div class="hero">
     <div class="container hero-content">
       <div class="hero-title">Paul AI GEO Analyzer</div>
       <div class="hero-sub">${escapeHtml(t('report_title'))}</div>
       <div class="hero-score-card">
         <div class="hero-score-main">
-          <div class="hero-score-value"><span class="count-up" data-target="${result.totalScore.toFixed(1)}">0.0</span><span class="hero-score-max">/${result.maxTotalScore}</span></div>
+          <div class="hero-score-value"><span class="count-up" data-target="${result.totalScore.toFixed(1)}">${result.totalScore.toFixed(1)}</span><span class="hero-score-max">/${result.maxTotalScore}</span></div>
           <span class="hero-score-badge" style="background:${ratingColor}">${escapeHtml(result.rating.label)}</span>
         </div>
         <div></div>
@@ -850,7 +1035,7 @@ export function generateHtmlReport(result: GEOAnalysisResult): string {
           <div>${escapeHtml(dateFormatted)}</div>
         </div>
         <div class="hero-progress">
-          <div class="hero-track"><div class="hero-bar" data-target="${(result.totalScore / result.maxTotalScore) * 100}" style="background:${ratingColor}"></div></div>
+          <div class="hero-track"><div class="hero-bar" data-target="${(result.totalScore / result.maxTotalScore) * 100}" style="background:${ratingColor};--w:${(result.totalScore / result.maxTotalScore) * 100}%"></div></div>
         </div>
         ${renderOverviewHtml(result, categoryOrder)}
       </div>
