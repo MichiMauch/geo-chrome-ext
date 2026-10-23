@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.8.1] - 2026-10-23
+
+### Fixed
+
+- **Measurements did not count as facts:** The citable-facts check knew percentages, currencies, energy units and tonnes, but not area, length, weight, volume or temperature. "36 m²", "250 Quadratmeter", "1000 Litern" or "21 °C" earned nothing, so guides and experience reports full of figures scored 0 %. These units are now recognised in all six languages.
+- **FAQPage without visible questions counted as a schema type:** The FAQ check already gave such markup no points, but the schema check still counted it towards its two types. Pages that mark up section titles as FAQ questions now lose that type, and the report explains why.
+
 ## [4.8.0] - 2026-10-22
 
 ### Changed

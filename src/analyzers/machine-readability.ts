@@ -3,6 +3,7 @@ import { BaseAnalyzer } from './base';
 import { GEO_CONFIG } from '../config/geo-config';
 import { schemaTypesOf } from '../utils/schema-types';
 import { ARTICLE_SCHEMA_TYPES, detectPageType } from '../utils/page-type';
+import { visibleQuestions } from '../utils/visible-questions';
 
 // Types the schema check counts. Each distinct type counts once, however many
 // nodes carry it.
@@ -161,6 +162,8 @@ interface SchemaTypeCheck {
   foundTypes: string[];
   // Types on the page that this check does not count (WebSite, ImageObject …)
   otherTypes: string[];
+  // FAQPage without a single visible question: describes nothing on the page
+  faqUnbacked: boolean;
   missing: string[];
   current: number;
   target: number;
@@ -488,7 +491,12 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
   ): SchemaTypeCheck {
     const config = GEO_CONFIG.machineReadability.schemaTypes;
     const allTypes = [...new Set(pageData.schema.flatMap(schemaTypesOf))];
-    const foundTypes = allTypes.filter((t) => RELEVANT_SCHEMA_TYPES.has(t));
+    // FAQPage counts only with questions a reader can see; Google expects the
+    // markup to mirror visible Q&A, and section titles are no questions.
+    const faqUnbacked = allTypes.includes('FAQPage') && visibleQuestions(pageData).size === 0;
+    const foundTypes = allTypes.filter(
+      (t) => RELEVANT_SCHEMA_TYPES.has(t) && !(faqUnbacked && t === 'FAQPage')
+    );
     const otherTypes = allTypes.filter((t) => !RELEVANT_SCHEMA_TYPES.has(t));
 
     const missing: string[] = [];
@@ -501,7 +509,7 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
 
     let current = Math.min(foundTypes.length, config.target);
     if (missing.length > 0) current = Math.min(current, config.target - 1);
-    return { foundTypes, otherTypes, missing, current, target: config.target };
+    return { foundTypes, otherTypes, faqUnbacked, missing, current, target: config.target };
   }
 
   // Report evidence for the schema type check: what was found, which type
@@ -512,14 +520,15 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
   ): { evidence: EvidenceLine[]; fixKey?: string } {
     const evidence: EvidenceLine[] = [];
     const faqQuestions = pageData.faqQuestions ?? [];
-    if (check.foundTypes.length === 0) {
-      evidence.push({ key: 'ev_schema_none' });
-    } else {
+    if (check.foundTypes.length > 0) {
       evidence.push({ key: 'ev_schema_found', params: { types: check.foundTypes.join(', ') } });
+    } else if (!check.faqUnbacked) {
+      evidence.push({ key: 'ev_schema_none' });
     }
     if (check.otherTypes.length > 0) {
       evidence.push({ key: 'ev_schema_other', params: { types: check.otherTypes.slice(0, 6).join(', ') } });
     }
+    if (check.faqUnbacked) evidence.push({ key: 'ev_schema_faq_unbacked' });
     if (check.missing.includes('Article')) evidence.push({ key: 'ev_schema_missing_article' });
     if (check.missing.includes('FAQPage')) {
       evidence.push({

@@ -259,6 +259,7 @@ describe('MachineReadabilityAnalyzer — schema type count', () => {
           { '@type': 'NewsArticle', '@types': ['NewsArticle', 'FAQPage'] },
           { '@type': 'BreadcrumbList' },
         ],
+        faqQuestions: ['Was kostet das?'],
       })
     );
     expect(detail.progress?.current).toBe(2);
@@ -449,6 +450,25 @@ describe('MachineReadabilityAnalyzer — report evidence', () => {
       { key: 'ev_schema_faq_ok', params: { count: 52 } },
     ]);
     expect(d.fixKey).toBeUndefined();
+  });
+
+  it('schema: FAQPage without visible questions does not count', () => {
+    const faqSchema: SchemaData = { '@type': 'FAQPage', mainEntity: [{}] };
+    const titles = [{ level: 2, text: 'Was wir anders planen würden' }];
+    const d = detail(makePage({ schema: [newsArticle, faqSchema], headings: titles }), 'criterion_schema');
+    expect(d.evidence).toEqual([
+      { key: 'ev_schema_found', params: { types: 'NewsArticle' } },
+      { key: 'ev_schema_faq_unbacked' },
+      { key: 'ev_schema_target', params: { count: 1, target: 2 } },
+      { key: 'ev_schema_too_few' },
+    ]);
+    // A question heading backs it
+    const backed = makePage({ schema: [newsArticle, faqSchema], headings: [{ level: 2, text: 'Was kostet das?' }] });
+    expect(detail(backed, 'criterion_schema').progress!.current).toBe(2);
+    // Alone it counts as no schema at all
+    const alone = detail(makePage({ schema: [faqSchema] }), 'criterion_schema');
+    expect(alone.found).toBe(false);
+    expect(alone.evidence?.map((e) => e.key)).toEqual(['ev_schema_faq_unbacked', 'ev_schema_target', 'ev_schema_too_few']);
   });
 
   it('schema: no schema, and a single non-article type that needs a second one', () => {

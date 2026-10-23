@@ -5,6 +5,7 @@ import { getSourceLinks } from '../utils/source-links';
 import { hasSchemaType } from '../utils/schema-types';
 import { excerpt, excludedLinkEvidence, hostList, matchExcerpt } from './trust-evidence';
 import { findDefinitionSentence } from './answerability';
+import { QUESTION_HEADING, normalizeQuestion, visibleQuestions } from '../utils/visible-questions';
 
 interface FaqEvaluation {
   score: number;
@@ -184,20 +185,10 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
 
     const hasFaqSchema = pageData.schema.some((s) => hasSchemaType(s, ['FAQPage', 'QAPage']));
 
-    // Headings count as questions only with a question mark: "Was wir
-    // bieten" is a section title. Accordion items without one come in via
-    // faqQuestions.
-    const questionPatterns = [/[?？]$/];
-    const normalize = (q: string) => q.trim().toLowerCase().replace(/\s+/g, ' ').replace(/\s*\?$/, '');
-
     // Detected FAQ/accordion questions plus question-style headings, counted
     // once each (a FAQ item is often both).
     const detected = pageData.faqQuestions ?? [];
-    const questions = new Set(detected.map(normalize));
-    pageData.headings
-      .filter((h) => questionPatterns.some((p) => p.test(h.text.trim())))
-      .forEach((h) => questions.add(normalize(h.text)));
-    questions.delete('');
+    const questions = visibleQuestions(pageData);
 
     const questionCount = questions.size;
     const hiddenCount = Math.min(
@@ -214,7 +205,7 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
       ? new Set(
           pageData.questionAnswers
             .filter(({ answer }) => substantive(answer))
-            .map(({ question }) => normalize(question))
+            .map(({ question }) => normalizeQuestion(question))
         ).size
       : pageData.paragraphs.filter(substantive).length;
     const answered = Math.min(questionCount - hiddenCount, answeredQuestions);
@@ -223,7 +214,7 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
       ? new Set(
           pageData.questionAnswers
             .filter(({ answer }) => answer.trim().length > 0 && !substantive(answer))
-            .map(({ question }) => normalize(question))
+            .map(({ question }) => normalizeQuestion(question))
         ).size
       : 0;
 
@@ -252,7 +243,7 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
         .map(({ question }) => question);
       const examples = hiddenCount > 0 && unanswered.length > 0
         ? unanswered
-        : [...detected, ...pageData.headings.map((h) => h.text).filter((h) => questionPatterns.some((p) => p.test(h.trim())))];
+        : [...detected, ...pageData.headings.map((h) => h.text).filter((h) => QUESTION_HEADING.test(h.trim()))];
       for (const q of [...new Set(examples)].slice(0, 2)) {
         evidence.push({ key: 'ev_faq_example', params: { text: excerpt(q) } });
       }

@@ -321,13 +321,15 @@ export const GEO_CONFIG = {
     // instead. None of them may carry the g flag (used with .test()).
     patterns: {
       // A citable fact is a figure with context: a percentage, an amount with
-      // a unit or currency, a grouped large number, or an attributed statement.
+      // a unit (energy, area, length, weight, volume, temperature) or currency, a grouped large number, or an attributed statement.
       // A bare year ("Copyright 2024", "Energiestrategie 2050") is not a fact.
       facts: [
         // 30 %, 30%, 4,5 Prozent, 12 percent
         /\d+(?:['’.,]\d+)*\s?(?:%|‰|Prozent|percent|per cent|pour cent|por ciento|por cento|per cento)/iu,
         // 5 TWh, 1,2 Mrd., 300 Millionen, 50 CHF, 20 €
         /\d+(?:['’.,]\d+)*\s?(?:[TGMk]Wh|[TGMk]W|CHF|Fr\.|Franken|EUR|Euro|€|\$|USD|£|Mio\.?|Mrd\.?|Millionen|Milliarden|millions?|billions?|milliards?|Tonnen|tonnes?)(?![\p{L}])/iu,
+        // 36 m², 250 Quadratmeter, 12 km, 3,5 kg, 200 Liter, 21 °C, 2 Hektar
+        /\d+(?:['’.,]\d+)*\s?(?:m[²³23]|km[²2]|km\/h|qm|[kcm]?m|ha|[km]?g|ml|°\s?[CF]|Quadratmetern?|Kubikmetern?|Kilometern?|Metern?|Hektar|Kilogramm|Gramm|Litern?|Grad|square (?:metres?|meters?|feet)|sq\.? ?ft|(?:kilo)?met(?:re|er)s?|lit(?:re|er)s?|mètres?(?: carrés| cubes)?|kilomètres?|metros?(?: cuadrados| quadrados| cúbicos)?|quilômetros?|kilómetros?|metri(?: quadri| cubi)?|chilometri|litros?|litri)(?![\p{L}\d])/iu,
         // CHF 50, € 20, $5
         /(?<![\p{L}])(?:CHF|Fr\.|EUR|USD|€|\$|£)\s?\d/u,
         // 1'200, 1’200, 1 200 (not phone numbers like 044 421 35 35)

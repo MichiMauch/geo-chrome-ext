@@ -64,6 +64,12 @@ describe('AiCitation — Fakten-Muster', () => {
     'Gemäß BFE sinkt der Verbrauch.',
     'Einer Umfrage zufolge sinkt der Verbrauch.',
     'According to the report, demand fell.',
+    'Wir wohnen auf 36 m² statt 250 Quadratmetern.',
+    'Das Haus ist 12 m lang und wiegt 9,5 Tonnen.',
+    'Der Tank fasst 200 Liter.',
+    'Im Winter fällt es auf -10 °C.',
+    'The plot covers 400 square meters.',
+    'La maison fait 30 mètres carrés.',
   ])('erkennt "%s"', (text) => {
     expect(isFact(text)).toBe(true);
   });
@@ -73,6 +79,8 @@ describe('AiCitation — Fakten-Muster', () => {
     'Die Energiestrategie 2050 des Bundes.',
     'Telefon 044 421 35 35',
     'Kontaktieren Sie uns jederzeit.',
+    'Seit 4 Monaten wohnen wir hier.',
+    'Kapitel 3 gibt einen Überblick.',
   ])('wertet "%s" nicht als Fakt', (text) => {
     expect(isFact(text)).toBe(false);
   });
