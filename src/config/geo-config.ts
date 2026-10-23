@@ -197,6 +197,20 @@ export const GEO_CONFIG = {
       crawlerView: 2.0,
       // Live analysis only, like crawlerView
       sitemap: 1.0,
+      // Product pages only
+      productData: 2.0,
+    },
+    // Shares of the product data check (sum 1.0): what Google merchant
+    // listings and the shopping answers of ChatGPT / Google AI Mode read
+    productParts: {
+      price: 0.25, // offers.price (or lowPrice) + priceCurrency
+      availability: 0.15,
+      identifier: 0.15, // gtin*/mpn; sku alone counts half
+      brand: 0.1,
+      image: 0.1,
+      description: 0.05,
+      rating: 0.1, // aggregateRating or review
+      shippingReturns: 0.1, // shippingDetails or hasMerchantReturnPolicy
     },
     // Shares of the sitemap score (sum 1.0)
     sitemapParts: {

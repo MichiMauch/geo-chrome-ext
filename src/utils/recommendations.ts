@@ -48,6 +48,7 @@ const RECOMMENDATION_KEYS: Record<string, RecommendationEntry> = {
   'ai_bots_blocked': { i18nKey: 'rec_ai_bots_blocked', priority: 11, owner: 'dev', effort: 'quick' },
   'ai_bots_firewall': { i18nKey: 'rec_ai_bots_firewall', priority: 10, owner: 'dev', effort: 'quick' },
   'content_signal_opt_out': { i18nKey: 'rec_content_signal_opt_out', priority: 8, owner: 'dev', effort: 'quick' },
+  'product_data_incomplete': { i18nKey: 'rec_product_data_incomplete', priority: 8, owner: 'dev', effort: 'medium' },
   'js_only_content': { i18nKey: 'rec_js_only_content', priority: 11, owner: 'dev', effort: 'project' }, // Crawlers get (almost) nothing
   'no_sitemap': { i18nKey: 'rec_no_sitemap', priority: 6, owner: 'dev', effort: 'medium' },
   'sitemap_page_missing': { i18nKey: 'rec_sitemap_page_missing', priority: 5, owner: 'dev', effort: 'quick' },

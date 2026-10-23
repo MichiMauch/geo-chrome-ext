@@ -42,6 +42,18 @@ const BOT_INFO: Record<string, { owner: string; purpose: BotPurpose }> = {
   CCBot: { owner: 'Common Crawl', purpose: 'training' },
 };
 
+// Schema.org property names shown in the product evidence, as written in the
+// markup (language-neutral on purpose: that is what the agency searches for)
+const PRODUCT_FIELD_NAMES: Record<string, string> = {
+  price: 'offers.price + priceCurrency',
+  availability: 'offers.availability',
+  brand: 'brand',
+  image: 'image',
+  description: 'description',
+  rating: 'aggregateRating / review',
+  shipping: 'shippingDetails / hasMerchantReturnPolicy',
+};
+
 const ROBOTS_ANSWER_BLOCK_KEYS = new Set([
   'ev_robotsTxt_unreachable', 'ev_robotsTxt_blocked_index', 'ev_robotsTxt_blocked_search', 'ev_robotsTxt_blocked_user',
 ]);
@@ -514,6 +526,23 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
       totalWeight += config.weights.crawlerView;
     }
 
+    let productIncomplete = false;
+    // Check 8: product data — product pages only
+    if (pageType === 'product') {
+      const product = this.evaluateProductData(pageData);
+      details.push({
+        criterionKey: 'criterion_productData',
+        found: product.score >= 0.99,
+        value: product.found ? (product.score >= 0.99 ? 'value_present' : 'value_productData_partial') : 'value_noneFound',
+        weight: config.weights.productData,
+        progress: { current: Math.round(product.score * 100), target: 100, unitKey: 'unit_percent' },
+        evidence: product.evidence,
+      });
+      weightedScore += product.score * config.weights.productData;
+      totalWeight += config.weights.productData;
+      if (product.score < 0.7) productIncomplete = true;
+    }
+
     // Check 7: XML sitemap — live analysis only (the batch starts from it)
     const sitemap = pageData.sitemap;
     if (sitemap) {
@@ -541,6 +570,7 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     }
 
     const recommendations: string[] = [];
+    if (productIncomplete) recommendations.push('product_data_incomplete');
     if (sitemap && !sitemap.exists) recommendations.push('no_sitemap');
     else if (sitemap?.listed === false) recommendations.push('sitemap_page_missing');
     else if (sitemap && ((sitemap.listed === true && !sitemap.pageLastmod) || sitemap.lastmodUniform)) {
@@ -761,6 +791,58 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     if (user) evidence.push({ key: 'ev_robotsTxt_blocked_user', params: { bots: user } });
     if (training) evidence.push({ key: 'ev_robotsTxt_blocked_training', params: { bots: training } });
     return { evidence, ...(!index && !search && !user ? { fixKey: 'fix_robotsTxt_training' } : {}) };
+  }
+
+  // Product / ProductGroup nodes (and their variants) with the fields
+  // shopping answers rely on. A field counts when any product node or
+  // variant carries it; ratings may sit in a separate node.
+  private evaluateProductData(pageData: PageData): { score: number; found: boolean; evidence: EvidenceLine[] } {
+    const parts = GEO_CONFIG.machineReadability.productParts;
+    const byId = indexById(pageData.schema);
+    const products = pageData.schema.filter((s) => schemaTypesOf(s).some((t) => t === 'Product' || t === 'ProductGroup'));
+    const nodes: SchemaNode[] = [
+      ...products,
+      ...products.flatMap((p) => resolveNodes((p as SchemaNode).hasVariant, byId)),
+    ];
+    if (nodes.length === 0) return { score: 0, found: false, evidence: [{ key: 'ev_product_none' }] };
+
+    const any = (f: (n: SchemaNode) => boolean) => nodes.some(f);
+    const offers = nodes.flatMap((n) => resolveNodes(n.offers, byId));
+    const offerHas = (f: (o: SchemaNode) => boolean) => offers.some(f);
+    const price = offerHas((o) => (!isEmptyValue(o.price) || !isEmptyValue(o.lowPrice)) && !isEmptyValue(o.priceCurrency));
+    const availability = offerHas((o) => !isEmptyValue(o.availability));
+    const gtin = any((n) => ['gtin', 'gtin8', 'gtin12', 'gtin13', 'gtin14', 'mpn', 'isbn'].some((k) => !isEmptyValue(n[k])));
+    const sku = any((n) => !isEmptyValue(n.sku));
+    const brand = any((n) => !isEmptyValue(n.brand));
+    const image = any((n) => !isEmptyValue(n.image));
+    const description = any((n) => !isEmptyValue(n.description));
+    const rating =
+      any((n) => !isEmptyValue(n.aggregateRating) || !isEmptyValue(n.review)) ||
+      pageData.schema.some((s) => !isEmptyValue(s.aggregateRating) || schemaTypesOf(s).includes('AggregateRating'));
+    const shipping = offerHas((o) => !isEmptyValue(o.shippingDetails) || !isEmptyValue(o.hasMerchantReturnPolicy)) ||
+      any((n) => !isEmptyValue(n.hasMerchantReturnPolicy));
+
+    const score =
+      (price ? parts.price : 0) +
+      (availability ? parts.availability : 0) +
+      (gtin ? parts.identifier : sku ? parts.identifier / 2 : 0) +
+      (brand ? parts.brand : 0) +
+      (image ? parts.image : 0) +
+      (description ? parts.description : 0) +
+      (rating ? parts.rating : 0) +
+      (shipping ? parts.shippingReturns : 0);
+
+    const fields: [string, boolean][] = [
+      ['price', price], ['availability', availability], ['brand', brand], ['image', image],
+      ['description', description], ['rating', rating], ['shipping', shipping],
+    ];
+    const present = fields.filter(([, ok]) => ok).map(([f]) => f);
+    const missing = fields.filter(([, ok]) => !ok).map(([f]) => f);
+    const evidence: EvidenceLine[] = [{ key: 'ev_product_found', params: { count: products.length, variants: nodes.length - products.length } }];
+    if (present.length > 0) evidence.push({ key: 'ev_product_present', params: { fields: present.map((f) => PRODUCT_FIELD_NAMES[f]).join(', ') } });
+    if (missing.length > 0) evidence.push({ key: 'ev_product_missing', params: { fields: missing.map((f) => PRODUCT_FIELD_NAMES[f]).join(', ') } });
+    evidence.push({ key: gtin ? 'ev_product_gtin' : sku ? 'ev_product_sku_only' : 'ev_product_no_identifier' });
+    return { score: Math.min(1, score), found: true, evidence };
   }
 
   private sitemapEvidence(s: NonNullable<PageData['sitemap']>): { evidence: EvidenceLine[]; fixKey?: string } {

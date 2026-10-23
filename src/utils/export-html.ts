@@ -140,6 +140,12 @@ function getExplanation(d: CategoryDetail): string {
     if (total > 0 && blocked === total) return t('explain_robotstxt_all_blocked');
     return t('explain_robotstxt_partial', { blocked, total });
   }
+  // Product data
+  if (criterion === t('criterion_productData')) {
+    if (value === t('value_noneFound')) return t('explain_productData_none');
+    if (!d.found) return t('explain_productData_partial', { current });
+    return t('explain_productData_ok');
+  }
   // XML sitemap
   if (criterion === t('criterion_sitemap')) {
     if (value === t('value_noneFound')) return t('explain_sitemap_none');

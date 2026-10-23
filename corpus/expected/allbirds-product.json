@@ -1,5 +1,5 @@
 {
-  "total": 15.3,
+  "total": 15.7,
   "pageType": "product",
   "categories": {
     "contentClarity": {
@@ -126,7 +126,7 @@
       ]
     },
     "machineReadability": {
-      "score": 2.5,
+      "score": 2.9,
       "criteria": {
         "criterion_schema": {
           "found": false,
@@ -186,6 +186,17 @@
           "progress": "14/14",
           "evidence": [
             "ev_robotsTxt_all_allowed"
+          ]
+        },
+        "criterion_productData": {
+          "found": false,
+          "value": "value_productData_partial",
+          "progress": "83/100",
+          "evidence": [
+            "ev_product_found",
+            "ev_product_present",
+            "ev_product_missing",
+            "ev_product_sku_only"
           ]
         }
       },

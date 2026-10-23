@@ -402,3 +402,47 @@ describe('Zuständigkeit und Aufwand', async () => {
     expect(recommendationMeta('js_only_content')).toEqual({ owner: 'dev', effort: 'project' });
   });
 });
+
+describe('Produktdaten', async () => {
+  const { MachineReadabilityAnalyzer } = await import('../../analyzers/machine-readability');
+  const base = {
+    url: 'https://shop.ch/p/schuh', headings: [], paragraphs: [], lists: [], links: [], images: [],
+    meta: { title: '', description: '', author: '', publishDate: null, modifiedDate: null, ogType: null },
+    author: null, dates: [],
+    semanticElements: { hasArticle: false, hasMain: false, hasNav: false, hasAside: false, hasHeader: false, hasFooter: false, hasSection: false },
+    llmsTxt: { exists: false }, robotsTxt: { exists: false, allowedBots: {}, blockedBots: [], totalChecked: 0 },
+    robotsMeta: { hasNoIndex: false, hasNoFollow: false, hasNoArchive: false, hasNoSnippet: false, rawContent: null },
+    openGraph: { title: null, description: null, image: null, url: null, type: null },
+    twitterCard: { card: null, title: null, description: null, image: null },
+    viewport: { hasViewport: true, hasDeviceWidth: true, userScalableNo: false, rawContent: '' },
+    canonical: { href: null },
+  } as unknown as PageData;
+  const run = (schema: unknown[]) => new MachineReadabilityAnalyzer().analyze({ ...base, schema } as PageData, 'product');
+  const detail = (schema: unknown[]) => run(schema).details.find((d) => d.criterionKey === 'criterion_productData')!;
+
+  it('bewertet einen vollständigen Produktblock voll', () => {
+    const d = detail([{
+      '@type': 'Product', name: 'Schuh', image: 'https://shop.ch/s.jpg', description: 'Leicht.', brand: { '@type': 'Brand', name: 'X' },
+      gtin13: '7612345678901', aggregateRating: { ratingValue: 4.5, reviewCount: 10 },
+      offers: { '@type': 'Offer', price: 99, priceCurrency: 'CHF', availability: 'https://schema.org/InStock', hasMerchantReturnPolicy: { '@type': 'MerchantReturnPolicy' } },
+    }]);
+    expect(d.found).toBe(true);
+    expect(d.evidence?.map((e) => e.key)).toEqual(['ev_product_found', 'ev_product_present', 'ev_product_gtin']);
+  });
+
+  it('liest Varianten einer ProductGroup und zählt sku nur halb', () => {
+    const d = detail([{
+      '@type': 'ProductGroup', name: 'Schuh', sku: 'S-1',
+      hasVariant: [{ '@type': 'Product', offers: { price: '99.00', priceCurrency: 'CHF' } }],
+    }]);
+    expect(d.progress?.current).toBe(33); // price .25 + sku .075
+    expect(d.evidence?.map((e) => e.key)).toContain('ev_product_sku_only');
+    expect(run([{ '@type': 'Product', name: 'Schuh' }]).recommendations).toContain('product_data_incomplete');
+  });
+
+  it('prüft nur auf Produktseiten', () => {
+    const other = new MachineReadabilityAnalyzer().analyze({ ...base, schema: [] } as PageData, 'article');
+    expect(other.details.find((d) => d.criterionKey === 'criterion_productData')).toBeUndefined();
+    expect(detail([]).value).toBe('value_noneFound');
+  });
+});
