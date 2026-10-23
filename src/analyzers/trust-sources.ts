@@ -4,8 +4,43 @@ import { GEO_CONFIG } from '../config/geo-config';
 import { isWithinLastYear } from '../utils/dom-helpers';
 import { getSourceLinks } from '../utils/source-links';
 import { excludedLinkEvidence, hostList } from './trust-evidence';
+import { publisherIdentity } from './machine-readability';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Links that tell a reader who is behind a site. The label must open the
+// link text ("Über ch.ch"), or the text is a short menu label ("FAQ/Contact
+// Us") — never somewhere inside an article title ("… über die neuen
+// Systeme"). The path is matched per segment. One evidence line per kind
+// (ev_publisher_<kind>_ok / _missing).
+const PUBLISHER_LINKS = [
+  {
+    kind: 'imprint',
+    text: /(?:^|[/|·•&,]\s*)(?:impressum|imprint|rechtliche?s?(?: hinweise)?|legal|mentions l[ée]gales|note legali|aviso legal|colofon)\b/i,
+    path: /\/(?:impressum|imprint|rechtliche?s?|legal(?:-notice)?|mentions-legales|note-legali|aviso-legal)(?:[-_./]|$)/i,
+  },
+  {
+    kind: 'contact',
+    text: /(?:^|[/|·•&,]\s*)(?:kontakt|contact|contatt[io]|contacto|contato)\b/i,
+    path: /\/(?:[a-z-]*-)?(?:kontakt|contact|contatti|contacto|contato)(?:[-_./]|$)/i,
+  },
+  {
+    kind: 'about',
+    text: /(?:^|[/|·•&,]\s*)(?:[üu]e?ber|about|[àa] propos|chi siamo|qui sommes|sobre|quem somos|qui[ée]nes somos|portr[äa]it|unternehmen|team)\b/i,
+    path: /\/(?:[üu]e?ber-|about|a-propos|chi-siamo|qui-sommes|sobre|quem-somos|quienes-somos|portr[äa]it|unternehmen)(?:[-_./]|$)/i,
+  },
+] as const;
+
+// Longer link texts are teasers and headlines, not menu entries
+const MENU_LABEL_MAX = 40;
+
+function linkPath(href: string): string {
+  try {
+    return decodeURIComponent(new URL(href).pathname);
+  } catch {
+    return '';
+  }
+}
 
 const AUTHOR_EVIDENCE_KEY = {
   schema: 'ev_author_schema',
@@ -169,14 +204,34 @@ export class TrustSourcesAnalyzer extends BaseAnalyzer {
       totalWeight += config.weights.date;
     }
 
-    // Check 3: Externe Quellen/Referenzen
+    // Homepages and product pages: is the publisher recognizable? Takes the
+    // place of the source links, which a start page or shop page rarely has.
+    let publisherScore = 1;
+    if (skipAuthorDate) {
+      const publisher = this.evaluatePublisher(pageData);
+      publisherScore = publisher.score;
+      details.push({
+        criterionKey: 'criterion_publisher',
+        found: publisher.score >= 0.99,
+        value: publisher.score >= 0.99 ? 'value_present' : publisher.score > 0 ? 'value_publisher_partial' : 'value_notPresent',
+        weight: config.weights.publisher,
+        progress: { current: Math.round(publisher.score * 100), target: 100, unitKey: 'unit_percent' },
+        evidence: publisher.evidence,
+      });
+      weightedScore += publisher.score * config.weights.publisher;
+      totalWeight += config.weights.publisher;
+    }
+
+    // Check 3: Externe Quellen/Referenzen (articles and other pages)
     // Shared filter with AiCitation: only external content links with text,
     // no social/share widgets, no header/nav/footer links.
     const sourceLinks = getSourceLinks(pageData.links);
     const linksNeeded = config.thresholds.sourceLinksTarget;
     const hasQualityLinks = sourceLinks.length >= linksNeeded;
 
-    details.push({
+    if (skipAuthorDate) {
+      details.push(this.notApplicable('criterion_sources'));
+    } else details.push({
       criterionKey: 'criterion_sources',
       found: hasQualityLinks,
       // The real count — progress caps at the target, the value doesn't.
@@ -196,19 +251,50 @@ export class TrustSourcesAnalyzer extends BaseAnalyzer {
       },
     });
 
-    if (hasQualityLinks) {
-      weightedScore += config.weights.externalSources;
-    } else if (sourceLinks.length > 0) {
-      weightedScore += config.thresholds.sourcePartialCredit;
+    if (!skipAuthorDate) {
+      if (hasQualityLinks) {
+        weightedScore += config.weights.externalSources;
+      } else if (sourceLinks.length > 0) {
+        weightedScore += config.thresholds.sourcePartialCredit;
+      }
+      totalWeight += config.weights.externalSources;
     }
-    totalWeight += config.weights.externalSources;
 
     const recommendations: string[] = [];
     if (!skipAuthorDate && !hasAuthor) recommendations.push('no_author');
     if (!skipAuthorDate && !hasDate) recommendations.push('no_date');
     else if (!skipAuthorDate && !newestVisible) recommendations.push('date_not_visible');
-    if (!hasQualityLinks) recommendations.push('few_sources');
+    if (!skipAuthorDate && !hasQualityLinks) recommendations.push('few_sources');
+    if (skipAuthorDate && publisherScore < 0.7) recommendations.push('publisher_unclear');
 
     return this.createCategory(0, weightedScore, totalWeight, details, recommendations);
+  }
+
+  // Organization in Schema.org (named, ideally with logo/sameAs) plus links
+  // a reader uses to find out who is behind the site.
+  private evaluatePublisher(pageData: PageData): { score: number; evidence: EvidenceLine[] } {
+    const parts = GEO_CONFIG.trustSources.publisherParts;
+    const identity = publisherIdentity(pageData);
+    const kinds = PUBLISHER_LINKS.filter(({ text, path }) =>
+      pageData.links.some(
+        (l) => !l.isExternal && ((l.text.length <= MENU_LABEL_MAX && text.test(l.text)) || path.test(linkPath(l.href)))
+      )
+    ).map(({ kind }) => kind);
+    const score =
+      (identity.named ? parts.schemaNamed : 0) +
+      (identity.named && identity.verifiable ? parts.verifiable : 0) +
+      parts.links * Math.min(1, kinds.length / 2);
+
+    const evidence: EvidenceLine[] = [];
+    if (identity.named) {
+      evidence.push({ key: 'ev_publisher_schema', params: { name: identity.name ?? pageData.author?.name ?? '' } });
+      evidence.push({ key: identity.verifiable ? 'ev_publisher_verifiable' : 'ev_publisher_unverifiable' });
+    } else {
+      evidence.push({ key: identity.unnamed ? 'ev_publisher_schema_unnamed' : 'ev_publisher_schema_none' });
+    }
+    for (const { kind } of PUBLISHER_LINKS) {
+      evidence.push({ key: `ev_publisher_${kind}_${(kinds as string[]).includes(kind) ? 'ok' : 'missing'}` });
+    }
+    return { score: Math.min(1, score), evidence };
   }
 }

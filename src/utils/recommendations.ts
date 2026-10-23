@@ -21,6 +21,7 @@ const RECOMMENDATION_KEYS: Record<string, { i18nKey: string; priority: number }>
   'no_author': { i18nKey: 'rec_no_author', priority: 9 },
   'no_date': { i18nKey: 'rec_no_date', priority: 7 },
   'date_not_visible': { i18nKey: 'rec_date_not_visible', priority: 3 },
+  'publisher_unclear': { i18nKey: 'rec_publisher_unclear', priority: 5 },
   'few_sources': { i18nKey: 'rec_few_sources', priority: 6 },
   // Machine Readability
   'no_schema': { i18nKey: 'rec_no_schema', priority: 10 },

@@ -46,6 +46,35 @@ const ROBOTS_ANSWER_BLOCK_KEYS = new Set([
   'ev_robotsTxt_unreachable', 'ev_robotsTxt_blocked_index', 'ev_robotsTxt_blocked_search', 'ev_robotsTxt_blocked_user',
 ]);
 
+/**
+ * The organization behind the page in the structured data: standalone
+ * Organization nodes, publishers, and organizations credited as author.
+ * `verifiable`: one of them carries a logo or sameAs (profiles elsewhere).
+ * Shared by the entity check and the publisher check of Trust & Sources.
+ */
+export function publisherIdentity(
+  pageData: PageData
+): { named: boolean; verifiable: boolean; name: string | null; unnamed: boolean } {
+  const schemas = pageData.schema;
+  const byId = indexById(schemas);
+  const credited = schemas.flatMap((s) => resolveNodes(s.author, byId));
+  const orgNodes = [
+    ...schemas.filter(isOrganizationNode),
+    ...schemas.flatMap((s) => resolveNodes(s.publisher, byId)),
+    ...credited.filter(isOrganizationNode),
+  ];
+  const namedOrgs = orgNodes.filter((n) => nodeName(n) !== null);
+  const plain = schemas.map((s) => plainName(s.publisher, byId)).find((n) => n !== null) ?? null;
+  const name = (namedOrgs.length > 0 ? nodeName(namedOrgs[0]) : null) ?? plain;
+  return {
+    named: name !== null || pageData.author?.source === 'publisher',
+    verifiable: namedOrgs.some((n) => !isEmptyValue(n.logo) || !isEmptyValue(n.sameAs)),
+    name,
+    // Organization nodes exist, but none carries a name
+    unnamed: orgNodes.length > 0 && namedOrgs.length === 0,
+  };
+}
+
 // Short text for evidence lines
 function clip(text: string, max = 60): string {
   const t = text.replace(/\s+/g, ' ').trim();
@@ -894,26 +923,13 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
     const w = GEO_CONFIG.machineReadability.scoring.entitySignals;
     const schemas = pageData.schema;
     const byId = indexById(schemas);
-
-    // Organizations: standalone nodes, publishers, and organizations credited as author
     const credited = schemas.flatMap((s) => resolveNodes(s.author, byId));
-    const orgNodes = [
-      ...schemas.filter(isOrganizationNode),
-      ...schemas.flatMap((s) => resolveNodes(s.publisher, byId)),
-      ...credited.filter(isOrganizationNode),
-    ];
+    const { named: orgNamed, verifiable: orgVerifiable, name: publisherName } = publisherIdentity(pageData);
     const personNodes = [
       ...schemas.filter((s) => schemaTypesOf(s).includes('Person')),
       ...credited.filter((n) => !isOrganizationNode(n)),
     ];
-    const namedOrgs = orgNodes.filter((n) => nodeName(n) !== null);
     const namedPersons = personNodes.filter((n) => nodeName(n) !== null);
-
-    const orgNamed =
-      namedOrgs.length > 0 ||
-      schemas.some((s) => plainName(s.publisher, byId) !== null) ||
-      pageData.author?.source === 'publisher';
-    const orgVerifiable = namedOrgs.some((n) => !isEmptyValue(n.logo) || !isEmptyValue(n.sameAs));
 
     const personNamed =
       namedPersons.length > 0 ||
@@ -935,10 +951,7 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
 
     // Report evidence: one line per signal, found or missing
     const evidence: EvidenceLine[] = [];
-    const orgName =
-      nodeName(namedOrgs[0] ?? {}) ??
-      schemas.map((s) => plainName(s.publisher, byId)).find((n) => n !== null) ??
-      (pageData.author?.source === 'publisher' ? pageData.author.name : null);
+    const orgName = publisherName ?? (pageData.author?.source === 'publisher' ? pageData.author.name : null);
     if (orgNamed && orgName) {
       evidence.push({ key: 'ev_entities_org_named', params: { name: clip(orgName) } });
       evidence.push({ key: orgVerifiable ? 'ev_entities_org_verifiable' : 'ev_entities_org_unverifiable' });

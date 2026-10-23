@@ -37,6 +37,13 @@ describe('Bekannte Befunde im Referenzkorpus', () => {
     expect(keys(await criterion('gov-uk-tax', 'answerability', 'criterion_lists'))).toContain('ev_tables_found');
   });
 
+  page('sbb-home')('SBB: Links als Web-Components (sbb-block-link) sind für Crawler keine Links', async () => {
+    const r = await analyzeSnapshot('sbb-home');
+    expect(r.pageData.links.length).toBeLessThan(5);
+    const d = r.categories.trustSources.details.find((x) => x.criterionKey === 'criterion_publisher')!;
+    expect(keys(d)).toContain('ev_publisher_schema_unnamed');
+  });
+
   it.each(['admin-ch-start', 'eda-home', 'ch-ch-de', 'spruengli', 'uzh-home', 'stadt-zuerich'].map((id) => [id]))(
     '%s ist eine Startseite, trotz og:type article oder AEM-Pfad',
     async (id) => {

@@ -1,5 +1,5 @@
 {
-  "total": 13.5,
+  "total": 18.5,
   "pageType": "homepage",
   "categories": {
     "contentClarity": {
@@ -83,7 +83,7 @@
       ]
     },
     "trustSources": {
-      "score": 0,
+      "score": 5,
       "criteria": {
         "criterion_author": {
           "found": true,
@@ -97,19 +97,26 @@
           "progress": "1/1",
           "evidence": []
         },
-        "criterion_sources": {
-          "found": false,
-          "value": "value_sourceLinks",
-          "progress": "0/2",
+        "criterion_publisher": {
+          "found": true,
+          "value": "value_present",
+          "progress": "100/100",
           "evidence": [
-            "ev_sources_none",
-            "ev_sources_excluded_chrome"
+            "ev_publisher_schema",
+            "ev_publisher_verifiable",
+            "ev_publisher_imprint_ok",
+            "ev_publisher_contact_missing",
+            "ev_publisher_about_ok"
           ]
+        },
+        "criterion_sources": {
+          "found": true,
+          "value": "value_notApplicable",
+          "progress": "1/1",
+          "evidence": []
         }
       },
-      "recommendations": [
-        "few_sources"
-      ]
+      "recommendations": []
     },
     "machineReadability": {
       "score": 3,

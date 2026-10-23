@@ -84,6 +84,11 @@ function getExplanation(d: CategoryDetail): string {
     return t('explain_date_ok', { value });
   }
   // Sources
+  if (criterion === t('criterion_publisher')) {
+    if (d.found) return t('explain_publisher_ok');
+    if (current === 0) return t('explain_publisher_none');
+    return t('explain_publisher_partial', { current });
+  }
   if (criterion === t('criterion_sources')) {
     if (!d.found) return t('explain_sources_bad', { current, target });
     return t('explain_sources_ok');

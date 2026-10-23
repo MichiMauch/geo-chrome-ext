@@ -74,12 +74,15 @@ describe('detectPageType', () => {
 describe('page-type adjusted expectations', () => {
   it('homepage: no author/date penalty in Trust & Sources', () => {
     const analyzer = new TrustSourcesAnalyzer();
-    // External links present so the remaining criterion contributes a score
+    // A recognizable publisher, so the homepage criterion contributes a score
     const page = makePage({
       url: 'https://example.com/',
+      schema: [{ '@type': 'Organization', name: 'Example AG', logo: 'https://example.com/logo.png' }],
       links: [
         { href: 'https://example.org/a', text: 'a', isExternal: true },
         { href: 'https://example.net/b', text: 'b', isExternal: true },
+        { href: 'https://example.com/impressum', text: 'Impressum', isExternal: false },
+        { href: 'https://example.com/kontakt', text: 'Kontakt', isExternal: false },
       ],
     });
 
@@ -94,6 +97,46 @@ describe('page-type adjusted expectations', () => {
     expect(authorDetail.value).toBe('value_notApplicable');
     expect(authorDetail.weight).toBe(0);
     expect(asHomepage.score).toBeGreaterThan(asOther.score);
+  });
+
+  it('homepage: publisher instead of source links', () => {
+    const analyzer = new TrustSourcesAnalyzer();
+    const bare = analyzer.analyze(makePage({ url: 'https://example.com/' }), 'homepage');
+    const publisher = bare.details.find((d) => d.criterionKey === 'criterion_publisher')!;
+    expect(publisher.found).toBe(false);
+    expect(publisher.evidence?.map((e) => e.key)).toEqual([
+      'ev_publisher_schema_none', 'ev_publisher_imprint_missing', 'ev_publisher_contact_missing', 'ev_publisher_about_missing',
+    ]);
+    expect(bare.details.find((d) => d.criterionKey === 'criterion_sources')!.value).toBe('value_notApplicable');
+    expect(bare.recommendations).toEqual(['publisher_unclear']);
+
+    const named = analyzer.analyze(
+      makePage({
+        url: 'https://example.com/',
+        schema: [{ '@type': 'WebSite', publisher: { '@type': 'Organization', name: 'Example AG', sameAs: ['https://ch.linkedin.com/company/example'] } }],
+        links: [{ href: 'https://example.com/ueber-uns', text: 'Team', isExternal: false }],
+      }),
+      'homepage'
+    );
+    const d = named.details.find((x) => x.criterionKey === 'criterion_publisher')!;
+    expect(d.progress?.current).toBe(85); // 0.5 named + 0.2 sameAs + 0.15 one of two links
+    expect(d.evidence).toContainEqual({ key: 'ev_publisher_schema', params: { name: 'Example AG' } });
+    expect(d.evidence).toContainEqual({ key: 'ev_publisher_about_ok' });
+    expect(named.recommendations).not.toContain('publisher_unclear');
+  });
+
+  it('homepage: publisher links by menu label or path, not inside headlines', () => {
+    const analyzer = new TrustSourcesAnalyzer();
+    const kinds = (links: { href: string; text: string }[]) =>
+      analyzer
+        .analyze(makePage({ url: 'https://example.com/', links: links.map((l) => ({ ...l, isExternal: false })) }), 'homepage')
+        .details.find((d) => d.criterionKey === 'criterion_publisher')!
+        .evidence!.filter((e) => e.key.endsWith('_ok'))
+        .map((e) => e.key);
+    expect(kinds([{ href: 'https://example.com/pages/help', text: 'FAQ/Contact Us' }])).toEqual(['ev_publisher_contact_ok']);
+    expect(kinds([{ href: 'https://example.com/de/uber-chch/', text: 'Über ch.ch' }])).toEqual(['ev_publisher_about_ok']);
+    expect(kinds([{ href: 'https://example.com/de/rechtliches/', text: 'Rechtliches' }])).toEqual(['ev_publisher_imprint_ok']);
+    expect(kinds([{ href: 'https://example.com/news/123.html', text: 'Was Sie als Admin über die neuen Systeme wissen müssen' }])).toEqual([]);
   });
 
   it('product page: author/date also skipped', () => {

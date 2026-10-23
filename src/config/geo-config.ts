@@ -154,6 +154,15 @@ export const GEO_CONFIG = {
       authorOrg: 2.0,
       date: 1.5,
       externalSources: 1.5,
+      // Homepages and product pages: who is behind the site, instead of
+      // author, date and source links (which do not belong there)
+      publisher: 2.0,
+    },
+    // Shares of the publisher check (sum 1.0)
+    publisherParts: {
+      schemaNamed: 0.5, // Organization (or publisher) with a name in Schema.org
+      verifiable: 0.2, // … with logo or sameAs
+      links: 0.3, // visible links to imprint, contact, about — two of three for full credit
     },
     thresholds: {
       datePartialCredit: 0.75,

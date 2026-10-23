@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.10.0] - 2026-10-23
+
+### Added
+
+- **Reference corpus:** 41 real pages (articles, start pages, docs, shop, authorities, single-page apps, multilingual Swiss sites) with the expected result per page, as a regression test (`npm run corpus`). Snapshots stay local because the repository is public; `npm run corpus:fetch` downloads them, `npm run corpus:update` rewrites the expected results. Hand-checked findings are fixed as explicit tests.
+- **“Publisher recognizable” on start pages and product pages:** Trust & Sources used to judge these pages on external source links alone, which a start page or shop page rarely has, so 14 of 41 corpus pages scored 0/5 there. It now checks who is behind the site: an Organization in the structured data (named, with logo or sameAs) and links to imprint, contact and “About us” (menu label or path, not words inside headlines). Source links no longer apply on these page types. An Organization block without a name is reported as such.
+
+### Fixed
+
+- **Start pages detected as articles:** Many CMS set `og:type="article"` on every page, the start page included (admin.ch, ch.ch, spruengli.ch). The URL now takes precedence over og:type, and AEM roots such as `/de.html` or `/gov/de/start.html` count as start pages. Found with the corpus.
+
 ## [4.9.1] - 2026-10-23
 
 ### Changed
