@@ -190,6 +190,9 @@ export interface SitemapData {
   lastmodShare: number;
   // Nearly every entry carries the same lastmod day (build time, not edits)
   lastmodUniform: boolean;
+  // Bing Webmaster Tools verification visible from outside (DNS is not);
+  // the usual way to switch on IndexNow. Information only, not scored.
+  bingVerification?: 'meta' | 'file' | null;
 }
 
 export interface RobotsMetaData {

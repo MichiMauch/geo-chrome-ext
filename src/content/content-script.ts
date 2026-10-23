@@ -8,7 +8,7 @@ import { applyHighlights, clearHighlights, scrollToFirst } from '../utils/highli
 import { discoverSitemapPages } from '../utils/sitemap';
 import { analyzeCrawlerView } from '../utils/crawler-view';
 import { probeBotAccess } from '../utils/bot-access';
-import { checkSitemap } from '../utils/sitemap-check';
+import { checkSitemap, detectBingVerification } from '../utils/sitemap-check';
 import { withXRobotsTag } from '../utils/x-robots-tag';
 import { saveAnalysis } from '../utils/history';
 import { reportAnalysis } from '../utils/analytics';
@@ -176,7 +176,11 @@ chrome.runtime.onMessage.addListener(
             extractPageData(),
             analyzeCrawlerView().catch(() => undefined),
           ]);
-          pageData.sitemap = await checkSitemap(window.location.href, pageData.robotsTxt.content).catch(() => undefined);
+          const [sitemap, bingVerification] = await Promise.all([
+            checkSitemap(window.location.href, pageData.robotsTxt.content).catch(() => undefined),
+            detectBingVerification(document, window.location.href).catch(() => null),
+          ]);
+          pageData.sitemap = sitemap && { ...sitemap, bingVerification };
           pageData.crawlerView = crawlerView;
           // Only when the normal fetch got the page: a block for the bots
           // alone is then specific to them.

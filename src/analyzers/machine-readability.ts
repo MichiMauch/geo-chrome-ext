@@ -748,6 +748,9 @@ export class MachineReadabilityAnalyzer extends BaseAnalyzer {
       evidence.push({ key: 'ev_sitemap_listed_unknown' });
     }
     if (s.lastmodUniform) evidence.push({ key: 'ev_sitemap_lastmod_uniform' });
+    if (s.bingVerification !== undefined) {
+      evidence.push({ key: s.bingVerification ? 'ev_sitemap_bing_verified' : 'ev_sitemap_bing_unknown' });
+    }
 
     let fixKey: string | undefined;
     if (s.listed === false) fixKey = 'fix_sitemap_listed';

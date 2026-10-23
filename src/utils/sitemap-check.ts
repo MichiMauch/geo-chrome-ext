@@ -64,6 +64,26 @@ async function fetchXml(url: string, fetchFn: typeof fetch): Promise<Document | 
 const childText = (el: Element, name: string): string =>
   (Array.from(el.children).find((c) => c.localName === name)?.textContent ?? '').trim();
 
+/**
+ * Bing Webmaster Tools verification: <meta name="msvalidate.01"> or
+ * /BingSiteAuth.xml. Verification by DNS record cannot be seen, so a miss
+ * proves nothing.
+ */
+export async function detectBingVerification(
+  doc: Document,
+  pageUrl: string,
+  fetchFn: typeof fetch = fetch
+): Promise<'meta' | 'file' | null> {
+  if (doc.querySelector('meta[name="msvalidate.01" i][content]')) return 'meta';
+  try {
+    const res = await fetchFn(new URL('/BingSiteAuth.xml', pageUrl).href, { credentials: 'omit' });
+    if (res.ok && /<users>\s*<user>/i.test(await res.text())) return 'file';
+  } catch {
+    // unreachable: no statement
+  }
+  return null;
+}
+
 export async function checkSitemap(
   pageUrl: string,
   robotsTxt: string | undefined,

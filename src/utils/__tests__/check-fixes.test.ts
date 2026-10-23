@@ -287,3 +287,16 @@ describe('Sitemap', async () => {
     expect(detail({ ...page, sitemap: { ...base, lastmodUniform: true } })?.evidence).toContainEqual({ key: 'ev_sitemap_lastmod_uniform' });
   });
 });
+
+describe('Bing Webmaster Tools', async () => {
+  const { detectBingVerification } = await import('../sitemap-check');
+  const notFound = (async () => new Response('', { status: 404 })) as unknown as typeof fetch;
+
+  it('erkennt Meta-Tag und BingSiteAuth.xml', async () => {
+    const withMeta = parse('<head><meta name="msvalidate.01" content="ABC123"></head><body></body>');
+    expect(await detectBingVerification(withMeta, 'https://x.ch/a', notFound)).toBe('meta');
+    const file = (async () => new Response('<?xml version="1.0"?><users><user>ABC</user></users>')) as unknown as typeof fetch;
+    expect(await detectBingVerification(parse('<body></body>'), 'https://x.ch/a', file)).toBe('file');
+    expect(await detectBingVerification(parse('<body></body>'), 'https://x.ch/a', notFound)).toBeNull();
+  });
+});
