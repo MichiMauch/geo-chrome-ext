@@ -20,3 +20,4 @@ dist/
 
 # Skills lock (per-machine)
 skills-lock.json
+corpus/snapshots/

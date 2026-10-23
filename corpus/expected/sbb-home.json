@@ -1,0 +1,300 @@
+{
+  "total": 8.1,
+  "pageType": "homepage",
+  "categories": {
+    "contentClarity": {
+      "score": 0.8,
+      "criteria": {
+        "criterion_h1": {
+          "found": false,
+          "value": "value_notPresent",
+          "progress": "0/1",
+          "evidence": [
+            "ev_h1_none",
+            "ev_h1_first_heading"
+          ]
+        },
+        "criterion_hierarchy": {
+          "found": false,
+          "value": "50%",
+          "progress": "50/100",
+          "evidence": [
+            "ev_hierarchy_outline",
+            "ev_hierarchy_no_h1",
+            "ev_hierarchy_few_subheadings"
+          ],
+          "fix": "fix_hierarchy_no_h1"
+        },
+        "criterion_scannable": {
+          "found": false,
+          "value": "0%",
+          "progress": "0/100",
+          "evidence": [
+            "ev_scannable_no_paragraphs",
+            "ev_scannable_no_lists"
+          ]
+        }
+      },
+      "recommendations": [
+        "no_h1",
+        "bad_hierarchy",
+        "low_scanability"
+      ]
+    },
+    "answerability": {
+      "score": 0.4,
+      "criteria": {
+        "criterion_definitions": {
+          "found": true,
+          "value": "value_notApplicable",
+          "progress": "1/1",
+          "evidence": []
+        },
+        "criterion_lists": {
+          "found": false,
+          "value": "value_lists",
+          "progress": "0/3",
+          "evidence": [
+            "ev_lists_none"
+          ]
+        },
+        "criterion_sections": {
+          "found": false,
+          "value": "value_subheadings",
+          "progress": "1/3",
+          "evidence": [
+            "ev_sections_count",
+            "ev_sections_thin"
+          ]
+        }
+      },
+      "recommendations": [
+        "no_lists",
+        "few_sections"
+      ]
+    },
+    "trustSources": {
+      "score": 0,
+      "criteria": {
+        "criterion_author": {
+          "found": true,
+          "value": "value_notApplicable",
+          "progress": "1/1",
+          "evidence": []
+        },
+        "criterion_date": {
+          "found": true,
+          "value": "value_notApplicable",
+          "progress": "1/1",
+          "evidence": []
+        },
+        "criterion_sources": {
+          "found": false,
+          "value": "value_sourceLinks",
+          "progress": "0/2",
+          "evidence": [
+            "ev_sources_none"
+          ]
+        }
+      },
+      "recommendations": [
+        "few_sources"
+      ]
+    },
+    "machineReadability": {
+      "score": 2.1,
+      "criteria": {
+        "criterion_schema": {
+          "found": true,
+          "value": "value_schemaTypes",
+          "progress": "1/2",
+          "evidence": [
+            "ev_schema_found",
+            "ev_schema_other",
+            "ev_schema_target",
+            "ev_schema_too_few"
+          ],
+          "fix": "fix_schema_more"
+        },
+        "criterion_schema_completeness": {
+          "found": false,
+          "value": "Organization: name",
+          "progress": "1/2",
+          "evidence": [
+            "ev_schema_completeness_summary",
+            "ev_schema_completeness_missing"
+          ]
+        },
+        "criterion_entities": {
+          "found": false,
+          "value": "0%",
+          "progress": "0/100",
+          "evidence": [
+            "ev_entities_org_none",
+            "ev_entities_person_none",
+            "ev_entities_graph_loose",
+            "ev_entities_topic_none"
+          ]
+        },
+        "criterion_semanticHtml": {
+          "found": false,
+          "value": "45%",
+          "progress": "45/100",
+          "evidence": [
+            "ev_semanticHtml_present",
+            "ev_semanticHtml_missing_article",
+            "ev_semanticHtml_missing_header",
+            "ev_semanticHtml_missing_nav",
+            "ev_semanticHtml_missing_footer"
+          ]
+        },
+        "criterion_internalLinks": {
+          "found": false,
+          "value": "value_notPresent",
+          "progress": "0/100",
+          "evidence": [
+            "ev_internalLinks_none"
+          ]
+        },
+        "criterion_llmsTxt": {
+          "found": false,
+          "value": "value_notFound",
+          "progress": "0/1",
+          "evidence": [
+            "ev_llmsTxt_missing",
+            "ev_llmsTxt_full_missing"
+          ]
+        },
+        "criterion_robotsTxt": {
+          "found": true,
+          "value": "value_allBotsAllowed",
+          "progress": "14/14",
+          "evidence": [
+            "ev_robotsTxt_all_allowed"
+          ]
+        }
+      },
+      "recommendations": [
+        "schema_incomplete",
+        "few_entities",
+        "weak_semantic_html",
+        "weak_internal_links",
+        "no_llms_txt"
+      ]
+    },
+    "aiCitation": {
+      "score": 0,
+      "criteria": {
+        "criterion_facts": {
+          "found": false,
+          "value": "0%",
+          "progress": "0/100",
+          "evidence": [
+            "ev_facts_no_paragraphs"
+          ]
+        },
+        "criterion_faq": {
+          "found": true,
+          "value": "value_notApplicable",
+          "progress": "1/1",
+          "evidence": []
+        },
+        "criterion_sourcedClaims": {
+          "found": false,
+          "value": "0%",
+          "progress": "0/100",
+          "evidence": [
+            "ev_sourcedClaims_no_citations",
+            "ev_sourcedClaims_no_links"
+          ]
+        },
+        "criterion_keyInfoUpfront": {
+          "found": true,
+          "value": "value_notApplicable",
+          "progress": "1/1",
+          "evidence": []
+        }
+      },
+      "recommendations": [
+        "no_facts",
+        "no_sourced_claims"
+      ]
+    },
+    "onPageSeo": {
+      "score": 4.8,
+      "criteria": {
+        "criterion_title_quality": {
+          "found": true,
+          "value": "value_chars",
+          "progress": "100/100",
+          "evidence": [
+            "ev_title_quality_text"
+          ]
+        },
+        "criterion_meta_description": {
+          "found": true,
+          "value": "value_chars",
+          "progress": "100/100",
+          "evidence": [
+            "ev_meta_description_text"
+          ]
+        },
+        "criterion_image_alts": {
+          "found": true,
+          "value": "value_noImages",
+          "progress": "0/1",
+          "evidence": [
+            "ev_image_alts_none"
+          ],
+          "fix": "fix_image_alts_none"
+        },
+        "criterion_indexability": {
+          "found": true,
+          "value": "value_indexable",
+          "progress": "1/1",
+          "evidence": [
+            "ev_indexability_ok"
+          ]
+        },
+        "criterion_viewport": {
+          "found": true,
+          "value": "value_present",
+          "progress": "1/1",
+          "evidence": [
+            "ev_viewport_ok"
+          ]
+        },
+        "criterion_social_cards": {
+          "found": false,
+          "value": "value_socialCardsMissing",
+          "progress": "3/6",
+          "evidence": [
+            "ev_social_cards_present",
+            "ev_social_cards_missing",
+            "ev_social_cards_preview_noimage",
+            "ev_social_cards_preview_nourl"
+          ]
+        },
+        "criterion_canonical": {
+          "found": true,
+          "value": "value_present",
+          "progress": "1/1",
+          "evidence": [
+            "ev_canonical_self"
+          ]
+        },
+        "criterion_hreflang": {
+          "found": true,
+          "value": "value_present",
+          "progress": "100/100",
+          "evidence": [
+            "ev_hreflang_found"
+          ]
+        }
+      },
+      "recommendations": [
+        "social_cards_missing"
+      ]
+    }
+  }
+}

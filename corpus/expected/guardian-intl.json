@@ -1,0 +1,322 @@
+{
+  "total": 12.3,
+  "pageType": "other",
+  "categories": {
+    "contentClarity": {
+      "score": 1.4,
+      "criteria": {
+        "criterion_h1": {
+          "found": false,
+          "value": "value_notPresent",
+          "progress": "0/1",
+          "evidence": [
+            "ev_h1_none",
+            "ev_h1_first_heading"
+          ]
+        },
+        "criterion_hierarchy": {
+          "found": false,
+          "value": "60%",
+          "progress": "60/100",
+          "evidence": [
+            "ev_hierarchy_outline",
+            "ev_hierarchy_no_h1"
+          ],
+          "fix": "fix_hierarchy_no_h1"
+        },
+        "criterion_scannable": {
+          "found": false,
+          "value": "25%",
+          "progress": "25/100",
+          "evidence": [
+            "ev_scannable_no_paragraphs",
+            "ev_scannable_lists",
+            "ev_scannable_headings_too_many",
+            "ev_scannable_empty_questions"
+          ]
+        }
+      },
+      "recommendations": [
+        "no_h1",
+        "bad_hierarchy",
+        "low_scanability"
+      ]
+    },
+    "answerability": {
+      "score": 3.2,
+      "criteria": {
+        "criterion_definitions": {
+          "found": true,
+          "value": "47%",
+          "progress": "47/100",
+          "evidence": [
+            "ev_definitions_sentences_none",
+            "ev_definitions_answers",
+            "ev_definitions_answer_example",
+            "ev_definitions_answers_empty",
+            "ev_definitions_total",
+            "ev_definitions_structured"
+          ]
+        },
+        "criterion_lists": {
+          "found": true,
+          "value": "value_lists",
+          "progress": "3/3",
+          "evidence": [
+            "ev_lists_found",
+            "ev_lists_examples"
+          ]
+        },
+        "criterion_sections": {
+          "found": false,
+          "value": "value_subheadings",
+          "progress": "3/3",
+          "evidence": [
+            "ev_sections_count",
+            "ev_sections_thin_half"
+          ],
+          "fix": "fix_sections_thin"
+        }
+      },
+      "recommendations": [
+        "few_sections"
+      ]
+    },
+    "trustSources": {
+      "score": 1.5,
+      "criteria": {
+        "criterion_author": {
+          "found": false,
+          "value": "value_notRecognizable",
+          "progress": "0/1",
+          "evidence": [
+            "ev_author_none"
+          ]
+        },
+        "criterion_date": {
+          "found": true,
+          "value": "2026-10-23",
+          "progress": "1/1",
+          "evidence": [
+            "ev_date_newest_visible",
+            "ev_date_age_today"
+          ],
+          "fix": "fix_date_old"
+        },
+        "criterion_sources": {
+          "found": false,
+          "value": "value_sourceLinks",
+          "progress": "0/2",
+          "evidence": [
+            "ev_sources_none",
+            "ev_sources_excluded_social",
+            "ev_sources_excluded_chrome"
+          ]
+        }
+      },
+      "recommendations": [
+        "no_author",
+        "few_sources"
+      ]
+    },
+    "machineReadability": {
+      "score": 1.6,
+      "criteria": {
+        "criterion_schema": {
+          "found": false,
+          "value": "value_noneFound",
+          "progress": "0/2",
+          "evidence": [
+            "ev_schema_none",
+            "ev_schema_target",
+            "ev_schema_too_few"
+          ]
+        },
+        "criterion_entities": {
+          "found": false,
+          "value": "0%",
+          "progress": "0/100",
+          "evidence": [
+            "ev_entities_org_none",
+            "ev_entities_person_none",
+            "ev_entities_graph_loose",
+            "ev_entities_topic_none"
+          ]
+        },
+        "criterion_semanticHtml": {
+          "found": true,
+          "value": "80%",
+          "progress": "80/100",
+          "evidence": [
+            "ev_semanticHtml_present",
+            "ev_semanticHtml_missing_article"
+          ]
+        },
+        "criterion_internalLinks": {
+          "found": false,
+          "value": "114 (32%)",
+          "progress": "70/100",
+          "evidence": [
+            "ev_internalLinks_count",
+            "ev_internalLinks_examples",
+            "ev_internalLinks_generic",
+            "ev_internalLinks_ratio"
+          ],
+          "fix": "fix_internalLinks_anchors"
+        },
+        "criterion_llmsTxt": {
+          "found": false,
+          "value": "value_notFound",
+          "progress": "0/1",
+          "evidence": [
+            "ev_llmsTxt_missing",
+            "ev_llmsTxt_full_missing"
+          ]
+        },
+        "criterion_robotsTxt": {
+          "found": false,
+          "value": "value_someBotsBlocked",
+          "progress": "7/14",
+          "evidence": [
+            "ev_robotsTxt_blocked_count",
+            "ev_robotsTxt_blocked_search",
+            "ev_robotsTxt_blocked_user",
+            "ev_robotsTxt_blocked_training"
+          ]
+        }
+      },
+      "recommendations": [
+        "no_schema",
+        "few_entities",
+        "weak_internal_links",
+        "no_llms_txt",
+        "ai_bots_blocked"
+      ]
+    },
+    "aiCitation": {
+      "score": 0.7,
+      "criteria": {
+        "criterion_facts": {
+          "found": false,
+          "value": "0%",
+          "progress": "0/100",
+          "evidence": [
+            "ev_facts_no_paragraphs"
+          ]
+        },
+        "criterion_faq": {
+          "found": true,
+          "value": "60%",
+          "progress": "60/100",
+          "evidence": [
+            "ev_faq_questions",
+            "ev_faq_example",
+            "ev_faq_example",
+            "ev_faq_schema_no"
+          ],
+          "fix": "fix_faq_more"
+        },
+        "criterion_sourcedClaims": {
+          "found": false,
+          "value": "0%",
+          "progress": "0/100",
+          "evidence": [
+            "ev_sourcedClaims_no_citations",
+            "ev_sourcedClaims_no_links",
+            "ev_sources_excluded_social",
+            "ev_sources_excluded_chrome"
+          ]
+        },
+        "criterion_keyInfoUpfront": {
+          "found": false,
+          "value": "0%",
+          "progress": "0/100",
+          "evidence": [
+            "ev_keyInfoUpfront_no_text"
+          ]
+        }
+      },
+      "recommendations": [
+        "no_facts",
+        "no_sourced_claims",
+        "no_key_info_upfront"
+      ]
+    },
+    "onPageSeo": {
+      "score": 3.9,
+      "criteria": {
+        "criterion_title_quality": {
+          "found": true,
+          "value": "value_chars",
+          "progress": "100/100",
+          "evidence": [
+            "ev_title_quality_text"
+          ]
+        },
+        "criterion_meta_description": {
+          "found": false,
+          "value": "value_chars",
+          "progress": "52/100",
+          "evidence": [
+            "ev_meta_description_text",
+            "ev_meta_description_short"
+          ],
+          "fix": "fix_meta_description_short"
+        },
+        "criterion_image_alts": {
+          "found": true,
+          "value": "114/115",
+          "progress": "114/115",
+          "evidence": [
+            "ev_image_alts_count",
+            "ev_image_alts_decorative",
+            "ev_image_alts_missing"
+          ]
+        },
+        "criterion_indexability": {
+          "found": true,
+          "value": "value_indexable",
+          "progress": "1/1",
+          "evidence": [
+            "ev_indexability_ok_raw",
+            "ev_indexability_header"
+          ]
+        },
+        "criterion_viewport": {
+          "found": true,
+          "value": "value_present",
+          "progress": "1/1",
+          "evidence": [
+            "ev_viewport_ok"
+          ]
+        },
+        "criterion_social_cards": {
+          "found": false,
+          "value": "value_socialCardsMissing",
+          "progress": "0/6",
+          "evidence": [
+            "ev_social_cards_missing",
+            "ev_social_cards_preview_notext",
+            "ev_social_cards_preview_noimage",
+            "ev_social_cards_preview_x",
+            "ev_social_cards_preview_nourl"
+          ]
+        },
+        "criterion_canonical": {
+          "found": false,
+          "value": "value_canonical_mismatch",
+          "progress": "0/1",
+          "evidence": [
+            "ev_canonical_mismatch"
+          ],
+          "fix": "fix_canonical_mismatch"
+        }
+      },
+      "recommendations": [
+        "description_too_short",
+        "social_cards_missing",
+        "canonical_mismatch"
+      ]
+    }
+  }
+}

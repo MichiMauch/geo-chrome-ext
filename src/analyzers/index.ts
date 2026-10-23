@@ -1,4 +1,4 @@
-import type { PageData, GEOAnalysisResult } from '../types/analysis';
+import type { PageData, PageType, AnalysisCategory, GEOAnalysisResult } from '../types/analysis';
 import { ContentClarityAnalyzer } from './content-clarity';
 import { AnswerabilityAnalyzer } from './answerability';
 import { TrustSourcesAnalyzer } from './trust-sources';
@@ -10,6 +10,8 @@ import { collectAllRecommendations } from '../utils/recommendations';
 import { mapAnalysisResult } from '../utils/analysis-mapper';
 import { detectPageType } from '../utils/page-type';
 
+type CategoryKey = keyof GEOAnalysisResult['categories'];
+
 const analyzers = {
   contentClarity: new ContentClarityAnalyzer(),
   answerability: new AnswerabilityAnalyzer(),
@@ -19,7 +21,9 @@ const analyzers = {
   onPageSeo: new OnPageSeoAnalyzer(),
 };
 
-export function runFullAnalysis(pageData: PageData): GEOAnalysisResult {
+// The six analyzers on one page, results not yet translated (criterion and
+// evidence keys intact). The reference corpus compares these.
+export function runRawAnalysis(pageData: PageData): { pageType: PageType; categories: Record<CategoryKey, AnalysisCategory> } {
   // Optimize performance: join text once for all analyzers
   (pageData as any).fullText = pageData.paragraphs.join(' ');
 
@@ -27,13 +31,29 @@ export function runFullAnalysis(pageData: PageData): GEOAnalysisResult {
   // article); 'other' keeps the exact pre-detection behavior.
   const pageType = detectPageType(pageData);
 
+  return {
+    pageType,
+    categories: {
+      contentClarity: analyzers.contentClarity.analyze(pageData),
+      answerability: analyzers.answerability.analyze(pageData, pageType),
+      trustSources: analyzers.trustSources.analyze(pageData, pageType),
+      machineReadability: analyzers.machineReadability.analyze(pageData),
+      aiCitation: analyzers.aiCitation.analyze(pageData, pageType),
+      onPageSeo: analyzers.onPageSeo.analyze(pageData),
+    },
+  };
+}
+
+export function runFullAnalysis(pageData: PageData): GEOAnalysisResult {
+  const raw = runRawAnalysis(pageData);
+  const pageType = raw.pageType;
   const categories = {
-    contentClarity: mapAnalysisResult(analyzers.contentClarity.analyze(pageData)),
-    answerability: mapAnalysisResult(analyzers.answerability.analyze(pageData, pageType)),
-    trustSources: mapAnalysisResult(analyzers.trustSources.analyze(pageData, pageType)),
-    machineReadability: mapAnalysisResult(analyzers.machineReadability.analyze(pageData)),
-    aiCitation: mapAnalysisResult(analyzers.aiCitation.analyze(pageData, pageType)),
-    onPageSeo: mapAnalysisResult(analyzers.onPageSeo.analyze(pageData)),
+    contentClarity: mapAnalysisResult(raw.categories.contentClarity),
+    answerability: mapAnalysisResult(raw.categories.answerability),
+    trustSources: mapAnalysisResult(raw.categories.trustSources),
+    machineReadability: mapAnalysisResult(raw.categories.machineReadability),
+    aiCitation: mapAnalysisResult(raw.categories.aiCitation),
+    onPageSeo: mapAnalysisResult(raw.categories.onPageSeo),
   };
 
   const totalScore = calculateTotalScore(categories);

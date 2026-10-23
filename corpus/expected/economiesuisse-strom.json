@@ -1,0 +1,338 @@
+{
+  "total": 16,
+  "pageType": "article",
+  "categories": {
+    "contentClarity": {
+      "score": 2.7,
+      "criteria": {
+        "criterion_h1": {
+          "found": true,
+          "value": "value_present",
+          "progress": "1/1",
+          "evidence": [
+            "ev_h1_ok"
+          ]
+        },
+        "criterion_hierarchy": {
+          "found": true,
+          "value": "80%",
+          "progress": "80/100",
+          "evidence": [
+            "ev_hierarchy_outline",
+            "ev_hierarchy_skips"
+          ]
+        },
+        "criterion_scannable": {
+          "found": false,
+          "value": "22%",
+          "progress": "22/100",
+          "evidence": [
+            "ev_scannable_paragraphs",
+            "ev_scannable_no_lists",
+            "ev_scannable_headings_too_many",
+            "ev_scannable_hidden_answers"
+          ],
+          "fix": "fix_scannable_hidden"
+        },
+        "criterion_readability": {
+          "found": false,
+          "value": "63 LIX",
+          "progress": "9/100",
+          "evidence": [
+            "ev_readability_formula_lix",
+            "ev_readability_value_lix",
+            "ev_readability_stats_lix",
+            "ev_readability_little_text",
+            "ev_readability_hardest_lix"
+          ]
+        }
+      },
+      "recommendations": [
+        "low_scanability",
+        "low_readability"
+      ]
+    },
+    "answerability": {
+      "score": 0.8,
+      "criteria": {
+        "criterion_definitions": {
+          "found": false,
+          "value": "0%",
+          "progress": "0/100",
+          "evidence": [
+            "ev_definitions_sentences_none",
+            "ev_definitions_answers",
+            "ev_definitions_answers_hidden",
+            "ev_definitions_total",
+            "ev_definitions_structured"
+          ],
+          "fix": "fix_definitions_hidden"
+        },
+        "criterion_lists": {
+          "found": false,
+          "value": "value_lists",
+          "progress": "0/3",
+          "evidence": [
+            "ev_lists_none"
+          ]
+        },
+        "criterion_sections": {
+          "found": false,
+          "value": "value_subheadings",
+          "progress": "3/3",
+          "evidence": [
+            "ev_sections_count",
+            "ev_sections_thin_half",
+            "ev_sections_hidden_answers"
+          ],
+          "fix": "fix_sections_hidden"
+        }
+      },
+      "recommendations": [
+        "no_definitions",
+        "no_lists",
+        "few_sections"
+      ]
+    },
+    "trustSources": {
+      "score": 3.1,
+      "criteria": {
+        "criterion_author": {
+          "found": true,
+          "value": "Lukas Federer",
+          "progress": "1/1",
+          "evidence": [
+            "ev_author_schema"
+          ]
+        },
+        "criterion_date": {
+          "found": true,
+          "value": "2026-09-10",
+          "progress": "1/1",
+          "evidence": [
+            "ev_date_newest_modified",
+            "ev_date_age_days",
+            "ev_date_also_published",
+            "ev_date_invisible"
+          ],
+          "fix": "fix_date_visible"
+        },
+        "criterion_sources": {
+          "found": false,
+          "value": "value_sourceLinks",
+          "progress": "0/2",
+          "evidence": [
+            "ev_sources_none",
+            "ev_sources_excluded_social"
+          ]
+        }
+      },
+      "recommendations": [
+        "date_not_visible",
+        "few_sources"
+      ]
+    },
+    "machineReadability": {
+      "score": 4,
+      "criteria": {
+        "criterion_schema": {
+          "found": true,
+          "value": "value_schemaTypesMissing",
+          "progress": "1/2",
+          "evidence": [
+            "ev_schema_found",
+            "ev_schema_missing_faq",
+            "ev_schema_target"
+          ],
+          "fix": "fix_schema_faq"
+        },
+        "criterion_schema_completeness": {
+          "found": true,
+          "value": "value_complete",
+          "progress": "3/3",
+          "evidence": [
+            "ev_schema_completeness_summary",
+            "ev_schema_completeness_ok"
+          ]
+        },
+        "criterion_entities": {
+          "found": true,
+          "value": "70%",
+          "progress": "70/100",
+          "evidence": [
+            "ev_entities_org_named",
+            "ev_entities_org_verifiable",
+            "ev_entities_person_named",
+            "ev_entities_person_verifiable",
+            "ev_entities_graph_loose",
+            "ev_entities_topic_none"
+          ]
+        },
+        "criterion_semanticHtml": {
+          "found": true,
+          "value": "75%",
+          "progress": "75/100",
+          "evidence": [
+            "ev_semanticHtml_present",
+            "ev_semanticHtml_missing_article"
+          ]
+        },
+        "criterion_internalLinks": {
+          "found": false,
+          "value": "2 (100%)",
+          "progress": "83/100",
+          "evidence": [
+            "ev_internalLinks_count",
+            "ev_internalLinks_examples",
+            "ev_internalLinks_ratio"
+          ]
+        },
+        "criterion_llmsTxt": {
+          "found": true,
+          "value": "value_llms_indexOnly",
+          "progress": "1/1",
+          "evidence": [
+            "ev_llmsTxt_found",
+            "ev_llmsTxt_full_missing"
+          ]
+        },
+        "criterion_robotsTxt": {
+          "found": true,
+          "value": "value_allBotsAllowed",
+          "progress": "14/14",
+          "evidence": [
+            "ev_robotsTxt_all_allowed"
+          ]
+        }
+      },
+      "recommendations": [
+        "no_faq_schema",
+        "weak_internal_links"
+      ]
+    },
+    "aiCitation": {
+      "score": 0.6,
+      "criteria": {
+        "criterion_facts": {
+          "found": false,
+          "value": "0%",
+          "progress": "0/100",
+          "evidence": [
+            "ev_facts_counted",
+            "ev_facts_hidden_faq"
+          ],
+          "fix": "fix_facts_hidden"
+        },
+        "criterion_faq": {
+          "found": false,
+          "value": "value_faqAnswersHidden",
+          "progress": "0/100",
+          "evidence": [
+            "ev_faq_questions",
+            "ev_faq_hidden",
+            "ev_faq_example",
+            "ev_faq_example",
+            "ev_faq_schema_no"
+          ],
+          "fix": "fix_faq_hidden"
+        },
+        "criterion_sourcedClaims": {
+          "found": false,
+          "value": "0%",
+          "progress": "0/100",
+          "evidence": [
+            "ev_sourcedClaims_no_citations",
+            "ev_sourcedClaims_no_links",
+            "ev_sources_excluded_social"
+          ]
+        },
+        "criterion_keyInfoUpfront": {
+          "found": false,
+          "value": "50%",
+          "progress": "50/100",
+          "evidence": [
+            "ev_keyInfoUpfront_lead",
+            "ev_keyInfoUpfront_h1_ok",
+            "ev_keyInfoUpfront_short_ok",
+            "ev_keyInfoUpfront_meta_ok",
+            "ev_keyInfoUpfront_definition_missing",
+            "ev_keyInfoUpfront_number_missing"
+          ]
+        }
+      },
+      "recommendations": [
+        "no_facts",
+        "faq_answers_hidden",
+        "no_sourced_claims",
+        "no_key_info_upfront"
+      ]
+    },
+    "onPageSeo": {
+      "score": 4.8,
+      "criteria": {
+        "criterion_title_quality": {
+          "found": true,
+          "value": "value_chars",
+          "progress": "100/100",
+          "evidence": [
+            "ev_title_quality_text"
+          ]
+        },
+        "criterion_meta_description": {
+          "found": true,
+          "value": "value_chars",
+          "progress": "100/100",
+          "evidence": [
+            "ev_meta_description_text"
+          ]
+        },
+        "criterion_image_alts": {
+          "found": true,
+          "value": "18/18",
+          "progress": "18/18",
+          "evidence": [
+            "ev_image_alts_count"
+          ]
+        },
+        "criterion_indexability": {
+          "found": true,
+          "value": "value_indexable",
+          "progress": "1/1",
+          "evidence": [
+            "ev_indexability_ok_raw"
+          ]
+        },
+        "criterion_viewport": {
+          "found": true,
+          "value": "value_present",
+          "progress": "1/1",
+          "evidence": [
+            "ev_viewport_ok"
+          ]
+        },
+        "criterion_social_cards": {
+          "found": false,
+          "value": "value_socialCardsMissing",
+          "progress": "4/6",
+          "evidence": [
+            "ev_social_cards_present",
+            "ev_social_cards_missing",
+            "ev_social_cards_type",
+            "ev_social_cards_preview_nourl"
+          ]
+        },
+        "criterion_canonical": {
+          "found": true,
+          "value": "value_present",
+          "progress": "1/1",
+          "evidence": [
+            "ev_canonical_self"
+          ]
+        }
+      },
+      "recommendations": [
+        "social_cards_missing"
+      ]
+    }
+  }
+}

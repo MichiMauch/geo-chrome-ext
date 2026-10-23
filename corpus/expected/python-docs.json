@@ -1,0 +1,315 @@
+{
+  "total": 14.1,
+  "pageType": "other",
+  "categories": {
+    "contentClarity": {
+      "score": 3.7,
+      "criteria": {
+        "criterion_h1": {
+          "found": true,
+          "value": "value_present",
+          "progress": "1/1",
+          "evidence": [
+            "ev_h1_ok"
+          ]
+        },
+        "criterion_hierarchy": {
+          "found": true,
+          "value": "90%",
+          "progress": "90/100",
+          "evidence": [
+            "ev_hierarchy_outline",
+            "ev_hierarchy_few_subheadings"
+          ]
+        },
+        "criterion_scannable": {
+          "found": true,
+          "value": "70%",
+          "progress": "70/100",
+          "evidence": [
+            "ev_scannable_paragraphs",
+            "ev_scannable_longest",
+            "ev_scannable_lists",
+            "ev_scannable_headings_too_few"
+          ]
+        },
+        "criterion_readability": {
+          "found": false,
+          "value": "38 Flesch",
+          "progress": "13/100",
+          "evidence": [
+            "ev_readability_formula_flesch",
+            "ev_readability_value_flesch",
+            "ev_readability_stats_flesch",
+            "ev_readability_hardest_flesch"
+          ]
+        }
+      },
+      "recommendations": [
+        "low_readability"
+      ]
+    },
+    "answerability": {
+      "score": 2.4,
+      "criteria": {
+        "criterion_definitions": {
+          "found": true,
+          "value": "47%",
+          "progress": "47/100",
+          "evidence": [
+            "ev_definitions_sentences",
+            "ev_definitions_no_questions",
+            "ev_definitions_total",
+            "ev_definitions_structured"
+          ]
+        },
+        "criterion_lists": {
+          "found": true,
+          "value": "value_lists",
+          "progress": "3/3",
+          "evidence": [
+            "ev_lists_found",
+            "ev_lists_examples"
+          ]
+        },
+        "criterion_sections": {
+          "found": false,
+          "value": "value_subheadings",
+          "progress": "0/3",
+          "evidence": [
+            "ev_sections_none",
+            "ev_sections_paragraphs_ok"
+          ]
+        }
+      },
+      "recommendations": [
+        "few_sections"
+      ]
+    },
+    "trustSources": {
+      "score": 0.5,
+      "criteria": {
+        "criterion_author": {
+          "found": false,
+          "value": "value_notRecognizable",
+          "progress": "0/1",
+          "evidence": [
+            "ev_author_none"
+          ]
+        },
+        "criterion_date": {
+          "found": false,
+          "value": "value_noDateFound",
+          "progress": "0/1",
+          "evidence": [
+            "ev_date_none"
+          ],
+          "fix": "fix_date"
+        },
+        "criterion_sources": {
+          "found": false,
+          "value": "value_sourceLinks",
+          "progress": "1/2",
+          "evidence": [
+            "ev_sources_found",
+            "ev_sources_excluded_chrome"
+          ]
+        }
+      },
+      "recommendations": [
+        "no_author",
+        "no_date",
+        "few_sources"
+      ]
+    },
+    "machineReadability": {
+      "score": 1.8,
+      "criteria": {
+        "criterion_schema": {
+          "found": false,
+          "value": "value_noneFound",
+          "progress": "0/2",
+          "evidence": [
+            "ev_schema_none",
+            "ev_schema_target",
+            "ev_schema_too_few"
+          ]
+        },
+        "criterion_entities": {
+          "found": false,
+          "value": "0%",
+          "progress": "0/100",
+          "evidence": [
+            "ev_entities_org_none",
+            "ev_entities_person_none",
+            "ev_entities_graph_loose",
+            "ev_entities_topic_none"
+          ]
+        },
+        "criterion_semanticHtml": {
+          "found": false,
+          "value": "25%",
+          "progress": "25/100",
+          "evidence": [
+            "ev_semanticHtml_present",
+            "ev_semanticHtml_missing_main",
+            "ev_semanticHtml_missing_article",
+            "ev_semanticHtml_missing_header",
+            "ev_semanticHtml_missing_footer"
+          ]
+        },
+        "criterion_internalLinks": {
+          "found": true,
+          "value": "27 (100%)",
+          "progress": "100/100",
+          "evidence": [
+            "ev_internalLinks_count",
+            "ev_internalLinks_examples",
+            "ev_internalLinks_ratio"
+          ]
+        },
+        "criterion_llmsTxt": {
+          "found": false,
+          "value": "value_notFound",
+          "progress": "0/1",
+          "evidence": [
+            "ev_llmsTxt_missing",
+            "ev_llmsTxt_full_missing"
+          ]
+        },
+        "criterion_robotsTxt": {
+          "found": true,
+          "value": "value_allBotsAllowed",
+          "progress": "14/14",
+          "evidence": [
+            "ev_robotsTxt_all_allowed"
+          ]
+        }
+      },
+      "recommendations": [
+        "no_schema",
+        "few_entities",
+        "weak_semantic_html",
+        "no_llms_txt"
+      ]
+    },
+    "aiCitation": {
+      "score": 0.9,
+      "criteria": {
+        "criterion_facts": {
+          "found": false,
+          "value": "0%",
+          "progress": "0/100",
+          "evidence": [
+            "ev_facts_counted"
+          ]
+        },
+        "criterion_faq": {
+          "found": false,
+          "value": "0%",
+          "progress": "0/100",
+          "evidence": [
+            "ev_faq_none",
+            "ev_faq_schema_no"
+          ],
+          "fix": "fix_faq"
+        },
+        "criterion_sourcedClaims": {
+          "found": false,
+          "value": "0%",
+          "progress": "0/100",
+          "evidence": [
+            "ev_sourcedClaims_no_citations",
+            "ev_sourcedClaims_links",
+            "ev_sources_excluded_chrome"
+          ]
+        },
+        "criterion_keyInfoUpfront": {
+          "found": true,
+          "value": "80%",
+          "progress": "80/100",
+          "evidence": [
+            "ev_keyInfoUpfront_lead",
+            "ev_keyInfoUpfront_h1_ok",
+            "ev_keyInfoUpfront_short_ok",
+            "ev_keyInfoUpfront_meta_ok",
+            "ev_keyInfoUpfront_definition_ok",
+            "ev_keyInfoUpfront_number_missing"
+          ]
+        }
+      },
+      "recommendations": [
+        "no_facts",
+        "no_faq",
+        "no_sourced_claims"
+      ]
+    },
+    "onPageSeo": {
+      "score": 4.8,
+      "criteria": {
+        "criterion_title_quality": {
+          "found": true,
+          "value": "value_chars",
+          "progress": "100/100",
+          "evidence": [
+            "ev_title_quality_text"
+          ]
+        },
+        "criterion_meta_description": {
+          "found": true,
+          "value": "value_chars",
+          "progress": "75/100",
+          "evidence": [
+            "ev_meta_description_text",
+            "ev_meta_description_long"
+          ],
+          "fix": "fix_meta_description_long"
+        },
+        "criterion_image_alts": {
+          "found": true,
+          "value": "3/3",
+          "progress": "3/3",
+          "evidence": [
+            "ev_image_alts_count"
+          ]
+        },
+        "criterion_indexability": {
+          "found": true,
+          "value": "value_indexable",
+          "progress": "1/1",
+          "evidence": [
+            "ev_indexability_ok"
+          ]
+        },
+        "criterion_viewport": {
+          "found": true,
+          "value": "value_present",
+          "progress": "1/1",
+          "evidence": [
+            "ev_viewport_ok"
+          ]
+        },
+        "criterion_social_cards": {
+          "found": true,
+          "value": "6/6",
+          "progress": "6/6",
+          "evidence": [
+            "ev_social_cards_present",
+            "ev_social_cards_preview_ok"
+          ]
+        },
+        "criterion_canonical": {
+          "found": true,
+          "value": "value_present",
+          "progress": "1/1",
+          "evidence": [
+            "ev_canonical_self"
+          ]
+        }
+      },
+      "recommendations": [
+        "description_too_long"
+      ]
+    }
+  }
+}

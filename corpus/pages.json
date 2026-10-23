@@ -1,0 +1,248 @@
+[
+  {
+    "id": "economiesuisse-strom",
+    "url": "https://www.economiesuisse.ch/de/artikel/stromversorgung-der-schweiz-fragen-und-antworten",
+    "kind": "article",
+    "why": "Next.js-Accordion: 52 FAQ-Antworten nur im RSC-Payload"
+  },
+  {
+    "id": "kokomo-rueckblick",
+    "url": "https://www.kokomo.house/tiny-house/tiny-house-nach-vier-jahren-unser-rueckblick/",
+    "kind": "article",
+    "why": "FAQPage-Schema aus Zwischentiteln, Masseinheiten als Fakten"
+  },
+  {
+    "id": "wikipedia-de-tiny-house",
+    "url": "https://de.wikipedia.org/wiki/Tiny_House",
+    "kind": "article",
+    "why": "Wikipedia: viele Quellen, Tabellen, kein Schema-Artikel"
+  },
+  {
+    "id": "wikipedia-en-seo",
+    "url": "https://en.wikipedia.org/wiki/Search_engine_optimization",
+    "kind": "article",
+    "why": "Englisch, sehr lang, viele Referenzen"
+  },
+  {
+    "id": "mdn-table",
+    "url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/table",
+    "kind": "other",
+    "why": "Doku-Seite mit Tabellen und Codebeispielen"
+  },
+  {
+    "id": "react-learn",
+    "url": "https://react.dev/learn",
+    "kind": "other",
+    "why": "Doku, statisch gerendert"
+  },
+  {
+    "id": "nextjs-docs",
+    "url": "https://nextjs.org/docs",
+    "kind": "other",
+    "why": "Doku-Einstieg"
+  },
+  {
+    "id": "admin-ch-start",
+    "url": "https://www.admin.ch/gov/de/start.html",
+    "kind": "homepage",
+    "why": "Bund, mehrsprachig"
+  },
+  {
+    "id": "ch-ch-de",
+    "url": "https://www.ch.ch/de/",
+    "kind": "homepage",
+    "why": "Behördenportal, mehrsprachig"
+  },
+  {
+    "id": "eda-home",
+    "url": "https://www.eda.admin.ch/eda/de/home.html",
+    "kind": "homepage",
+    "why": "Bund, mehrsprachig"
+  },
+  {
+    "id": "uzh-home",
+    "url": "https://www.uzh.ch/de.html",
+    "kind": "homepage",
+    "why": "Hochschule, mehrsprachig"
+  },
+  {
+    "id": "sbb-home",
+    "url": "https://www.sbb.ch/de",
+    "kind": "homepage",
+    "why": "Grosse Schweizer Startseite"
+  },
+  {
+    "id": "swisscom-hilfe",
+    "url": "https://www.swisscom.ch/de/privatkunden/hilfe.html",
+    "kind": "other",
+    "why": "Hilfe-/FAQ-Hub"
+  },
+  {
+    "id": "guardian-intl",
+    "url": "https://www.theguardian.com/international",
+    "kind": "homepage",
+    "why": "Newsportal"
+  },
+  {
+    "id": "bbc-news",
+    "url": "https://www.bbc.com/news",
+    "kind": "homepage",
+    "why": "Newsportal"
+  },
+  {
+    "id": "heise-home",
+    "url": "https://www.heise.de/",
+    "kind": "homepage",
+    "why": "Tech-News deutsch"
+  },
+  {
+    "id": "watson-home",
+    "url": "https://www.watson.ch/",
+    "kind": "homepage",
+    "why": "Schweizer Newsportal"
+  },
+  {
+    "id": "nzz-home",
+    "url": "https://www.nzz.ch/",
+    "kind": "homepage",
+    "why": "Schweizer Zeitung"
+  },
+  {
+    "id": "cloudflare-blog",
+    "url": "https://blog.cloudflare.com/",
+    "kind": "homepage",
+    "why": "Cloudflare, evtl. Content-Signal"
+  },
+  {
+    "id": "wordpress-news",
+    "url": "https://wordpress.org/news/",
+    "kind": "other",
+    "why": "WordPress-Blogübersicht"
+  },
+  {
+    "id": "netnode-home",
+    "url": "https://www.netnode.ch/",
+    "kind": "homepage",
+    "why": "Agentur-Website"
+  },
+  {
+    "id": "geo-mauch",
+    "url": "https://geo.mauch.rocks/",
+    "kind": "homepage",
+    "why": "Eigene Landingpage"
+  },
+  {
+    "id": "allbirds-product",
+    "url": "https://www.allbirds.com/products/mens-tree-runners",
+    "kind": "product",
+    "why": "Shopify-Produktseite"
+  },
+  {
+    "id": "kronenhalle",
+    "url": "https://www.kronenhalle.ch/",
+    "kind": "homepage",
+    "why": "Restaurant Zürich (lokales Geschäft)"
+  },
+  {
+    "id": "spruengli",
+    "url": "https://www.spruengli.ch/de/",
+    "kind": "homepage",
+    "why": "Confiserie, Shop und Filialen"
+  },
+  {
+    "id": "excalidraw",
+    "url": "https://excalidraw.com/",
+    "kind": "homepage",
+    "why": "Reine Single-Page-App"
+  },
+  {
+    "id": "github-nextjs",
+    "url": "https://github.com/vercel/next.js",
+    "kind": "other",
+    "why": "Repository-Seite"
+  },
+  {
+    "id": "heise-artikel",
+    "url": "https://www.heise.de/news/Cisco-stopft-diverse-teils-kritische-Sicherheitsluecken-11497857.html",
+    "kind": "article",
+    "why": "Tech-News-Artikel deutsch"
+  },
+  {
+    "id": "bbc-artikel",
+    "url": "https://www.bbc.com/news/articles/c54g1kxw4nvvo",
+    "kind": "article",
+    "why": "Newsartikel englisch"
+  },
+  {
+    "id": "nzz-artikel",
+    "url": "https://www.nzz.ch/meinung/krawallanten-in-frankreich-hass-auf-den-staat-ist-en-vogue-ld.10041547",
+    "kind": "article",
+    "why": "Schweizer Zeitung, Paywall möglich"
+  },
+  {
+    "id": "cloudflare-artikel",
+    "url": "https://blog.cloudflare.com/full-transaction-waf/",
+    "kind": "article",
+    "why": "Tech-Blogartikel"
+  },
+  {
+    "id": "wordpress-artikel",
+    "url": "https://wordpress.org/news/2026/10/wordpress-7-2-beta-1-is-ready-for-download-and-testing/",
+    "kind": "article",
+    "why": "WordPress-Blogartikel"
+  },
+  {
+    "id": "netnode-artikel",
+    "url": "https://www.netnode.ch/de/blog/ki-lunch-learn-sechs-werkzeuge-und-ein-fernseher",
+    "kind": "article",
+    "why": "Agentur-Blogartikel"
+  },
+  {
+    "id": "guardian-artikel",
+    "url": "https://www.theguardian.com/world/2026/oct/22/fallout-fast-tracking-french-rioting-cases",
+    "kind": "article",
+    "why": "Newsartikel englisch, grosse Site"
+  },
+  {
+    "id": "srf-home",
+    "url": "https://www.srf.ch/news",
+    "kind": "homepage",
+    "why": "Schweizer Rundfunk, mehrsprachige Gruppe"
+  },
+  {
+    "id": "interdiscount-home",
+    "url": "https://www.interdiscount.ch/de",
+    "kind": "homepage",
+    "why": "Elektronik-Shop"
+  },
+  {
+    "id": "zuerich-tourismus",
+    "url": "https://www.zuerich.com/de",
+    "kind": "homepage",
+    "why": "Tourismus, mehrsprachig"
+  },
+  {
+    "id": "stadt-zuerich",
+    "url": "https://www.stadt-zuerich.ch/de.html",
+    "kind": "homepage",
+    "why": "Stadtverwaltung"
+  },
+  {
+    "id": "hug-luzern",
+    "url": "https://www.hug-luzern.ch/",
+    "kind": "homepage",
+    "why": "KMU (Lebensmittel)"
+  },
+  {
+    "id": "python-docs",
+    "url": "https://docs.python.org/3/tutorial/index.html",
+    "kind": "other",
+    "why": "Klassische statische Doku"
+  },
+  {
+    "id": "gov-uk-tax",
+    "url": "https://www.gov.uk/income-tax-rates",
+    "kind": "other",
+    "why": "Behörde, Tabellen, sehr klar"
+  }
+]
