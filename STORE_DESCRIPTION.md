@@ -91,7 +91,7 @@ Beyond human-readable content, AI crawlers rely on structured data and semantic 
 - Semantic HTML (proper use of `article`, `main`, `nav`, `section`, `header`, `footer`, `aside`)
 - Internal linking (enough contextual links, descriptive anchor texts instead of "click here")
 - llms.txt file (does the site provide one in the root directory to give LLMs context?)
-- AI crawler access in robots.txt (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot — are any blocked?)
+- AI crawler access in robots.txt (are the crawlers of the major AI providers blocked?)
 
 AI Citation Readiness (0–5 points)
 Being machine-readable is one thing; being actually citable by AI assistants is another. This category evaluates how directly your content can be quoted:
