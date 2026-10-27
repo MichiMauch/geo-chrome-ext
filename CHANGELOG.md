@@ -6,6 +6,7 @@
 
 - **`geo` command line:** The analyzers run in Node on the HTML a server sends (jsdom), with the same sitemap, Bing, X-Robots-Tag and AI-crawler firewall checks as the extension. Text output with every criterion and the findings per owner, `--json`, `--findings`, `--report`, `--min` for CI, `--sitemap`, `--urls`, `--file --url` for local files, `--bot` for the crawler view. Addresses work without `https://`.
 - **Snapshots and comparisons:** `--snapshot` writes a `geo-snapshot/1` file (scores, criteria, fingerprinted findings, analyzer version). `geo diff` compares two of them by path — run against run or staging against production — as text, Markdown, JSON or a standalone HTML report; `--baseline` with `--fail-on-regression` turns it into a CI gate.
+- **Reports and viewer:** `geo report site` renders a run as a site report in the extension's look, `geo report page` the extension's page report (with its viewer script inline, so bars, snippets and copy buttons work outside the extension), and `geo viewer` builds static, relatively linked pages over all runs: sites, runs with history chart, page reports and comparisons between any two runs. `geo diff --html` uses the same look. `--results` keeps the full analysis results for the page reports.
 - **Ticket plans:** `geo tickets` groups the findings into one ticket per recommendation and site, with affected pages, owner, effort, fix snippet and a dedupe marker, and with `--baseline` marks findings that disappeared as resolved.
 
 ## [4.14.1] - 2026-10-23

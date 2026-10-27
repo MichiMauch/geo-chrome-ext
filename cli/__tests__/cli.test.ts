@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -275,3 +275,56 @@ describe('ticket HTML', () => {
   });
 });
 
+
+describe('geo report and geo viewer', () => {
+  async function history(): Promise<string> {
+    const dir = tmp();
+    const host = join(dir, 'example.test');
+    for (const [run, label] of [['r1', 'september'], ['r2', 'oktober']] as const) {
+      const runDir = join(host, run);
+      mkdirSync(runDir, { recursive: true });
+      await main(
+        [`${ORIGIN}/a`, `${ORIGIN}/b`, '--snapshot', join(runDir, 'snapshot.json'), '--results', join(runDir, 'results.json'), '--label', label, '--delay', '0', '--no-bot-probe'],
+        capture()
+      );
+    }
+    return dir;
+  }
+
+  it('renders a site report with history, comparison and page links', async () => {
+    const dir = await history();
+    const io = capture();
+    const code = await main(
+      ['report', 'site', join(dir, 'example.test/r2/snapshot.json'), '--baseline', join(dir, 'example.test/r1/snapshot.json'), '--history-dir', join(dir, 'example.test'), '--page-href', 'p?x={path}'],
+      io
+    );
+    expect(code).toBe(0);
+    const html = io.stdout.join('');
+    expect(html).toContain('GEO-Site-Bericht');
+    expect(html).toContain('Seit dem letzten Lauf');
+    expect(html).toContain('href="p?x=%2Fa"');
+  });
+
+  it('renders the extension page report with its viewer script', async () => {
+    const dir = await history();
+    const io = capture();
+    expect(await main(['report', 'page', join(dir, 'example.test/r2/results.json'), '/a'], io)).toBe(0);
+    const html = io.stdout.join('');
+    expect(html).toContain('progress-bar');
+    expect(html).toContain("bar.getAttribute('data-target')");
+  });
+
+  it('builds a static viewer with relative links', async () => {
+    const dir = await history();
+    const out = join(dir, 'out');
+    expect(await main(['viewer', dir, out], capture())).toBe(0);
+    expect(existsSync(join(out, 'index.html'))).toBe(true);
+    const run = readFileSync(join(out, 'example.test/r2/index.html'), 'utf8');
+    expect(run).toContain('href="vergleich-r1.html"');
+    expect(run).toMatch(/href="pages\/a-[0-9a-f]{6}\.html"/);
+    expect(run).toContain('href="../../index.html"');
+    expect(existsSync(join(out, 'example.test/r2/vergleich-r1.html'))).toBe(true);
+    expect(readdirSync(join(out, 'example.test/r2/pages'))).toHaveLength(2);
+    expect(readFileSync(join(out, 'example.test/index.html'), 'utf8')).toContain('r2/index.html');
+  });
+});

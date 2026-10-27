@@ -69,11 +69,17 @@ geo diff before.json after.json   # compare two runs (text, --md, --json, --html
 geo --sitemap 30 staging.example.com --baseline prod.json --fail-on-regression
 
 geo tickets run.json --baseline before.json   # ticket plan: one ticket per finding and site
+
+geo --sitemap 30 example.com --snapshot h/example.com/run1/snapshot.json --results h/example.com/run1/results.json
+geo report site h/example.com/run1/snapshot.json --out site.html   # site report in the extension's look
+geo report page h/example.com/run1/results.json /artikel --out page.html   # the extension's page report
+geo viewer h out                  # static HTML over all runs: sites, runs, pages, comparisons
 ```
 
 - **Snapshot** (`geo-snapshot/1`): every page with scores per category, met criteria, findings and the analyzer version. `geo diff` and `geo tickets` only read snapshots.
 - **Comparison** matches pages by path, so it covers both "last month against today" and "staging against production". New, removed and failed pages are listed apart and never move the average. A different analyzer version is flagged, so a stricter rule is not read as a worse site.
 - **Ticket plan** (`geo-tickets/1`): per recommendation the affected pages, owner, effort, fix snippet and a marker `geo:<host>:<key>`. The plan states what the run found (`open` or `resolved`); whoever executes it looks the marker up in the tracker to decide between creating, commenting and reopening.
+- **Reports and viewer:** `geo report site` renders a run as a site report in the extension's look (average, categories, findings per owner with their pages, history, change since the baseline, every page), `geo report page` the extension's own page report with its viewer behaviour inline. `geo viewer <history> <out>` turns a folder of runs (`<host>/<run>/snapshot.json` and `results.json`) into static pages linked relatively, which is what the Kraftwerk app `geo` shows.
 - Unlike the extension the CLI cannot see content rendered by JavaScript; a client-rendered page scores what crawlers get. robots.txt, llms.txt and sitemaps are fetched once per origin, the firewall probe with AI-crawler User-Agents once per origin (`--no-bot-probe` to skip).
 
 ## Development
