@@ -327,4 +327,16 @@ describe('geo report and geo viewer', () => {
     expect(readdirSync(join(out, 'example.test/r2/pages'))).toHaveLength(2);
     expect(readFileSync(join(out, 'example.test/index.html'), 'utf8')).toContain('r2/index.html');
   });
+
+  it('sends latest.html to the page report of a single-page check and shows its change', async () => {
+    const dir = await history();
+    const runDir = join(dir, 'example.test', 'r3');
+    mkdirSync(runDir, { recursive: true });
+    await main([`${ORIGIN}/a`, '--snapshot', join(runDir, 'snapshot.json'), '--results', join(runDir, 'results.json'), '--no-bot-probe'], capture());
+    const out = join(dir, 'out');
+    await main(['viewer', dir, out], capture());
+    expect(readFileSync(join(out, 'latest.html'), 'utf8')).toMatch(/url=example\.test\/r3\/pages\/a-[0-9a-f]{6}\.html/);
+    // The site entry stays on the last site run, not the single page
+    expect(readFileSync(join(out, 'example.test/index.html'), 'utf8')).toContain('r2/index.html');
+  });
 });
