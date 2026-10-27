@@ -11,7 +11,9 @@
   "include": [
     "src/**/*",
     "e2e/**/*",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "cli/**/*",
+    "vite.cli.config.ts"
   ],
   "exclude": [
     "node_modules",

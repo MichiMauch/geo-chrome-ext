@@ -24,3 +24,4 @@ corpus/snapshots/
 test-results/
 playwright-report/
 store/raw/
+dist-cli/

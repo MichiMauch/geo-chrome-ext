@@ -50,6 +50,32 @@ Generative Engine Optimization prepares your content for AI-powered search engin
 4. Edit your page, click the icon again to re-analyze, and track progress via trend and history
 5. Open the domain overview to compare all analyzed pages of the site
 
+## Command line (`geo`)
+
+The same analyzers run in the terminal, on the HTML the server sends — what a JavaScript-less AI crawler sees. Built for Claude Code, Kraftwerk workflows and CI.
+
+```bash
+npm run build:cli && npm link     # builds dist-cli/geo.mjs and puts `geo` on the PATH
+
+geo example.com                   # one page, every criterion, findings with owner and effort
+geo --sitemap 30 example.com --snapshot run.json --label release-5.2
+geo localhost:3000/artikel        # a dev server before the deploy
+geo --file page.html --url example.com/neu   # a local file under its future address
+geo example.com --json            # raw GEOAnalysisResult
+geo example.com --findings        # flat findings with fingerprint geo:<key>:<path>
+geo example.com --min 18          # exit code 1 below the score
+
+geo diff before.json after.json   # compare two runs (text, --md, --json, --html report.html)
+geo --sitemap 30 staging.example.com --baseline prod.json --fail-on-regression
+
+geo tickets run.json --baseline before.json   # ticket plan: one ticket per finding and site
+```
+
+- **Snapshot** (`geo-snapshot/1`): every page with scores per category, met criteria, findings and the analyzer version. `geo diff` and `geo tickets` only read snapshots.
+- **Comparison** matches pages by path, so it covers both "last month against today" and "staging against production". New, removed and failed pages are listed apart and never move the average. A different analyzer version is flagged, so a stricter rule is not read as a worse site.
+- **Ticket plan** (`geo-tickets/1`): per recommendation the affected pages, owner, effort, fix snippet and a marker `geo:<host>:<key>`. The plan states what the run found (`open` or `resolved`); whoever executes it looks the marker up in the tracker to decide between creating, commenting and reopening.
+- Unlike the extension the CLI cannot see content rendered by JavaScript; a client-rendered page scores what crawlers get. robots.txt, llms.txt and sitemaps are fetched once per origin, the firewall probe with AI-crawler User-Agents once per origin (`--no-bot-probe` to skip).
+
 ## Development
 
 ```bash
@@ -58,6 +84,7 @@ npm run build        # full build into dist/ (popup, content, background, report
 npm run type-check   # tsc --noEmit
 npm test             # vitest
 npm run package      # build + zip for the Chrome Web Store
+npm run build:cli    # CLI bundle into dist-cli/geo.mjs (see above)
 ```
 
 Local test pages with deliberately planted issues live in `testpage/` (serve with `python3 -m http.server 8765` from that folder): `index.html` triggers heading/alt/scanability findings, `extra.html` triggers H1-quality, readability, unsourced-claims and key-info findings, `spa.html` is an empty shell filled entirely by JavaScript and is disallowed for GPTBot only — it exercises the crawler-view check and the path-specific robots.txt evaluation.
