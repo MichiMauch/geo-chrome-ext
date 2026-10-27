@@ -6,7 +6,7 @@ import { installFetch } from '../analyze';
 import { main, normalizeInputUrl, type Io } from '../geo';
 import { buildSnapshot, fingerprintOf, parseSnapshot, pathOf, type PageEntry, type Snapshot } from '../snapshot';
 import { diffSnapshots, hasRegression } from '../diff';
-import { markerOf, planTickets, titleOf } from '../tickets';
+import { bodyToHtml, levelOf, markerOf, planTickets, titleOf } from '../tickets';
 
 const ORIGIN = 'https://example.test';
 
@@ -251,3 +251,27 @@ describe('helpers', () => {
     expect(markerOf('https://www.x.ch', 'no_faq')).toBe('geo:www.x.ch:no_faq');
   });
 });
+
+describe('ticket HTML', () => {
+  it('renders headings, lists, code fences and links as portal HTML', () => {
+    const html = bodyToHtml('**Redaktion** · schnell\n\n## Seiten\n\n- https://x.ch/a\n- https://x.ch/b\n\n## Vorlage\n\nHinweis\n\n```\n<p>a</p>\n\nb\n```\n\n---\nQuelle `geo:x.ch:k`');
+    expect(html).toContain('<p><strong>Redaktion</strong> · schnell</p>');
+    expect(html).toContain('<h2>Seiten</h2>');
+    expect(html).toContain('<ul><li><p><a href="https://x.ch/a">https://x.ch/a</a></p></li><li><p><a href="https://x.ch/b">https://x.ch/b</a></p></li></ul>');
+    expect(html).toContain('<p>Hinweis</p>');
+    expect(html).toContain('<p><code>&lt;p&gt;a&lt;/p&gt;<br><br>b</code></p>');
+    expect(html).toContain('<code>geo:x.ch:k</code>');
+    expect(html).not.toContain('```');
+  });
+
+  it('maps priorities to levels', () => {
+    expect([levelOf(12), levelOf(10), levelOf(7), levelOf(3)]).toEqual(['high', 'high', 'medium', 'low']);
+  });
+
+  it('puts the HTML body into every planned ticket', () => {
+    const plan = planTickets(snap([entry(ORIGIN, '/', 10, ['no_schema'])]));
+    expect(plan.tickets[0].html).toContain('<h2>');
+    expect(plan.tickets[0].level).toBe('high');
+  });
+});
+

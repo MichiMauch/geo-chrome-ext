@@ -25,8 +25,14 @@ export interface PlannedTicket {
   owner: Finding['owner'];
   effort: Finding['effort'];
   priority: number;
+  // high from priority 10 (crawler blocks, missing schema, noindex …),
+  // medium from 7, low below; for trackers with a priority field
+  level: 'high' | 'medium' | 'low';
   title: string;
+  // Markdown, and the same as HTML for trackers that store HTML (my.netnode.ch
+  // allows h2, p, ul, li, strong, a, code)
   body: string;
+  html: string;
   pages: string[];
   change?: { before: number; after: number; newOn: string[]; fixedOn: string[] };
 }
@@ -152,6 +158,58 @@ export function planTickets(snapshot: Snapshot, options: TicketOptions = {}): Ti
   };
 }
 
+export const levelOf = (priority: number): PlannedTicket['level'] =>
+  priority >= 10 ? 'high' : priority >= 7 ? 'medium' : 'low';
+
+const escapeHtml = (str: string): string =>
+  str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// Inline Markdown of the ticket body: **bold**, `code`, bare URLs
+function inlineHtml(text: string): string {
+  return escapeHtml(text)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/(^|\s)(https?:\/\/[^\s<]+)/g, '$1<a href="$2">$2</a>');
+}
+
+/** The ticket body's Markdown (headings, lists, code fences, rules) as portal HTML. */
+export function bodyToHtml(markdown: string): string {
+  const html: string[] = [];
+  let list: string[] = [];
+  const flushList = () => {
+    if (list.length) html.push(`<ul>${list.map((li) => `<li><p>${li}</p></li>`).join('')}</ul>`);
+    list = [];
+  };
+  // Code fences become one <p><code> with line breaks: the portal has no <pre>
+  let code: string[] | null = null;
+  for (const line of markdown.split('\n')) {
+    if (code) {
+      if (line.startsWith('```')) {
+        html.push(`<p><code>${escapeHtml(code.join('\n')).replace(/\n/g, '<br>')}</code></p>`);
+        code = null;
+      } else {
+        code.push(line);
+      }
+      continue;
+    }
+    if (line.startsWith('```')) {
+      flushList();
+      code = [];
+      continue;
+    }
+    if (line.startsWith('- ')) {
+      list.push(inlineHtml(line.slice(2)));
+      continue;
+    }
+    flushList();
+    if (line === '---' || line.trim() === '') continue;
+    const heading = line.match(/^##\s+(.*)$/);
+    html.push(heading ? `<h2>${inlineHtml(heading[1])}</h2>` : `<p>${inlineHtml(line)}</p>`);
+  }
+  flushList();
+  return html.join('\n');
+}
+
 function ticketOf(
   finding: Finding,
   pages: string[],
@@ -159,6 +217,7 @@ function ticketOf(
   change: FindingChange | undefined,
   state: PlannedTicket['state']
 ): PlannedTicket {
+  const body = bodyOf(finding, pages, snapshot, change, state);
   return {
     marker: markerOf(snapshot.origin, finding.key),
     key: finding.key,
@@ -166,8 +225,10 @@ function ticketOf(
     owner: finding.owner,
     effort: finding.effort,
     priority: finding.priority,
+    level: levelOf(finding.priority),
     title: titleOf(finding.text),
-    body: bodyOf(finding, pages, snapshot, change, state),
+    body,
+    html: bodyToHtml(body),
     pages,
     ...(change
       ? { change: { before: change.before, after: change.after, newOn: change.newOn, fixedOn: change.fixedOn } }
