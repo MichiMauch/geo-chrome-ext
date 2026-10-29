@@ -14,6 +14,7 @@
     "build:background": "BUILD_TARGET=background vite build",
     "build:report": "BUILD_TARGET=report vite build",
     "build:cli": "vite build --config vite.cli.config.ts && chmod +x dist-cli/geo.mjs",
+    "build:lib": "vite build --config vite.lib.config.ts && tsc -p tsconfig.lib.json && node scripts/lib-types-entry.mjs",
     "geo": "node dist-cli/geo.mjs",
     "type-check": "tsc --noEmit && tsc -p tsconfig.corpus.json",
     "package": "npm run build && cd dist && zip -r ../geo-analyzer-extension.zip .",
