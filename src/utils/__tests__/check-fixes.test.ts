@@ -3,6 +3,8 @@ import { describe, it, expect } from 'vitest';
 import {
   extractAuthorInfo,
   extractDates,
+  extractLeadSummary,
+  extractParagraphs,
   extractQuestionAnswers,
   isWithinLastYear,
 } from '../dom-helpers';
@@ -525,5 +527,34 @@ describe('Sitemap mit News-Sitemap zuerst', () => {
       onlyNews[url] ? new Response(onlyNews[url], { status: 200 }) : new Response('', { status: 404 })) as typeof fetch;
     const result = await checkSitemap(page, 'Sitemap: https://example.ch/sitemap.xml', newsFetch);
     expect(result.pageLastmod).toBe('2026-10-22T22:00:00+00:00');
+  });
+});
+
+describe('Zusammenfassung am Anfang', () => {
+  it('liest Überschrift und Punkte einer Box «Auf einen Blick»', () => {
+    const doc = parse(`<body><main><h1>Gesundheitswesen</h1>
+      <p>Das digitale Gesundheitswesen braucht endlich eine richtige Grundlage.</p>
+      <div><h3>Auf einen Blick</h3><div><div><ul>
+        <li><span aria-hidden="true"></span><span>Das Patientendossier ist gescheitert.</span></li>
+        <li><span>Die Schweiz braucht einen Gesundheitsdatenraum.</span></li>
+      </ul></div></div></div>
+      <p>${TEXT}</p></main></body>`);
+    expect(extractLeadSummary(doc)).toEqual({
+      heading: 'Auf einen Blick',
+      items: ['Das Patientendossier ist gescheitert.', 'Die Schweiz braucht einen Gesundheitsdatenraum.'],
+      paragraphsBefore: 1,
+    });
+    expect(extractParagraphs(doc)).toHaveLength(2);
+  });
+
+  it('erkennt auch «Key takeaways» mit Absätzen statt Liste', () => {
+    const doc = parse(`<body><main><h1>Energy</h1><h2>Key takeaways</h2>
+      <p>Prices rose by 12 percent last year.</p><h2>Details</h2><p>${TEXT}</p></main></body>`);
+    expect(extractLeadSummary(doc)?.items).toEqual(['Prices rose by 12 percent last year.']);
+  });
+
+  it('findet nichts ohne passende Überschrift', () => {
+    const doc = parse(`<body><main><h1>Seite</h1><h2>Weitere Themen</h2><ul><li>Eins</li></ul></main></body>`);
+    expect(extractLeadSummary(doc)).toBeUndefined();
   });
 });

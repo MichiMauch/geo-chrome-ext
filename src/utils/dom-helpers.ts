@@ -20,6 +20,7 @@ import type {
   TableData,
   LocalSignals,
   QuestionAnswer,
+  LeadSummary,
 } from '../types/analysis';
 import { GEO_CONFIG } from '../config/geo-config';
 import { extractTextDates } from './text-dates';
@@ -66,6 +67,7 @@ export async function extractPageData(
       faqQuestions: faq.questions,
       faqAnswersHidden: faq.hidden,
       questionAnswers: extractQuestionAnswers(doc),
+      leadSummary: extractLeadSummary(doc),
       images: extractImages(doc),
       openGraph: extractOpenGraph(doc),
       twitterCard: extractTwitterCard(doc),
@@ -651,6 +653,55 @@ function hasBlockChild(el: Element): boolean {
 
 export function extractParagraphs(doc: Document = document): string[] {
   return contentParagraphElements(doc).map(({ text }) => text);
+}
+
+// ---------------------------------------------------------------------------
+// Summary box at the start
+// ---------------------------------------------------------------------------
+
+// Headings of a summary box: "Auf einen Blick", "Key takeaways", "En bref" …
+const SUMMARY_HEADING =
+  /^(auf einen blick|das wichtigste in kürze|das wichtigste|in kürze|kurz und bündig|kurz gesagt|zusammenfassung|kernaussagen|at a glance|key takeaways|key points|in brief|in short|summary|tl;?\s?dr|en bref|l['’]essentiel|en un coup d['’]œil|points clés|à retenir|résumé|de un vistazo|en resumen|puntos clave|lo esencial|em resumo|resumo|pontos-chave|em poucas palavras|in breve|in sintesi|a colpo d['’]occhio|punti chiave|riassunto)\s*:?$/i;
+
+const MAX_SUMMARY_ITEMS = 8;
+
+/**
+ * A summary box: a heading like "Auf einen Blick" with a list (or a few
+ * paragraphs) under it. Where it sits is judged by the analyzer, from the
+ * number of content paragraphs before it.
+ */
+export function extractLeadSummary(doc: Document = document): LeadSummary | undefined {
+  const scope = getContentScope(doc);
+  const heading = Array.from(scope.root.querySelectorAll('h2, h3, h4, h5, h6')).find(
+    (h) => !scope.isExcluded(h) && SUMMARY_HEADING.test(normalizeText(h.textContent))
+  );
+  if (!heading) return undefined;
+
+  const follows = (el: Element) =>
+    (heading.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+  let items: string[] = [];
+  // The list sits next to the heading or one wrapper further down
+  for (let box = heading.parentElement, depth = 0; box && depth < 2 && items.length === 0; box = box.parentElement, depth++) {
+    const list = Array.from(box.querySelectorAll('ul, ol')).find(follows);
+    if (list) {
+      items = Array.from(list.querySelectorAll(':scope > li'))
+        .map((li) => normalizeText(li.textContent))
+        .filter(Boolean);
+    }
+  }
+  if (items.length === 0) {
+    for (let el = heading.nextElementSibling; el && !/^H[1-6]$/.test(el.tagName); el = el.nextElementSibling) {
+      const text = normalizeText(el.textContent);
+      if (text) items.push(text);
+    }
+  }
+  items = items.slice(0, MAX_SUMMARY_ITEMS);
+  if (items.length === 0) return undefined;
+
+  const paragraphsBefore = contentParagraphElements(doc).filter(
+    ({ el }) => (el.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+  ).length;
+  return { heading: normalizeText(heading.textContent), items, paragraphsBefore };
 }
 
 // ---------------------------------------------------------------------------

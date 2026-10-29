@@ -305,13 +305,14 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
 
   // The first paragraphs a reader (and an AI) actually reads: skips a
   // repeated H1 and short bylines, teasers or captions above the text.
-  private leadParagraphs(pageData: PageData): string[] {
+  // Body paragraphs with substance: not the H1 repeated, not a short label
+  private leadCandidates(pageData: PageData, paragraphs: string[]): string[] {
     const minWords = GEO_CONFIG.aiCitation.thresholds.upfrontMinWords;
     const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
     const h1 = pageData.headings.find((h) => h.level === 1);
     const h1Text = h1 ? norm(h1.text) : '';
 
-    const lead = pageData.paragraphs.filter((p) => {
+    return paragraphs.filter((p) => {
       const text = norm(p);
       if (text.length === 0) return false;
       if (h1Text && (text === h1Text || (h1Text.includes(text) && text.length < h1Text.length + 20))) {
@@ -319,13 +320,28 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
       }
       return text.split(' ').length >= minWords;
     });
+  }
 
+  private leadParagraphs(pageData: PageData): string[] {
+    const lead = this.leadCandidates(pageData, pageData.paragraphs);
     return (lead.length > 0 ? lead : pageData.paragraphs).slice(0, 3);
+  }
+
+  // A summary box ("Auf einen Blick") counts as the start of the page when at
+  // most one lead paragraph (an intro) comes before it.
+  private upfrontSummary(pageData: PageData): PageData['leadSummary'] {
+    const summary = pageData.leadSummary;
+    if (!summary) return undefined;
+    const leadBefore = this.leadCandidates(pageData, pageData.paragraphs.slice(0, summary.paragraphsBefore));
+    return leadBefore.length <= 1 ? summary : undefined;
   }
 
   private evaluateKeyInfoUpfront(pageData: PageData): Evaluation {
     const firstParagraphs = this.leadParagraphs(pageData);
-    const firstText = firstParagraphs.join(' ');
+    const summary = this.upfrontSummary(pageData);
+    // Summary points end like sentences, so the sentence tests see them apart
+    const summaryText = summary ? summary.items.map((item) => (/[.!?…]$/.test(item) ? item : `${item}.`)).join(' ') : '';
+    const firstText = [summaryText, ...firstParagraphs].filter(Boolean).join(' ');
     const words = firstText.split(/\s+/).filter(Boolean);
     const first150 = words.slice(0, 150).join(' ');
 
@@ -333,7 +349,11 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
 
     // Each part adds its share; the evidence lists every part as met or
     // missing, with that share, so the percentage adds up for the reader.
-    const evidence: EvidenceLine[] = [{ key: 'ev_keyInfoUpfront_lead', params: { text: excerpt(first150) } }];
+    const evidence: EvidenceLine[] = [
+      summary
+        ? { key: 'ev_keyInfoUpfront_lead_summary', params: { heading: summary.heading, text: excerpt(first150) } }
+        : { key: 'ev_keyInfoUpfront_lead', params: { text: excerpt(first150) } },
+    ];
     let score = 0;
 
     const h1 = pageData.headings.find((h) => h.level === 1);
@@ -369,7 +389,15 @@ export class AiCitationAnalyzer extends BaseAnalyzer {
     // "ist der" anywhere ("Hier ist ein Überblick") defines nothing.
     const definitionSentence = findDefinitionSentence(first150);
     const definition = definitionSentence ? excerpt(definitionSentence) : null;
-    if (definition) {
+    // A summary box states the core message of an article, which is rarely
+    // a definition ("X ist ein …"), so the box itself counts as one.
+    if (summary) {
+      score += 0.3;
+      evidence.push({
+        key: 'ev_keyInfoUpfront_summary_ok',
+        params: { heading: summary.heading, text: excerpt(summary.items[0]), points: 30 },
+      });
+    } else if (definition) {
       score += 0.3;
       evidence.push({ key: 'ev_keyInfoUpfront_definition_ok', params: { text: definition, points: 30 } });
     } else {

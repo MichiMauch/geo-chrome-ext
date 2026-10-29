@@ -11,6 +11,10 @@
 
 ## [4.14.2] - 2026-10-29
 
+### Changed
+
+- **Summary boxes count as the start of the page:** “Key information upfront” only read body paragraphs, so a box like “Auf einen Blick”, “Key takeaways” or “En bref” at the top of an article was ignored. A summary box with at most one intro paragraph before it now counts towards the first 150 words (so a figure in it scores), and it meets the key-statement part on its own: an article's core message is rarely a definition of the form “X is a …”.
+
 ### Fixed
 
 - **XML sitemap without lastmod when a page is listed twice:** The check stopped at the first sitemap that listed the page. On sites whose index starts with a Google News sitemap (which carries `news:publication_date`, not `lastmod`), it never reached the regular sitemap with the date and scored the sitemap 85/100. It now keeps looking until it finds a `lastmod`, and falls back to the news publication date when the page is only in a news sitemap.

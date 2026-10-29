@@ -101,6 +101,15 @@ export interface ScoreRating {
 }
 
 // DOM-Daten vom Content Script
+export interface LeadSummary {
+  // The box heading, e.g. "Auf einen Blick"
+  heading: string;
+  // Its points, from a list or the paragraphs under the heading
+  items: string[];
+  // Content paragraphs (as in PageData.paragraphs) that come before the box
+  paragraphsBefore: number;
+}
+
 export interface PageData {
   url: string;
   headings: HeadingData[];
@@ -123,6 +132,9 @@ export interface PageData {
   // the text that follows it up to the next heading (empty when the answer
   // is not in the DOM). Undefined for analyses stored before 4.5.
   questionAnswers?: QuestionAnswer[];
+  // A summary box near the start ("Auf einen Blick", "Key takeaways"):
+  // undefined when the page has none, or for analyses stored before 4.15.
+  leadSummary?: LeadSummary;
   // Primary language subtag of the page content (from <html lang> or
   // schema inLanguage), lowercased, e.g. 'de'. Undefined when unknown.
   lang?: string;

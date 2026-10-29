@@ -294,6 +294,50 @@ describe('AiCitation — FAQ', () => {
     expect(detail(withQuestions, 'criterion_faq')?.value).toBe('100%');
   });
 
+  const body = 'Das elektronische Patientendossier sollte die Grundlage für ein vernetztes Gesundheitswesen bilden.';
+  const summary = {
+    heading: 'Auf einen Blick',
+    items: [
+      'Das elektronische Patientendossier ist am fehlenden Fundament gescheitert.',
+      'Die Schweiz braucht einen nationalen Gesundheitsdatenraum.',
+    ],
+    paragraphsBefore: 1,
+  };
+
+  it('zählt eine Zusammenfassung am Anfang als Kernaussage', () => {
+    const page = makePage({
+      headings: [{ level: 1, text: 'Das digitale Gesundheitswesen braucht eine Grundlage' }],
+      // Vor der Box steht nur der wiederholte Titel
+      paragraphs: ['Das digitale Gesundheitswesen braucht eine Grundlage', body],
+      leadSummary: summary,
+    });
+    const d = detail(page, 'criterion_keyInfoUpfront');
+    // Zusammenfassung 0.3 + H1 0.2 + kurzer erster Absatz 0.15
+    expect(d?.value).toBe('65%');
+    expect(d?.evidence?.map((e) => e.key)).toEqual(
+      expect.arrayContaining(['ev_keyInfoUpfront_lead_summary', 'ev_keyInfoUpfront_summary_ok'])
+    );
+  });
+
+  it('nimmt Zahlen aus der Zusammenfassung mit', () => {
+    const page = makePage({
+      paragraphs: [body],
+      leadSummary: { ...summary, items: ['Die Kosten steigen jährlich um 3,2 Prozent.'], paragraphsBefore: 0 },
+    });
+    // Zusammenfassung 0.3 + H1 0.2 + kurzer erster Absatz 0.15 + Zahl 0.2
+    expect(detail(page, 'criterion_keyInfoUpfront')?.value).toBe('85%');
+  });
+
+  it('ignoriert eine Zusammenfassung weiter unten im Text', () => {
+    const page = makePage({
+      paragraphs: [body, `${body} Zweiter Absatz.`, `${body} Dritter Absatz.`],
+      leadSummary: { ...summary, paragraphsBefore: 3 },
+    });
+    expect(detail(page, 'criterion_keyInfoUpfront')?.evidence?.map((e) => e.key)).not.toContain(
+      'ev_keyInfoUpfront_summary_ok'
+    );
+  });
+
   it('ist auf der Startseite nicht relevant', () => {
     const page = makePage({ faqQuestions: questions, faqAnswersHidden: 6 });
     const result = analyze(page, 'homepage');
