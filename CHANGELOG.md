@@ -9,6 +9,12 @@
 - **Reports and viewer:** `geo report site` renders a run as a site report in the extension's look, `geo report page` the extension's page report (with its viewer script inline, so bars, snippets and copy buttons work outside the extension), and `geo viewer` builds static, relatively linked pages over all runs: sites, runs with history chart, page reports and comparisons between any two runs. `geo diff --html` uses the same look. `--results` keeps the full analysis results for the page reports.
 - **Ticket plans:** `geo tickets` groups the findings into one ticket per recommendation and site, with affected pages, owner, effort, fix snippet and a dedupe marker, and with `--baseline` marks findings that disappeared as resolved.
 
+## [4.14.2] - 2026-10-29
+
+### Fixed
+
+- **XML sitemap without lastmod when a page is listed twice:** The check stopped at the first sitemap that listed the page. On sites whose index starts with a Google News sitemap (which carries `news:publication_date`, not `lastmod`), it never reached the regular sitemap with the date and scored the sitemap 85/100. It now keeps looking until it finds a `lastmod`, and falls back to the news publication date when the page is only in a news sitemap.
+
 ## [4.14.1] - 2026-10-23
 
 ### Fixed

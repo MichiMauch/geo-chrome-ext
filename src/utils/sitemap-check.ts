@@ -84,6 +84,12 @@ export async function detectBingVerification(
   return null;
 }
 
+function newsPublicationDate(url: Element): string | null {
+  const news = Array.from(url.children).find((c) => c.localName === 'news');
+  const date = Array.from(news?.children ?? []).find((c) => c.localName === 'publication_date');
+  return date?.textContent?.trim() || null;
+}
+
 export async function checkSitemap(
   pageUrl: string,
   robotsTxt: string | undefined,
@@ -102,10 +108,14 @@ export async function checkSitemap(
   let withLastmod = 0;
   const lastmodCounts = new Map<string, number>();
   let pageLastmod: string | null = null;
+  // Google News sitemaps carry news:publication_date instead of lastmod
+  let pagePublished: string | null = null;
   let listed = false;
 
+  // A site often lists a page twice, e.g. in a news sitemap without lastmod
+  // and in a regular one with it; the walk goes on until it has a lastmod.
   const visit = async (url: string, depth: number): Promise<void> => {
-    if (listed || visited.has(url)) return;
+    if ((listed && pageLastmod) || visited.has(url)) return;
     if (visited.size >= MAX_FILES) {
       capped = true;
       return;
@@ -132,7 +142,8 @@ export async function checkSitemap(
       }
       if (pageKey(loc) === target) {
         listed = true;
-        pageLastmod = lastmod || null;
+        pageLastmod ||= lastmod || null;
+        pagePublished ||= newsPublicationDate(el);
       }
     }
     if (depth >= MAX_DEPTH) {
@@ -150,7 +161,7 @@ export async function checkSitemap(
     declaredInRobots: declared.length > 0,
     // Unknown when the walk stopped early without finding the page
     listed: listed ? true : capped ? null : false,
-    pageLastmod,
+    pageLastmod: pageLastmod ?? pagePublished,
     entries,
     lastmodShare: entries > 0 ? withLastmod / entries : 0,
     lastmodUniform: withLastmod >= UNIFORM_MIN_ENTRIES && topLastmod / withLastmod >= UNIFORM_SHARE,

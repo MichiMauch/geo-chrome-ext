@@ -496,3 +496,34 @@ describe('Lokales Geschäft', async () => {
     expect(off.d?.evidence?.map((e) => e.key)).toEqual(expect.arrayContaining(['ev_local_postal_mismatch', 'ev_local_phone_mismatch']));
   });
 });
+
+describe('Sitemap mit News-Sitemap zuerst', () => {
+  const page = 'https://example.ch/de/artikel/neu';
+  const files: Record<string, string> = {
+    'https://example.ch/sitemap.xml': `<?xml version="1.0"?><sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+      <sitemap><loc>https://example.ch/news.xml</loc></sitemap>
+      <sitemap><loc>https://example.ch/artikel.xml</loc></sitemap></sitemapindex>`,
+    'https://example.ch/news.xml': `<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
+      <url><loc>${page}</loc><news:news><news:publication_date>2026-10-22T22:00:00+00:00</news:publication_date></news:news></url></urlset>`,
+    'https://example.ch/artikel.xml': `<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+      <url><loc>${page}</loc><lastmod>2026-10-23T06:39:21+00:00</lastmod></url></urlset>`,
+  };
+  const fetchFn = (async (url: string) =>
+    files[url] ? new Response(files[url], { status: 200 }) : new Response('', { status: 404 })) as typeof fetch;
+
+  it('sucht weiter, bis der Eintrag mit lastmod gefunden ist', async () => {
+    const { checkSitemap } = await import('../sitemap-check');
+    const result = await checkSitemap(page, 'Sitemap: https://example.ch/sitemap.xml', fetchFn);
+    expect(result.listed).toBe(true);
+    expect(result.pageLastmod).toBe('2026-10-23T06:39:21+00:00');
+  });
+
+  it('nimmt das Publikationsdatum, wenn nur die News-Sitemap die Seite führt', async () => {
+    const { checkSitemap } = await import('../sitemap-check');
+    const onlyNews: Record<string, string> = { ...files, 'https://example.ch/artikel.xml': files['https://example.ch/artikel.xml'].replace(page, 'https://example.ch/de/anders') };
+    const newsFetch = (async (url: string) =>
+      onlyNews[url] ? new Response(onlyNews[url], { status: 200 }) : new Response('', { status: 404 })) as typeof fetch;
+    const result = await checkSitemap(page, 'Sitemap: https://example.ch/sitemap.xml', newsFetch);
+    expect(result.pageLastmod).toBe('2026-10-22T22:00:00+00:00');
+  });
+});
