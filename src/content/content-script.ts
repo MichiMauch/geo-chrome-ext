@@ -12,6 +12,7 @@ import { checkSitemap, detectBingVerification } from '../utils/sitemap-check';
 import { withXRobotsTag } from '../utils/x-robots-tag';
 import { saveAnalysis } from '../utils/history';
 import { reportAnalysis } from '../utils/analytics';
+import { computeContentHash } from '../utils/content-hash';
 
 async function loadSavedLang(): Promise<void> {
   const data = await chrome.storage.local.get('geo_lang');
@@ -74,40 +75,6 @@ async function runBatchAnalysis(maxPages: number): Promise<void> {
 
 // Initialize i18n for analyzer strings
 initI18n();
-
-// Compute a quick hash of the page's key content
-function computeContentHash(): string {
-  const parts: string[] = [];
-  parts.push(document.title);
-  parts.push(document.querySelector('meta[name="description"]')?.getAttribute('content') || '');
-
-  // All headings
-  document.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((h) => {
-    parts.push(h.tagName + ':' + (h.textContent || '').trim());
-  });
-
-  // Body text content length + first/last 500 chars as fingerprint
-  const bodyText = (document.body?.textContent || '').replace(/\s+/g, ' ').trim();
-  parts.push('LEN:' + bodyText.length);
-  parts.push(bodyText.slice(0, 500));
-  parts.push(bodyText.slice(-500));
-
-  // Number of structural elements
-  parts.push('P:' + document.querySelectorAll('p').length);
-  parts.push('L:' + document.querySelectorAll('ul,ol').length);
-  parts.push('A:' + document.querySelectorAll('a').length);
-  // Alt-attribute fingerprint: fixing alt texts doesn't change the body text,
-  // but must bust the cache (alt coverage score + highlight targets).
-  parts.push('IMG:' + document.querySelectorAll('img').length + ':' + document.querySelectorAll('img:not([alt])').length);
-
-  // Simple string hash (djb2)
-  const str = parts.join('|');
-  let hash = 5381;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) + hash + str.charCodeAt(i)) | 0;
-  }
-  return hash.toString(36);
-}
 
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener(
